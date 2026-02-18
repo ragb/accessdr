@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+.venv/
+
+# Native DLLs (installed locally, not part of source)
+*.dll
+
+# Generated data
+settings.json
+bookmarks.json
+
+# Claude Code internal
+.claude/
+
+# Misc
+nul
