@@ -38,7 +38,7 @@ class RFDialog(wx.Frame):
         self._build_ui()
         self.SetSize(400, 340)
         self.Centre()
-        speech.speak(_("RF Settings dialog opened."))
+        speech.output(_("RF Settings dialog opened."))
 
     # ------------------------------------------------------------------
 
@@ -112,7 +112,7 @@ class RFDialog(wx.Frame):
     def _on_gain_slide(self, event: wx.CommandEvent) -> None:
         val = self._gain_slider.GetValue()
         self._gain_label.SetLabel(f"{val} dB")
-        speech.speak(_("Gain {val} dB").format(val=val))
+        speech.output(_("Gain {val} dB").format(val=val))
 
     def _on_apply(self, _event: wx.CommandEvent) -> None:
         self._settings.device_index = self._device_choice.GetSelection()
@@ -126,7 +126,7 @@ class RFDialog(wx.Frame):
         if self._on_change:
             self._on_change(self._settings)
 
-        speech.speak(
+        speech.output(
             _("RF settings applied. Gain {gain:.0f} dB, "
               "Sample rate {rate} kHz, PPM {ppm}.").format(
                 gain=self._settings.gain,

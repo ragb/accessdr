@@ -52,9 +52,19 @@ BW_OPTIONS = {
 
 
 def _fmt_freq(hz: int) -> str:
-    """Format Hz as MHz string with 3 decimal places, e.g. '98.100 MHz'."""
+    """Format Hz as MHz string with enough precision to show the last digit.
+
+    Examples: 98.100 MHz, 98.1005 MHz, 98.10050 MHz, 98.100500 MHz.
+    Always shows at least 3 decimal places (kHz resolution).
+    """
     mhz = hz / 1_000_000
-    return f"{mhz:.3f} MHz"
+    if hz % 1000 == 0:
+        return f"{mhz:.3f} MHz"
+    if hz % 100 == 0:
+        return f"{mhz:.4f} MHz"
+    if hz % 10 == 0:
+        return f"{mhz:.5f} MHz"
+    return f"{mhz:.6f} MHz"
 
 
 def _signal_quality(db: float) -> str:
@@ -313,7 +323,7 @@ class MainWindow(wx.Frame):
         self._sdr.set_frequency(freq_hz)
         self._retune_pending = True   # ask DSP loop to re-announce stereo status
         wx.CallAfter(self._freq_ctrl.SetValue, _fmt_freq(freq_hz))
-        wx.CallAfter(speech.speak, _fmt_freq(freq_hz))
+        wx.CallAfter(speech.output, _fmt_freq(freq_hz))
         wx.CallAfter(
             self._statusbar.SetStatusText,
             _("Tuned to {freq}").format(freq=_fmt_freq(freq_hz)),
@@ -339,20 +349,20 @@ class MainWindow(wx.Frame):
             else:
                 freq_hz = int(val)
         except ValueError:
-            speech.speak(_("Invalid frequency."))
+            speech.output(_("Invalid frequency."))
             return
         self._tune(freq_hz)
 
     def _on_step_change(self, event: wx.CommandEvent) -> None:
         self._step_idx = event.GetSelection()
         self._settings.step = STEPS[self._step_idx]
-        speech.speak(_("Step {step}").format(step=_(STEP_LABELS[self._step_idx])))
+        speech.output(_("Step {step}").format(step=_(STEP_LABELS[self._step_idx])))
 
     def _cycle_step(self) -> None:
         self._step_idx = (self._step_idx + 1) % len(STEPS)
         self._step_choice.SetSelection(self._step_idx)
         self._settings.step = STEPS[self._step_idx]
-        speech.speak(_("Step {step}").format(step=_(STEP_LABELS[self._step_idx])))
+        speech.output(_("Step {step}").format(step=_(STEP_LABELS[self._step_idx])))
 
     # ==================================================================
     # Mode / bandwidth control
@@ -372,7 +382,7 @@ class MainWindow(wx.Frame):
         self._settings.mode = mode
         self._update_bw_choices(mode)
         self._was_stereo = None
-        speech.speak(_("Mode {mode}").format(mode=mode))
+        speech.output(_("Mode {mode}").format(mode=mode))
 
     def _on_bw_change(self, event: wx.CommandEvent) -> None:
         mode = self._mode_choice.GetStringSelection()
@@ -380,7 +390,7 @@ class MainWindow(wx.Frame):
         idx = event.GetSelection()
         if 0 <= idx < len(options):
             self._settings.bandwidth = options[idx][0]
-            speech.speak(_("Bandwidth {bw}").format(bw=options[idx][1]))
+            speech.output(_("Bandwidth {bw}").format(bw=options[idx][1]))
 
     def _set_mode(self, mode: str) -> None:
         if mode not in MODES:
@@ -389,7 +399,7 @@ class MainWindow(wx.Frame):
         self._settings.mode = mode
         self._update_bw_choices(mode)
         self._was_stereo = None
-        speech.speak(_("Mode {mode}").format(mode=mode))
+        speech.output(_("Mode {mode}").format(mode=mode))
 
     # ==================================================================
     # Start / Stop
@@ -403,7 +413,7 @@ class MainWindow(wx.Frame):
 
     def _start_radio(self) -> None:
         if not self._sdr.open():
-            speech.speak(_("Could not open SDR device."))
+            speech.output(_("Could not open SDR device."))
             return
         # Create stateful demodulator — filters pre-computed, state preserved across chunks
         self._demodulator: Demodulator = make_demodulator(
@@ -427,7 +437,7 @@ class MainWindow(wx.Frame):
         self._statusbar.SetStatusText(
             _("Receiving — {freq}").format(freq=_fmt_freq(self._settings.frequency))
         )
-        speech.speak(_("Radio started."))
+        speech.output(_("Radio started."))
 
     def _stop_radio(self) -> None:
         self._running = False
@@ -440,7 +450,7 @@ class MainWindow(wx.Frame):
         self._signal_lbl.SetLabel(_("Signal: —"))
         self._start_btn.SetLabel(_("\u25b6 Start"))
         self._statusbar.SetStatusText(_("Stopped."))
-        speech.speak(_("Radio stopped."))
+        speech.output(_("Radio stopped."))
 
     # ==================================================================
     # DSP thread
@@ -534,20 +544,20 @@ class MainWindow(wx.Frame):
         val = event.GetInt() / 100.0
         self._audio.volume = val
         self._settings.volume = val
-        speech.speak(_("Volume {v} percent").format(v=event.GetInt()))
+        speech.output(_("Volume {v} percent").format(v=event.GetInt()))
 
     def _on_mute(self, event: wx.CommandEvent) -> None:
         muted = self._mute_btn.GetValue()
         self._audio.muted = muted
         self._settings.muted = muted
-        speech.speak(_("Muted") if muted else _("Unmuted"))
+        speech.output(_("Muted") if muted else _("Unmuted"))
 
     def _on_squelch(self, event: wx.CommandEvent) -> None:
         val = float(event.GetInt())
         self._audio.squelch = val
         self._settings.squelch = val
         self._sq_lbl.SetLabel(f"{val:.0f} dBm")
-        speech.speak(_("Squelch {val:.0f} dBm").format(val=val))
+        speech.output(_("Squelch {val:.0f} dBm").format(val=val))
 
     # ==================================================================
     # Keyboard shortcuts
@@ -585,12 +595,12 @@ class MainWindow(wx.Frame):
             self._mute_btn.SetValue(val)
             self._audio.muted = val
             self._settings.muted = val
-            speech.speak(_("Muted") if val else _("Unmuted"))
+            speech.output(_("Muted") if val else _("Unmuted"))
             return
 
         if code == ord("I") and modifiers == 0:
             if not self._running:
-                speech.speak(_("Radio not running."))
+                speech.output(_("Radio not running."))
             else:
                 parts = []
                 db = self._audio.signal_db
@@ -606,13 +616,13 @@ class MainWindow(wx.Frame):
                 )
                 if self._audio.muted:
                     parts.append(_("Muted"))
-                speech.speak(", ".join(parts))
+                speech.output(", ".join(parts))
             return
 
         if code == wx.WXK_SPACE and modifiers == 0:
             if self._settings.sonification_enabled and self._last_spectrum is not None:
                 self._sonification.snapshot()
-                speech.speak(_("Sonification snapshot."))
+                speech.output(_("Sonification snapshot."))
             return
 
         if code == ord("F") and modifiers == 0:
@@ -666,7 +676,7 @@ class MainWindow(wx.Frame):
     def _speak_peaks(self) -> None:
         """Speak top N spectrum peaks (F key)."""
         if self._last_spectrum is None:
-            speech.speak(_("No spectrum data yet."))
+            speech.output(_("No spectrum data yet."))
             return
         peaks = SpectrumAnalyser.find_peaks(
             self._last_spectrum,
@@ -675,10 +685,10 @@ class MainWindow(wx.Frame):
             n_peaks=self._settings.speech_peak_count,
         )
         if not peaks:
-            speech.speak(_("No peaks detected."))
+            speech.output(_("No peaks detected."))
             return
         parts = [f"{f / 1e6:.3f} MHz {db:.0f} dBm" for f, db in peaks]
-        speech.speak(_("Peaks: ") + ", ".join(parts))
+        speech.output(_("Peaks: ") + ", ".join(parts))
 
     # ==================================================================
     # Band jump
@@ -690,7 +700,7 @@ class MainWindow(wx.Frame):
             freq = centre_frequency(name)
             self._tune(freq)
             self._set_mode(mode)
-            speech.speak(
+            speech.output(
                 _("Band: {name}, {freq}, mode {mode}").format(
                     name=_(name), freq=_fmt_freq(freq), mode=mode
                 )
@@ -782,7 +792,7 @@ class MainWindow(wx.Frame):
         settings.save()
 
     def _on_sdr_error(self, msg: str) -> None:
-        wx.CallAfter(speech.speak, _("SDR error: {msg}").format(msg=msg))
+        wx.CallAfter(speech.output, _("SDR error: {msg}").format(msg=msg))
         wx.CallAfter(
             self._statusbar.SetStatusText,
             _("Error: {msg}").format(msg=msg),

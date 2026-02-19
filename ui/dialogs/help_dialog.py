@@ -115,4 +115,4 @@ class HelpDialog(wx.Frame):
         for action, key in SHORTCUTS:
             if action and key:
                 lines.append(f"{_(action)}: {key}")
-        speech.speak("  ".join(lines), interrupt=False)
+        speech.output("  ".join(lines), interrupt=False)

@@ -40,7 +40,7 @@ class ScannerDialog(wx.Frame):
         self._build_ui()
         self.SetSize(520, 560)
         self.Centre()
-        speech.speak(_("Scanner dialog opened."))
+        speech.output(_("Scanner dialog opened."))
 
     # ------------------------------------------------------------------
 
@@ -124,13 +124,13 @@ class ScannerDialog(wx.Frame):
             step_hz = int(float(self._step.GetValue()) * 1_000)
             squelch = float(self._squelch.GetValue())
         except ValueError:
-            speech.speak(_("Invalid scan parameters."))
+            speech.output(_("Invalid scan parameters."))
             return
 
         self._results_list.DeleteAllItems()
         self._status.SetLabel(_("Scanning…"))
         self._scanner.start(start_hz, stop_hz, step_hz, squelch)
-        speech.speak(
+        speech.output(
             _("Scan started from {start} to {stop}, step {step} kHz.").format(
                 start=_fmt_freq(start_hz),
                 stop=_fmt_freq(stop_hz),
@@ -141,7 +141,7 @@ class ScannerDialog(wx.Frame):
     def _on_stop(self, _event: wx.CommandEvent) -> None:
         self._scanner.stop()
         self._status.SetLabel(_("Stopped."))
-        speech.speak(_("Scan stopped."))
+        speech.output(_("Scan stopped."))
 
     def _on_clear(self, _event: wx.CommandEvent) -> None:
         self._results_list.DeleteAllItems()
@@ -152,7 +152,7 @@ class ScannerDialog(wx.Frame):
             self._results_list.GetItemCount(), _fmt_freq(result.freq_hz)
         )
         self._results_list.SetItem(idx, 1, f"{result.strength_db:.1f}")
-        speech.speak(
+        speech.output(
             _("Signal found at {freq}, {db:.0f} dBm.").format(
                 freq=_fmt_freq(result.freq_hz), db=result.strength_db
             )
@@ -167,7 +167,7 @@ class ScannerDialog(wx.Frame):
                 count,
             ).format(count=count)
         )
-        speech.speak(
+        speech.output(
             ngettext(
                 "Scan complete. {count} signal found.",
                 "Scan complete. {count} signals found.",

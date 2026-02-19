@@ -38,7 +38,7 @@ class AudioDialog(wx.Frame):
         self._build_ui()
         self.SetSize(440, 320)
         self.Centre()
-        speech.speak(_("Audio Settings dialog opened."))
+        speech.output(_("Audio Settings dialog opened."))
 
     # ------------------------------------------------------------------
 
@@ -135,18 +135,18 @@ class AudioDialog(wx.Frame):
                 self._rec_status.SetLabel(
                     _("Recording: {filename}").format(filename=os.path.basename(path))
                 )
-                speech.speak(
+                speech.output(
                     _("Recording started. File: {filename}").format(
                         filename=os.path.basename(path)
                     )
                 )
             else:
                 self._record_btn.SetValue(False)
-                speech.speak(_("Could not start recording."))
+                speech.output(_("Could not start recording."))
         else:
             self._audio.stop_recording()
             self._rec_status.SetLabel(_("Not recording."))
-            speech.speak(_("Recording stopped."))
+            speech.output(_("Recording stopped."))
 
     def _on_apply(self, _event: wx.CommandEvent) -> None:
         sel = self._device_choice.GetStringSelection()
@@ -158,7 +158,7 @@ class AudioDialog(wx.Frame):
         self._settings.save()
         if self._on_change:
             self._on_change(self._settings)
-        speech.speak(
+        speech.output(
             _("Audio settings applied. Buffer {size} samples. "
               "Restart radio for buffer change to take effect.").format(
                 size=self._settings.audio_buffer_size

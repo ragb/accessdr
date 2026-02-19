@@ -38,7 +38,7 @@ class SpectrumDialog(wx.Frame):
         self._build_ui()
         self.SetSize(440, 480)
         self.Centre()
-        speech.speak(_("Spectrum and Sonification dialog opened."))
+        speech.output(_("Spectrum and Sonification dialog opened."))
 
     # ------------------------------------------------------------------
 
@@ -159,17 +159,17 @@ class SpectrumDialog(wx.Frame):
 
     def _on_snapshot(self, _event: wx.CommandEvent) -> None:
         self._son.snapshot()
-        speech.speak(_("Sonification snapshot started."))
+        speech.output(_("Sonification snapshot started."))
 
     def _on_toggle_sweep(self, _event: wx.CommandEvent) -> None:
         if self._sweeping:
             self._son.stop()
             self._sweeping = False
-            speech.speak(_("Continuous sweep stopped."))
+            speech.output(_("Continuous sweep stopped."))
         else:
             self._son.start_sweep()
             self._sweeping = True
-            speech.speak(_("Continuous sweep started."))
+            speech.output(_("Continuous sweep started."))
 
     def _on_apply(self, _event: wx.CommandEvent) -> None:
         fft_sizes = [256, 512, 1024, 2048, 4096]
@@ -194,7 +194,7 @@ class SpectrumDialog(wx.Frame):
         if self._on_change:
             self._on_change(self._settings)
 
-        speech.speak(_("Spectrum settings applied."))
+        speech.output(_("Spectrum settings applied."))
 
     def _on_key(self, event: wx.KeyEvent) -> None:
         if event.GetKeyCode() == wx.WXK_SPACE:

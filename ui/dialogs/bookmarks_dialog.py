@@ -35,7 +35,7 @@ class BookmarksDialog(wx.Frame):
         self.SetSize(480, 420)
         self.Centre()
         self._refresh_list()
-        speech.speak(_("Bookmarks dialog opened."))
+        speech.output(_("Bookmarks dialog opened."))
 
     # ------------------------------------------------------------------
 
@@ -117,12 +117,12 @@ class BookmarksDialog(wx.Frame):
         mode = self._mode_ctrl.GetStringSelection()
 
         if not label:
-            speech.speak(_("Please enter a label."))
+            speech.output(_("Please enter a label."))
             return
         try:
             freq_hz = int(float(freq_str) * 1_000_000)
         except ValueError:
-            speech.speak(_("Invalid frequency."))
+            speech.output(_("Invalid frequency."))
             return
 
         self._store.add(label, freq_hz, mode)
@@ -130,7 +130,7 @@ class BookmarksDialog(wx.Frame):
         self._refresh_list()
         self._label_ctrl.Clear()
         self._freq_ctrl.Clear()
-        speech.speak(
+        speech.output(
             _("Bookmark added: {label}, {freq} MHz, {mode}.").format(
                 label=label, freq=f"{freq_hz / 1e6:.3f}", mode=mode
             )
@@ -139,12 +139,12 @@ class BookmarksDialog(wx.Frame):
     def _on_load_selected(self, _event) -> None:  # noqa: ANN001
         idx = self._list.GetFirstSelected()
         if idx < 0:
-            speech.speak(_("No bookmark selected."))
+            speech.output(_("No bookmark selected."))
             return
         bm = self._store.get_all()[idx]
         if self._on_load_cb:
             self._on_load_cb(bm)
-        speech.speak(
+        speech.output(
             _("Loaded bookmark: {label}, {freq} MHz, {mode}.").format(
                 label=bm.label, freq=f"{bm.frequency / 1e6:.3f}", mode=bm.mode
             )
@@ -153,13 +153,13 @@ class BookmarksDialog(wx.Frame):
     def _on_delete(self, _event: wx.CommandEvent) -> None:
         idx = self._list.GetFirstSelected()
         if idx < 0:
-            speech.speak(_("No bookmark selected."))
+            speech.output(_("No bookmark selected."))
             return
         bm = self._store.get_all()[idx]
         self._store.remove(idx)
         self._store.save()
         self._refresh_list()
-        speech.speak(_("Deleted bookmark: {label}.").format(label=bm.label))
+        speech.output(_("Deleted bookmark: {label}.").format(label=bm.label))
 
     def _on_key(self, event: wx.KeyEvent) -> None:
         if event.GetKeyCode() == wx.WXK_ESCAPE:
