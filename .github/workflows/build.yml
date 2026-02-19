@@ -1,0 +1,58 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [master]
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Download RTL-SDR DLLs
+        shell: pwsh
+        run: |
+          $url = "https://github.com/librtlsdr/librtlsdr/releases/download/v2.0.2/librtlsdr-2.0.2-msvc-amd64.zip"
+          Invoke-WebRequest -Uri $url -OutFile rtlsdr.zip
+          Expand-Archive rtlsdr.zip -DestinationPath rtlsdr_tmp
+          # Copy DLLs from the extracted directory to project root
+          Get-ChildItem -Path rtlsdr_tmp -Recurse -Include rtlsdr.dll,pthreadVC2.dll,msvcr100.dll |
+            Copy-Item -Destination .
+          # Verify DLLs exist
+          if (!(Test-Path rtlsdr.dll)) { throw "rtlsdr.dll not found" }
+          Remove-Item -Recurse rtlsdr_tmp, rtlsdr.zip
+
+      - name: Build with PyInstaller
+        run: pyinstaller accessdr.spec
+
+      - name: Install NSIS
+        run: choco install nsis -y --no-progress
+
+      - name: Build installer
+        run: |
+          $env:PATH += ";C:\Program Files (x86)\NSIS"
+          makensis installer\accessdr.nsi
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AccessDR-installer
+          path: dist/installer/AccessDR-*-setup.exe
+
+      - name: Attach installer to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/installer/AccessDR-*-setup.exe --clobber
