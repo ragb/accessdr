@@ -35,7 +35,13 @@ python -m venv .venv
 pip install -e ".[dev]"
 ```
 
-Copy the RTL-SDR DLLs (`rtlsdr.dll`, `pthreadVC2.dll`, `msvcr100.dll`) into the project root. These ship with [SDR#](https://airspy.com/download/) or can be downloaded from the [librtlsdr releases](https://github.com/librtlsdr/librtlsdr/releases).
+Fetch the RTL-SDR library:
+
+```bash
+invoke fetch-dlls
+```
+
+This downloads the static librtlsdr build automatically. Alternatively, copy `rtlsdr.dll` manually from [SDR#](https://airspy.com/download/) or the [librtlsdr releases](https://github.com/librtlsdr/librtlsdr/releases).
 
 ### Running
 
@@ -137,17 +143,18 @@ All cross-thread communication uses `queue.Queue` and `wx.CallAfter`. Live tunin
 
 ## Building a Distributable
 
-### PyInstaller
+The project uses [Invoke](https://www.pyinvoke.org/) for build tasks. Run `invoke --list` to see all available tasks.
 
 ```bash
-pyinstaller accessdr.spec
+invoke fetch-dlls    # download RTL-SDR DLLs (skips if already present)
+invoke build         # fetch DLLs + compile translations + PyInstaller freeze
+invoke installer     # full build + NSIS installer
+invoke clean         # remove build artifacts
 ```
 
-### Windows Installer
+The `invoke build` command automatically downloads the RTL-SDR static library from the [librtlsdr releases](https://github.com/librtlsdr/librtlsdr/releases), so manually placing DLLs is only needed when running from source.
 
-```bash
-"C:\Program Files (x86)\NSIS\makensis.exe" installer\accessdr.nsi
-```
+NSIS must be installed for `invoke installer` ([download](https://nsis.sourceforge.io/Download)).
 
 Output: `dist\installer\AccessDR-0.1.0-setup.exe`
 

@@ -3,9 +3,10 @@ tasks.py -- Invoke build tasks for AccessDR.
 
 Usage:
     invoke --list          # show all tasks
+    invoke fetch-dlls      # download RTL-SDR DLLs for build
     invoke i18n-build      # extract + update + compile translations
-    invoke build           # i18n + PyInstaller freeze
-    invoke installer       # i18n + freeze + NSIS installer
+    invoke build           # fetch-dlls + i18n + PyInstaller freeze
+    invoke installer       # fetch-dlls + i18n + freeze + NSIS installer
     invoke clean           # remove build artifacts
     invoke run             # launch app from source
 """
@@ -27,6 +28,11 @@ PYBABEL = os.path.join(VENV_SCRIPTS, "pybabel.exe")
 PYINSTALLER = os.path.join(VENV_SCRIPTS, "pyinstaller.exe")
 MAKENSIS = r"C:\Program Files (x86)\NSIS\makensis.exe"
 
+RTLSDR_DLL_URL = (
+    "https://github.com/librtlsdr/librtlsdr/releases/download/"
+    "v0.9.0/rtlsdr-bin-w64_static.zip"
+)
+
 LOCALE_DIR = os.path.join(PROJECT_ROOT, "locale")
 POT_FILE = os.path.join(LOCALE_DIR, "accessdr.pot")
 BABEL_CFG = os.path.join(PROJECT_ROOT, "babel.cfg")
@@ -43,6 +49,48 @@ VERSION: str = _version_ns["__version__"]
 def _q(path: str) -> str:
     """Quote a path for shell use."""
     return f'"{path}"'
+
+
+# ---------------------------------------------------------------------------
+# DLL fetch
+# ---------------------------------------------------------------------------
+@task
+def fetch_dlls(c: Context) -> None:
+    """Download RTL-SDR DLLs into the project root (skips if already present)."""
+    dll_path = os.path.join(PROJECT_ROOT, "rtlsdr.dll")
+    if os.path.isfile(dll_path) and os.path.getsize(dll_path) > 0:
+        print("[fetch-dlls] rtlsdr.dll already present, skipping.")
+        return
+
+    import io
+    import urllib.request
+    import zipfile
+
+    print(f"[fetch-dlls] Downloading from {RTLSDR_DLL_URL} ...")
+    with urllib.request.urlopen(RTLSDR_DLL_URL) as resp:
+        data = resp.read()
+
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        # Static build ships librtlsdr.dll — rename to rtlsdr.dll for pyrtlsdr
+        for name in zf.namelist():
+            if name.endswith("librtlsdr.dll"):
+                with open(dll_path, "wb") as f:
+                    f.write(zf.read(name))
+                print(f"[fetch-dlls] Extracted {name} -> rtlsdr.dll")
+                break
+        else:
+            print("[fetch-dlls] ERROR: librtlsdr.dll not found in archive")
+            sys.exit(1)
+
+    # Create stub files for pthreadVC2/msvcr100 (not needed by static build,
+    # but referenced in the PyInstaller spec so they must exist)
+    for stub in ("pthreadVC2.dll", "msvcr100.dll"):
+        stub_path = os.path.join(PROJECT_ROOT, stub)
+        if not os.path.isfile(stub_path) or os.path.getsize(stub_path) == 0:
+            open(stub_path, "wb").close()
+            print(f"[fetch-dlls] Created stub {stub}")
+
+    print("[fetch-dlls] Done.")
 
 
 # ---------------------------------------------------------------------------
@@ -116,9 +164,9 @@ def i18n_build(c: Context) -> None:
 # ---------------------------------------------------------------------------
 # Build tasks
 # ---------------------------------------------------------------------------
-@task(pre=[i18n_build])
+@task(pre=[fetch_dlls, i18n_build])
 def build(c: Context) -> None:
-    """Freeze app with PyInstaller (runs i18n first)."""
+    """Freeze app with PyInstaller (fetches DLLs + runs i18n first)."""
     c.run(f'{_q(PYINSTALLER)} --noconfirm {_q(SPEC_FILE)}', echo=True)
     exe = os.path.join(PROJECT_ROOT, "dist", "AccessDR", "AccessDR.exe")
     if os.path.isfile(exe):
