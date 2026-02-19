@@ -46,11 +46,14 @@ except Exception:                  # noqa: BLE001
 
 SAMPLE_RATE = 44_100               # Hz for sonification stream
 
-# Amplitude mapping: bins below NOISE_FLOOR_DB are silent; bins
-# DYNAMIC_RANGE_DB above the floor are at full volume.
-NOISE_FLOOR_DB   = -80.0
-DYNAMIC_RANGE_DB =  60.0
-MAX_AMP          =   0.25          # peak output amplitude (0–1)
+MAX_AMP = 0.25          # peak output amplitude (0–1)
+
+# Amplitude is normalised relative to the spectrum's own noise floor so
+# that the mapping adapts to any absolute power scale coming from the FFT.
+# The bottom NOISE_PERCENTILE of bins defines silence; bins DYNAMIC_RANGE_DB
+# above that floor reach MAX_AMP.
+_NOISE_PERCENTILE = 20    # percent of bins used to estimate noise floor
+_DYNAMIC_RANGE_DB = 30.0  # dB above noise floor that maps to full amplitude
 
 
 class Sonification:
@@ -195,14 +198,18 @@ class Sonification:
         # Update sweep position for the next block
         self._sweep_pos = float(pos_raw[-1] % 1.0) if n > 0 else self._sweep_pos
 
-        # --- Amplitude (interpolated between adjacent bins) ---
+        # --- Amplitude (normalised relative to this spectrum's noise floor) ---
+        # Use the bottom _NOISE_PERCENTILE of bins as the noise floor so the
+        # mapping adapts to the FFT's absolute power scale automatically.
+        noise_floor = float(np.percentile(spectrum, _NOISE_PERCENTILE))
+
         bin_f  = pos_norm * (bins - 1)
         bin_lo = bin_f.astype(np.intp)
         bin_hi = np.clip(bin_lo + 1, 0, bins - 1)
         frac   = bin_f - bin_lo
         amp_db = spectrum[bin_lo] * (1.0 - frac) + spectrum[bin_hi] * frac
 
-        amp = np.clip((amp_db - NOISE_FLOOR_DB) / DYNAMIC_RANGE_DB, 0.0, 1.0) * MAX_AMP
+        amp = np.clip((amp_db - noise_floor) / _DYNAMIC_RANGE_DB, 0.0, 1.0) * MAX_AMP
 
         # --- Pitch (logarithmic — perceptually uniform across octaves) ---
         log_ratio = math.log(max(self.max_pitch, self.min_pitch + 1) / self.min_pitch)
