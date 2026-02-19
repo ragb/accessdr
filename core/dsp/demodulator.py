@@ -96,6 +96,13 @@ class WFMDemodulator(Demodulator):
     # a comfortable margin between the two cases.
     _PILOT_SNR_THRESHOLD = 4.0
 
+    # Hysteresis counters to prevent mono↔stereo flicker between chunks.
+    # At 240 kHz / 16384 samples per chunk each chunk ≈ 68 ms.
+    # Enter stereo after _PILOT_ON consecutive detections  (~0.5 s).
+    # Drop to mono  after _PILOT_OFF consecutive non-detections (~0.5 s).
+    _PILOT_ON  = 8
+    _PILOT_OFF = 8
+
     def __init__(self, baseband_rate: int, audio_rate: int) -> None:
         super().__init__(baseband_rate, audio_rate)
         rate = baseband_rate
@@ -138,6 +145,7 @@ class WFMDemodulator(Demodulator):
         self._zi_audio_r  = sp_signal.lfilter_zi(self._audio_lp_b, self._audio_lp_a)* 0.0
 
         self.stereo_detected: bool = False
+        self._pilot_count: int = 0   # hysteresis counter
 
     def process(self, iq: np.ndarray) -> np.ndarray:
         # FM discriminant → MPX baseband (rad/sample)
@@ -151,11 +159,17 @@ class WFMDemodulator(Demodulator):
         pilot, self._zi_pilot = sp_signal.lfilter(
             self._pilot_b, self._pilot_a, mpx, zi=self._zi_pilot)
 
-        # Stereo detection: FFT-based SNR at 19 kHz vs surrounding noise floor.
-        # A real pilot tone concentrates into a single spectral bin (~16× above
-        # the noise floor); noise alone gives SNR ≈ 1.  This is immune to the
-        # broadband FM discriminant noise that fools a simple RMS threshold.
-        self.stereo_detected = self._detect_pilot(mpx)
+        # Stereo detection with hysteresis to prevent per-chunk flicker.
+        # _pilot_count increments when the FFT sees a pilot, decrements when not.
+        # State only changes at the floor (→ mono) or ceiling (→ stereo).
+        if self._detect_pilot(mpx):
+            self._pilot_count = min(self._pilot_count + 1, self._PILOT_ON)
+            if self._pilot_count >= self._PILOT_ON:
+                self.stereo_detected = True
+        else:
+            self._pilot_count = max(self._pilot_count - 1, 0)
+            if self._pilot_count <= 0:
+                self.stereo_detected = False
 
         if self.stereo_detected:
             return self._process_stereo(mpx, lpr, pilot)
