@@ -32,7 +32,7 @@ dev = [
     "pyinstaller>=6.0",
     "babel>=2.14",
     "invoke>=2.0",
-    "mkdocs-material>=9.5",
+    "zensical>=0.0.23",
 ]
 
 [project.scripts]

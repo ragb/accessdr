@@ -8,6 +8,7 @@ on:
       - "mkdocs.yml"
 
 permissions:
+  contents: write
   pages: write
   id-token: write
 
@@ -22,8 +23,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install mkdocs-material
-        run: pip install mkdocs-material
+      - name: Install zensical
+        run: pip install zensical
 
       - name: Build and deploy
-        run: mkdocs gh-deploy --force
+        run: |
+          zensical build
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan gh-pages-tmp
+          git rm -rf .
+          cp -r site/* .
+          touch .nojekyll
+          git add -A
+          git commit -m "Deploy docs"
+          git push origin HEAD:gh-pages --force
