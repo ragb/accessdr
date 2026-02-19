@@ -119,6 +119,7 @@ class MainWindow(wx.Frame):
         self._step_idx = STEPS.index(self._settings.step) if self._settings.step in STEPS else 3
         self._was_stereo: Optional[bool] = None   # tracks last announced stereo state
         self._retune_pending: bool = False        # set by _tune(), cleared by DSP loop
+        self._last_spectrum: Optional[np.ndarray] = None
 
         # Open dialogs cache (so we don't create duplicates)
         self._dialogs: dict = {}
@@ -597,6 +598,12 @@ class MainWindow(wx.Frame):
                 speech.speak(", ".join(parts))
             return
 
+        if code == wx.WXK_SPACE and modifiers == 0:
+            if self._settings.sonification_enabled and self._last_spectrum is not None:
+                self._sonification.snapshot()
+                speech.speak("Sonification snapshot.")
+            return
+
         if code == ord("F") and modifiers == 0:
             self._speak_peaks()
             return
@@ -647,7 +654,7 @@ class MainWindow(wx.Frame):
 
     def _speak_peaks(self) -> None:
         """Speak top N spectrum peaks (F key)."""
-        if not hasattr(self, "_last_spectrum"):
+        if self._last_spectrum is None:
             speech.speak("No spectrum data yet.")
             return
         peaks = SpectrumAnalyser.find_peaks(

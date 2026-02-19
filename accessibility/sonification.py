@@ -6,6 +6,17 @@ frequency position and amplitude-encodes signal strength, giving blind
 users an audible overview of the spectrum without needing a visual
 waterfall display.
 
+Design
+------
+- The audio callback is fully vectorised with NumPy — no per-sample
+  Python loops, so it runs safely inside the sounddevice audio thread.
+- Pitch is mapped logarithmically (octaves) — perceptually uniform.
+- Amplitude maps the range [noise_floor_db .. noise_floor_db+60 dB]
+  to [0 .. 0.25], so a quiet noise floor is near-silent and a strong
+  signal is clearly audible.
+- Phase is carried between callback blocks for glitch-free audio.
+- Snapshot mode plays exactly one full L→R sweep then stops.
+
 Usage
 -----
     son = Sonification(min_pitch=200, max_pitch=4000)
@@ -35,6 +46,12 @@ except Exception:                  # noqa: BLE001
 
 SAMPLE_RATE = 44_100               # Hz for sonification stream
 
+# Amplitude mapping: bins below NOISE_FLOOR_DB are silent; bins
+# DYNAMIC_RANGE_DB above the floor are at full volume.
+NOISE_FLOOR_DB   = -80.0
+DYNAMIC_RANGE_DB =  60.0
+MAX_AMP          =   0.25          # peak output amplitude (0–1)
+
 
 class Sonification:
     """Sweeps across FFT bins, generating a pitched tone per bin."""
@@ -45,17 +62,17 @@ class Sonification:
         max_pitch: int = 4000,
         sweep_speed: float = 1.0,
     ) -> None:
-        self.min_pitch = min_pitch
-        self.max_pitch = max_pitch
+        self.min_pitch  = min_pitch
+        self.max_pitch  = max_pitch
         self.sweep_speed = sweep_speed          # seconds per full sweep
 
         self._spectrum: Optional[np.ndarray] = None
-        self._lock = threading.Lock()
+        self._lock       = threading.Lock()
         self._stream: Optional["sd.OutputStream"] = None
-        self._phase = 0.0
-        self._sweep_pos = 0.0                  # 0.0–1.0 across spectrum
-        self._running = False
-        self._snapshot_remaining = 0           # samples left in snapshot
+        self._phase      = 0.0                 # fractional cycle, carried across blocks
+        self._sweep_pos  = 0.0                 # 0.0–1.0 across spectrum
+        self._running    = False
+        self._is_snapshot = False              # True → stop after one full sweep
 
     # ------------------------------------------------------------------
     # Public interface
@@ -73,18 +90,22 @@ class Sonification:
         """Begin continuous automatic sweep (left → right, repeating)."""
         if not _SD_AVAILABLE:
             return
-        self._running = True
-        self._sweep_pos = 0.0
+        self.stop()
+        self._is_snapshot = False
+        self._sweep_pos   = 0.0
+        self._phase       = 0.0
+        self._running     = True
         self._open_stream()
 
     def snapshot(self) -> None:
-        """Play a single sweep of the current spectrum then stop."""
+        """Play a single full sweep of the current spectrum then stop."""
         if not _SD_AVAILABLE:
             return
-        samples_needed = int(SAMPLE_RATE * self.sweep_speed)
-        self._snapshot_remaining = samples_needed
-        self._sweep_pos = 0.0
-        self._running = True
+        self.stop()
+        self._is_snapshot = True
+        self._sweep_pos   = 0.0
+        self._phase       = 0.0
+        self._running     = True
         self._open_stream()
 
     def stop(self) -> None:
@@ -104,10 +125,10 @@ class Sonification:
         max_pitch: Optional[int] = None,
         sweep_speed: Optional[float] = None,
     ) -> None:
-        if min_pitch is not None:
-            self.min_pitch = min_pitch
-        if max_pitch is not None:
-            self.max_pitch = max_pitch
+        if min_pitch  is not None:
+            self.min_pitch   = min_pitch
+        if max_pitch  is not None:
+            self.max_pitch   = max_pitch
         if sweep_speed is not None:
             self.sweep_speed = sweep_speed
 
@@ -141,56 +162,63 @@ class Sonification:
         time,                      # noqa: ANN001
         status,                    # noqa: ANN001
     ) -> None:
-        """sounddevice callback — runs in audio thread."""
+        """sounddevice callback — runs in audio thread, fully vectorised."""
         with self._lock:
             spectrum = self._spectrum
 
-        n = frames
-        out = np.zeros(n, dtype=np.float32)
+        outdata[:] = 0.0
 
-        if spectrum is not None and self._running:
-            bins = len(spectrum)
-            sweep_samples = int(SAMPLE_RATE * self.sweep_speed)
-            samples_per_bin = max(1, sweep_samples // bins)
+        if spectrum is None or not self._running:
+            raise sd.CallbackStop()
 
-            for i in range(n):
-                # Current bin index
-                bin_idx = int(self._sweep_pos * bins) % bins
-                amp_db = float(spectrum[bin_idx])
+        bins          = len(spectrum)
+        sweep_samples = max(1, int(SAMPLE_RATE * self.sweep_speed))
 
-                # Map dB (-120..0) to amplitude 0..1
-                amp = max(0.0, min(1.0, (amp_db + 120.0) / 120.0)) * 0.3
+        # Raw sweep positions for this block (may cross 1.0 for snapshot)
+        pos_raw = self._sweep_pos + np.arange(frames, dtype=np.float64) / sweep_samples
 
-                # Pitch: linear interpolation across pitch range
-                t = bin_idx / max(bins - 1, 1)
-                freq = self.min_pitch + t * (self.max_pitch - self.min_pitch)
+        # Snapshot: play exactly until the position first reaches 1.0
+        stop_after = False
+        if self._is_snapshot:
+            wrap_mask = pos_raw >= 1.0
+            if np.any(wrap_mask):
+                cut = int(np.argmax(wrap_mask))
+                if cut == 0:
+                    self._running = False
+                    raise sd.CallbackStop()
+                pos_raw    = pos_raw[:cut]
+                stop_after = True
 
-                # Generate sine sample
-                out[i] = amp * math.sin(2.0 * math.pi * self._phase)
-                self._phase += freq / SAMPLE_RATE
-                if self._phase > 1.0:
-                    self._phase -= 1.0
+        n        = len(pos_raw)
+        pos_norm = pos_raw % 1.0   # wrap to [0, 1)
 
-                # Advance sweep position
-                self._sweep_pos += 1.0 / sweep_samples
-                if self._sweep_pos >= 1.0:
-                    self._sweep_pos = 0.0
-                    if self._snapshot_remaining > 0:
-                        self._running = False
-                        break
+        # Update sweep position for the next block
+        self._sweep_pos = float(pos_raw[-1] % 1.0) if n > 0 else self._sweep_pos
 
-                if self._snapshot_remaining > 0:
-                    self._snapshot_remaining -= 1
-                    if self._snapshot_remaining == 0:
-                        self._running = False
-                        break
+        # --- Amplitude (interpolated between adjacent bins) ---
+        bin_f  = pos_norm * (bins - 1)
+        bin_lo = bin_f.astype(np.intp)
+        bin_hi = np.clip(bin_lo + 1, 0, bins - 1)
+        frac   = bin_f - bin_lo
+        amp_db = spectrum[bin_lo] * (1.0 - frac) + spectrum[bin_hi] * frac
 
-        outdata[:, 0] = out
+        amp = np.clip((amp_db - NOISE_FLOOR_DB) / DYNAMIC_RANGE_DB, 0.0, 1.0) * MAX_AMP
+
+        # --- Pitch (logarithmic — perceptually uniform across octaves) ---
+        log_ratio = math.log(max(self.max_pitch, self.min_pitch + 1) / self.min_pitch)
+        freq = self.min_pitch * np.exp(log_ratio * pos_norm)
+
+        # --- Phase accumulation (continuous across blocks, no clicks) ---
+        phase_inc = freq / SAMPLE_RATE
+        phases    = self._phase + np.cumsum(phase_inc)
+        self._phase = float(phases[-1]) % 1.0
+
+        out = amp * np.sin(2.0 * np.pi * phases)
+        outdata[:n, 0] = out.astype(np.float32)
+
+        if stop_after:
+            self._running = False
+            raise sd.CallbackStop()
 
     def _stream_finished(self) -> None:
-        if not self._running and self._stream is not None:
-            try:
-                self._stream.close()
-            except Exception:      # noqa: BLE001
-                pass
-            self._stream = None
+        self._stream = None
