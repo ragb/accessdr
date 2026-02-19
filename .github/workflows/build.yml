@@ -24,13 +24,17 @@ jobs:
       - name: Download RTL-SDR DLLs
         shell: pwsh
         run: |
-          $url = "https://github.com/librtlsdr/librtlsdr/releases/download/v2.0.2/librtlsdr-2.0.2-msvc-amd64.zip"
+          # Download static build from librtlsdr v0.9.0 (self-contained, no external deps)
+          $url = "https://github.com/librtlsdr/librtlsdr/releases/download/v0.9.0/rtlsdr-bin-w64_static.zip"
           Invoke-WebRequest -Uri $url -OutFile rtlsdr.zip
           Expand-Archive rtlsdr.zip -DestinationPath rtlsdr_tmp
-          # Copy DLLs from the extracted directory to project root
-          Get-ChildItem -Path rtlsdr_tmp -Recurse -Include rtlsdr.dll,pthreadVC2.dll,msvcr100.dll |
-            Copy-Item -Destination .
-          # Verify DLLs exist
+          # Static build ships as librtlsdr.dll — rename to rtlsdr.dll for pyrtlsdr
+          Copy-Item rtlsdr_tmp/librtlsdr.dll -Destination rtlsdr.dll
+          # Create stub files for pthreadVC2/msvcr100 (not needed by static build,
+          # but referenced in the PyInstaller spec)
+          New-Item -ItemType File -Path pthreadVC2.dll -Force | Out-Null
+          New-Item -ItemType File -Path msvcr100.dll -Force | Out-Null
+          # Verify
           if (!(Test-Path rtlsdr.dll)) { throw "rtlsdr.dll not found" }
           Remove-Item -Recurse rtlsdr_tmp, rtlsdr.zip
 
@@ -41,6 +45,7 @@ jobs:
         run: choco install nsis -y --no-progress
 
       - name: Build installer
+        shell: pwsh
         run: |
           $env:PATH += ";C:\Program Files (x86)\NSIS"
           makensis installer\accessdr.nsi
