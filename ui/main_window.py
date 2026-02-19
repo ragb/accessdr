@@ -122,7 +122,8 @@ class MainWindow(wx.Frame):
 
         # Radio
         radio_menu = wx.Menu()
-        radio_menu.Append(wx.ID_ANY, "&RF Settings…\tCtrl+R").SetHelp("Open RF settings")
+        item_rf = radio_menu.Append(wx.ID_ANY, "&RF Settings…\tCtrl+R")
+        self.Bind(wx.EVT_MENU, lambda e: self._open_rf_dialog(), item_rf)
         bands_menu = wx.Menu()
         for name in BAND_NAMES:
             item = bands_menu.Append(wx.ID_ANY, name)
@@ -132,14 +133,18 @@ class MainWindow(wx.Frame):
 
         # View
         view_menu = wx.Menu()
-        view_menu.Append(wx.ID_ANY, "&Spectrum && Sonification…\tCtrl+S")
+        item_spectrum = view_menu.Append(wx.ID_ANY, "&Spectrum && Sonification…\tCtrl+S")
+        self.Bind(wx.EVT_MENU, lambda e: self._open_spectrum_dialog(), item_spectrum)
         mb.Append(view_menu, "&View")
 
         # Tools
         tools_menu = wx.Menu()
-        tools_menu.Append(wx.ID_ANY, "&Scanner…\tCtrl+N")
-        tools_menu.Append(wx.ID_ANY, "&Bookmarks…\tCtrl+B")
-        tools_menu.Append(wx.ID_ANY, "&Audio Settings…\tCtrl+D")
+        item_scanner = tools_menu.Append(wx.ID_ANY, "&Scanner…\tCtrl+N")
+        item_bookmarks = tools_menu.Append(wx.ID_ANY, "&Bookmarks…\tCtrl+B")
+        item_audio = tools_menu.Append(wx.ID_ANY, "&Audio Settings…\tCtrl+D")
+        self.Bind(wx.EVT_MENU, lambda e: self._open_scanner_dialog(), item_scanner)
+        self.Bind(wx.EVT_MENU, lambda e: self._open_bookmarks_dialog(), item_bookmarks)
+        self.Bind(wx.EVT_MENU, lambda e: self._open_audio_dialog(), item_audio)
         mb.Append(tools_menu, "&Tools")
 
         # Help
@@ -149,35 +154,9 @@ class MainWindow(wx.Frame):
 
         self.SetMenuBar(mb)
 
-        # Bind menu items by position (simpler than tracking IDs)
+        # Bind standard IDs
         self.Bind(wx.EVT_MENU, self._on_exit, id=wx.ID_EXIT)
         self.Bind(wx.EVT_MENU, self._on_open_help, id=wx.ID_HELP)
-
-        # Bind by accelerator table for dialogs
-        accel_entries = [
-            wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("R"), self._new_id("rf")),
-            wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("S"), self._new_id("spectrum")),
-            wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("N"), self._new_id("scanner")),
-            wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("B"), self._new_id("bookmarks")),
-            wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("D"), self._new_id("audio")),
-        ]
-        self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
-
-        for key, dialog_name in [
-            ("rf", self._open_rf_dialog),
-            ("spectrum", self._open_spectrum_dialog),
-            ("scanner", self._open_scanner_dialog),
-            ("bookmarks", self._open_bookmarks_dialog),
-            ("audio", self._open_audio_dialog),
-        ]:
-            self.Bind(wx.EVT_MENU, lambda e, fn=dialog_name: fn(), id=self._ids[key])
-
-    def _new_id(self, name: str) -> int:
-        if not hasattr(self, "_ids"):
-            self._ids: dict = {}
-        new_id = wx.NewIdRef()
-        self._ids[name] = new_id
-        return new_id
 
     def _build_ui(self) -> None:
         panel = wx.Panel(self)
@@ -530,6 +509,13 @@ class MainWindow(wx.Frame):
     # ==================================================================
 
     def _on_key(self, event: wx.KeyEvent) -> None:
+        # Only handle shortcuts when the main window itself is active.
+        # EVT_CHAR_HOOK bubbles up from child frames (dialogs), so without
+        # this guard arrow keys and mode keys would fire inside dialogs too.
+        if wx.GetActiveWindow() is not self:
+            event.Skip()
+            return
+
         focused = self.FindFocus()
         in_text = isinstance(focused, wx.TextCtrl)
         code = event.GetKeyCode()
@@ -590,6 +576,24 @@ class MainWindow(wx.Frame):
             self._open_help_dialog()
             return
 
+        # Dialog shortcuts (Ctrl+letter)
+        if modifiers == wx.MOD_CONTROL:
+            if code == ord("R"):
+                self._open_rf_dialog()
+                return
+            if code == ord("S"):
+                self._open_spectrum_dialog()
+                return
+            if code == ord("N"):
+                self._open_scanner_dialog()
+                return
+            if code == ord("B"):
+                self._open_bookmarks_dialog()
+                return
+            if code == ord("D"):
+                self._open_audio_dialog()
+                return
+
         event.Skip()
 
     def _speak_peaks(self) -> None:
@@ -628,11 +632,21 @@ class MainWindow(wx.Frame):
 
     def _open_or_raise(self, key: str, factory) -> None:
         dlg = self._dialogs.get(key)
-        if dlg is None or not dlg.IsShown():
+        try:
+            already_shown = dlg is not None and dlg.IsShown()
+        except RuntimeError:
+            # Frame was destroyed (user closed it); create a fresh one
+            already_shown = False
+            dlg = None
+        if not already_shown:
             dlg = factory()
             self._dialogs[key] = dlg
+            dlg.Show()
         dlg.Raise()
-        dlg.SetFocus()
+        # Focus the panel inside the frame so Tab traversal works.
+        # wx.CallAfter defers until after Show() has finished rendering.
+        panel = next((c for c in dlg.GetChildren() if isinstance(c, wx.Panel)), None)
+        wx.CallAfter((panel or dlg).SetFocus)
 
     def _open_rf_dialog(self) -> None:
         from ui.dialogs.rf_dialog import RFDialog

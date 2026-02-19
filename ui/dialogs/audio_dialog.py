@@ -48,11 +48,17 @@ class AudioDialog(wx.Frame):
         grid = wx.FlexGridSizer(cols=2, vgap=8, hgap=8)
         grid.AddGrowableCol(1)
 
-        # Output device
+        # Output device — deduplicate by name (sounddevice lists each physical
+        # device once per host API: WASAPI, DirectSound, MME, etc.)
         devices = AudioOutput.list_devices()
-        device_names = ["Default"] + [
-            d.get("name", str(d)) for d in devices if d.get("max_output_channels", 0) > 0
-        ]
+        seen: set = set()
+        device_names = ["Default"]
+        for d in devices:
+            if d.get("max_output_channels", 0) > 0:
+                name = d.get("name", str(d))
+                if name not in seen:
+                    seen.add(name)
+                    device_names.append(name)
         grid.Add(wx.StaticText(panel, label="Output Device:"), 0, wx.ALIGN_CENTER_VERTICAL)
         self._device_choice = wx.Choice(panel, choices=device_names, name="Audio output device")
         current = self._settings.audio_device or ""
