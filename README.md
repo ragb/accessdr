@@ -1,5 +1,7 @@
 # AccessDR
 
+> **Note:** This project is a proof of concept in a very early alpha stage. Expect rough edges, missing features, and breaking changes.
+
 Accessible SDR radio application for blind and visually impaired users. Built with Python, wxPython, and pyrtlsdr.
 
 AccessDR brings software-defined radio to screen reader users with full keyboard navigation, speech output via NVDA/JAWS/Narrator, and spectrum sonification that lets you *hear* the RF spectrum as a sweeping tone.
