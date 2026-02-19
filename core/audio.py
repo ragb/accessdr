@@ -105,11 +105,6 @@ class AudioOutput:
         if audio.size == 0:
             return
 
-        # Measure signal strength in dBFS (mean power across all samples/channels)
-        rms = float(np.sqrt(np.mean(audio.astype(np.float64) ** 2)))
-        rms = max(rms, 1e-10)
-        self.signal_db = 20.0 * np.log10(rms)
-
         # Normalise to (N, 2) stereo
         a = audio.astype(np.float32)
         if a.ndim == 1:

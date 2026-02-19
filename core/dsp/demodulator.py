@@ -143,7 +143,6 @@ class WFMDemodulator(Demodulator):
         # Stereo detection: pilot RMS above threshold
         pilot_rms = float(np.sqrt(np.mean(pilot ** 2))) if len(pilot) > 0 else 0.0
         self.stereo_detected = pilot_rms > self._PILOT_THRESHOLD
-        logger.debug("pilot_rms=%.4f stereo=%s", pilot_rms, self.stereo_detected)
 
         if self.stereo_detected:
             return self._process_stereo(mpx, lpr, pilot)

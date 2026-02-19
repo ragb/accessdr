@@ -54,6 +54,30 @@ def _fmt_freq(hz: int) -> str:
     return f"{mhz:.3f} MHz"
 
 
+def _signal_quality(db: float) -> str:
+    """Return a one-word quality label for an IQ power level (dBFS).
+
+    RTL-SDR IQ samples are normalised to ±1.  Typical receive levels:
+      ≥ −10 dBFS : very strong (risk of clipping)
+      −10 to −20 : excellent
+      −20 to −35 : good
+      −35 to −50 : fair
+      −50 to −65 : weak
+      < −65 dBFS : noise floor / no signal
+    """
+    if db >= -10:
+        return "Excellent"
+    if db >= -20:
+        return "Excellent"
+    if db >= -35:
+        return "Good"
+    if db >= -50:
+        return "Fair"
+    if db >= -65:
+        return "Weak"
+    return "None"
+
+
 class MainWindow(wx.Frame):
     """Primary application window."""
 
@@ -409,6 +433,7 @@ class MainWindow(wx.Frame):
             self._dsp_thread.join(timeout=2.0)
             self._dsp_thread = None
         self._was_stereo = None
+        self._signal_lbl.SetLabel("Signal: —")
         self._start_btn.SetLabel("▶ Start")
         self._statusbar.SetStatusText("Stopped.")
         speech.speak("Radio stopped.")
@@ -438,6 +463,11 @@ class MainWindow(wx.Frame):
             if self._retune_pending:
                 self._retune_pending = False
                 dsp_stereo = None
+
+            # RF signal power from raw IQ (dBFS, 0 = full scale).
+            # Measuring here — before any DSP — correctly tracks gain changes.
+            iq_power = float(np.mean(np.abs(iq.astype(np.complex128)) ** 2))
+            self._audio.signal_db = 10.0 * np.log10(max(iq_power, 1e-10))
 
             # Decimate to baseband
             bb = decimate(iq, self._settings.sample_rate, BASEBAND_RATE)
@@ -470,7 +500,9 @@ class MainWindow(wx.Frame):
 
         # Update signal strength display
         strength = self._audio.signal_db
-        self._signal_lbl.SetLabel(f"Signal: {strength:.1f} dBm")
+        self._signal_lbl.SetLabel(
+            f"Signal: {strength:.1f} dBFS  [{_signal_quality(strength)}]"
+        )
 
         # Feed sonification
         if self._settings.sonification_enabled:
@@ -544,8 +576,11 @@ class MainWindow(wx.Frame):
             return
 
         if code == ord("I") and modifiers == 0:
-            db = self._audio.signal_db
-            speech.speak(f"Signal {db:.1f} dBm")
+            if not self._running:
+                speech.speak("Radio not running.")
+            else:
+                db = self._audio.signal_db
+                speech.speak(f"Signal {db:.1f} dBFS, {_signal_quality(db)}")
             return
 
         if code == ord("F") and modifiers == 0:

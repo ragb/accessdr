@@ -10,7 +10,7 @@ import wx
 from ui.main_window import MainWindow
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(levelname)s %(name)s: %(message)s",
     stream=sys.stderr,
 )
