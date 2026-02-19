@@ -446,6 +446,7 @@ class MainWindow(wx.Frame):
         """Main DSP thread: demodulate IQ and feed audio + spectrum."""
         current_mode = self._settings.mode
         dsp_stereo: Optional[bool] = None   # tracks last announced stereo state (DSP thread)
+        stereo_delay: int = 0               # chunks to wait before announcing after retune
 
         while self._running:
             try:
@@ -458,11 +459,14 @@ class MainWindow(wx.Frame):
                 current_mode = self._settings.mode
                 self._demodulator = make_demodulator(current_mode, BASEBAND_RATE, AUDIO_RATE)
                 dsp_stereo = None
+                stereo_delay = 0
 
-            # Re-announce stereo status after a retune
+            # Re-announce stereo status after a retune, but delay so the
+            # frequency speech finishes before the stereo announcement fires.
             if self._retune_pending:
                 self._retune_pending = False
                 dsp_stereo = None
+                stereo_delay = 6   # ~6 chunks ≈ 300–400 ms at typical chunk sizes
 
             # RF signal power from raw IQ (dBFS, 0 = full scale).
             # Measuring here — before any DSP — correctly tracks gain changes.
@@ -480,19 +484,20 @@ class MainWindow(wx.Frame):
             audio = self._demodulator.process(bb)
             self._audio.write(audio)
 
-            # Announce stereo/mono changes (fired from DSP thread via CallAfter)
+            # Track stereo/mono state; update status bar silently on change.
+            # The I key report includes stereo/mono so we don't speak it here.
             if current_mode == "WFM":
                 stereo = getattr(self._demodulator, "stereo_detected", False)
-                if stereo != dsp_stereo:
-                    prev = dsp_stereo
+                if stereo_delay > 0:
+                    stereo_delay -= 1
                     dsp_stereo = stereo
-                    if stereo or prev is not None:   # skip initial None→False
-                        label = "Stereo" if stereo else "Mono"
-                        wx.CallAfter(speech.speak, label)
-                        wx.CallAfter(
-                            self._statusbar.SetStatusText,
-                            f"Receiving — {_fmt_freq(self._settings.frequency)} [{label}]",
-                        )
+                elif stereo != dsp_stereo:
+                    dsp_stereo = stereo
+                    label = "Stereo" if stereo else "Mono"
+                    wx.CallAfter(
+                        self._statusbar.SetStatusText,
+                        f"Receiving — {_fmt_freq(self._settings.frequency)} [{label}]",
+                    )
 
     def _on_spectrum_update(self, spectrum: np.ndarray) -> None:
         """Called on UI thread with updated spectrum data."""
@@ -579,8 +584,17 @@ class MainWindow(wx.Frame):
             if not self._running:
                 speech.speak("Radio not running.")
             else:
+                parts = []
                 db = self._audio.signal_db
-                speech.speak(f"Signal {db:.1f} dBFS, {_signal_quality(db)}")
+                parts.append(f"Signal {db:.1f} dBFS, {_signal_quality(db)}")
+                if self._settings.mode == "WFM" and self._demodulator is not None:
+                    stereo = getattr(self._demodulator, "stereo_detected", False)
+                    parts.append("Stereo" if stereo else "Mono")
+                squelch_open = db >= self._audio.squelch
+                parts.append("Squelch open" if squelch_open else "Squelch closed")
+                if self._audio.muted:
+                    parts.append("Muted")
+                speech.speak(", ".join(parts))
             return
 
         if code == ord("F") and modifiers == 0:
