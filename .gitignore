@@ -24,6 +24,9 @@ is_setup.exe
 # Claude Code internal
 .claude/
 
+# Icon generation artifacts
+accessdr_icon_preview.png
+
 # Misc
 nul
 err.txt

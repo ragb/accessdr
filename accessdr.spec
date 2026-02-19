@@ -85,7 +85,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,                  # no console window
-    icon=None,                      # TODO: add icon when available
+    icon=os.path.join(PROJ, "accessdr.ico"),
 )
 
 coll = COLLECT(

@@ -22,6 +22,8 @@ Unicode True
 ; Interface
 ; ---------------------------------------------------------------------------
 !define MUI_ABORTWARNING
+!define MUI_ICON "..\accessdr.ico"
+!define MUI_UNICON "..\accessdr.ico"
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
