@@ -1,0 +1,44 @@
+site_name: AccessDR Documentation
+site_description: User guide for AccessDR, an accessible SDR radio application for blind and visually impaired users
+site_url: https://ragb.github.io/accessdr/
+
+repo_url: https://github.com/ragb/accessdr
+repo_name: ragb/accessdr
+
+theme:
+  name: material
+  language: en
+  favicon: assets/icon.png
+  logo: assets/icon.png
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: light blue
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - User Guide: user-guide.md
+  - Keyboard Shortcuts: keyboard-shortcuts.md
+  - Settings Reference: settings.md
+  - Building from Source: building.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.keys
+  - tables
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ragb/accessdr

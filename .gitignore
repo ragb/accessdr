@@ -24,6 +24,9 @@ is_setup.exe
 # Claude Code internal
 .claude/
 
+# MkDocs build output
+site/
+
 # Icon generation artifacts
 accessdr_icon_preview.png
 
