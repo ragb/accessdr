@@ -38,7 +38,7 @@ class Settings:
     sonification_enabled: bool = False
     sonification_min_hz: int = 200
     sonification_max_hz: int = 4000
-    sonification_sweep_speed: float = 1.0   # seconds per sweep
+    sonification_sweep_speed: float = 5.0   # seconds per sweep
     speech_peak_count: int = 3
     auto_announce_threshold: float = -60.0  # dBm
 

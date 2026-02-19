@@ -93,7 +93,7 @@ class SpectrumDialog(wx.Frame):
         son_grid.Add(wx.StaticText(panel, label="Sweep speed (s):"), 0, wx.ALIGN_CENTER_VERTICAL)
         self._sweep_speed = wx.SpinCtrlDouble(
             panel, value=str(self._settings.sonification_sweep_speed),
-            min=0.2, max=10.0, inc=0.1, name="Sweep speed seconds"
+            min=0.5, max=30.0, inc=0.5, name="Sweep speed seconds"
         )
         son_grid.Add(self._sweep_speed, 1, wx.EXPAND)
 
