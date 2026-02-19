@@ -14,19 +14,33 @@ Usage:
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 
 from invoke import task, Context
+
 
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-VENV_SCRIPTS = os.path.join(PROJECT_ROOT, ".venv", "Scripts")
-PYTHON = os.path.join(VENV_SCRIPTS, "python.exe")
-PYBABEL = os.path.join(VENV_SCRIPTS, "pybabel.exe")
-PYINSTALLER = os.path.join(VENV_SCRIPTS, "pyinstaller.exe")
-MAKENSIS = r"C:\Program Files (x86)\NSIS\makensis.exe"
+
+
+def _find_tool(name: str) -> str:
+    """Return the path to *name*, preferring .venv/Scripts, then PATH."""
+    venv = os.path.join(PROJECT_ROOT, ".venv", "Scripts", name)
+    if os.path.isfile(venv):
+        return venv
+    on_path = shutil.which(name)
+    if on_path:
+        return on_path
+    return name   # fall back to bare name, let the shell resolve it
+
+
+PYTHON = _find_tool("python.exe")
+PYBABEL = _find_tool("pybabel.exe")
+PYINSTALLER = _find_tool("pyinstaller.exe")
+MAKENSIS = shutil.which("makensis") or r"C:\Program Files (x86)\NSIS\makensis.exe"
 
 RTLSDR_DLL_URL = (
     "https://github.com/librtlsdr/librtlsdr/releases/download/"
