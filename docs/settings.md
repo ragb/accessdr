@@ -38,8 +38,8 @@ Accessible via **Tools > Spectrum & Sonification** (++ctrl+s++).
 |---|---|---|
 | `fft_size` | 1024 | FFT window size for spectrum analysis |
 | `sonification_enabled` | false | Enable spectrum sonification |
-| `sonification_min_hz` | 200 Hz | Lowest pitch of the sonification tone |
-| `sonification_max_hz` | 4000 Hz | Highest pitch of the sonification tone |
+| `sonification_min_hz` | 200 Hz | Pitch for weak signals (noise floor) |
+| `sonification_max_hz` | 4000 Hz | Pitch for strong signals (full power) |
 | `sonification_sweep_speed` | 5.0 s | Duration of one full spectrum sweep |
 | `speech_peak_count` | 3 | Number of peaks announced when pressing ++f++ |
 | `auto_announce_threshold` | -60.0 dBm | Signal level for automatic announcements |

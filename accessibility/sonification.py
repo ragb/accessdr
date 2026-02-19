@@ -1,19 +1,24 @@
 """
 accessibility/sonification.py — Spectrum-to-audio tone mapping.
 
-Converts FFT magnitude bins into a sweeping tone that pitch-encodes
-frequency position and amplitude-encodes signal strength, giving blind
+Converts FFT magnitude bins into a stereo sweeping tone that gives blind
 users an audible overview of the spectrum without needing a visual
 waterfall display.
+
+Mapping
+-------
+- **Pan (L→R)** encodes frequency position — left ear = low end of the
+  spectrum, right ear = high end.  Equal-power panning via cos/sin.
+- **Pitch** encodes signal power — stronger signals produce a higher
+  pitch, weak signals / noise floor produce a low pitch or silence.
+  The mapping is logarithmic (octaves) for perceptual uniformity.
+- **Amplitude** is a fixed level (MAX_AMP) above the noise floor and
+  zero below it, so noise stays silent and signals are clearly audible.
 
 Design
 ------
 - The audio callback is fully vectorised with NumPy — no per-sample
   Python loops, so it runs safely inside the sounddevice audio thread.
-- Pitch is mapped logarithmically (octaves) — perceptually uniform.
-- Amplitude maps the range [noise_floor_db .. noise_floor_db+60 dB]
-  to [0 .. 0.25], so a quiet noise floor is near-silent and a strong
-  signal is clearly audible.
 - Phase is carried between callback blocks for glitch-free audio.
 - Snapshot mode plays exactly one full L→R sweep then stops.
 
@@ -122,6 +127,13 @@ class Sonification:
                 pass
             self._stream = None
 
+    @property
+    def sweep_pos(self) -> float:
+        """Current sweep position (0.0–1.0), or -1.0 if not sweeping."""
+        if not self._running:
+            return -1.0
+        return self._sweep_pos
+
     def update_settings(
         self,
         min_pitch: Optional[int] = None,
@@ -147,7 +159,7 @@ class Sonification:
         try:
             self._stream = sd.OutputStream(
                 samplerate=SAMPLE_RATE,
-                channels=1,
+                channels=2,
                 dtype="float32",
                 blocksize=512,
                 callback=self._audio_callback,
@@ -165,7 +177,10 @@ class Sonification:
         time,                      # noqa: ANN001
         status,                    # noqa: ANN001
     ) -> None:
-        """sounddevice callback — runs in audio thread, fully vectorised."""
+        """sounddevice callback — runs in audio thread, fully vectorised.
+
+        Mapping: pan = frequency position, pitch = signal power.
+        """
         with self._lock:
             spectrum = self._spectrum
 
@@ -198,9 +213,7 @@ class Sonification:
         # Update sweep position for the next block
         self._sweep_pos = float(pos_raw[-1] % 1.0) if n > 0 else self._sweep_pos
 
-        # --- Amplitude (normalised relative to this spectrum's noise floor) ---
-        # Use the bottom _NOISE_PERCENTILE of bins as the noise floor so the
-        # mapping adapts to the FFT's absolute power scale automatically.
+        # --- Interpolate power at current sweep position ---
         noise_floor = float(np.percentile(spectrum, _NOISE_PERCENTILE))
 
         bin_f  = pos_norm * (bins - 1)
@@ -209,19 +222,35 @@ class Sonification:
         frac   = bin_f - bin_lo
         amp_db = spectrum[bin_lo] * (1.0 - frac) + spectrum[bin_hi] * frac
 
-        amp = np.clip((amp_db - noise_floor) / _DYNAMIC_RANGE_DB, 0.0, 1.0) * MAX_AMP
+        # --- Amplitude: ramp quickly from silence to MAX_AMP over a few dB ---
+        # A 3 dB soft knee avoids clicks at the noise-floor boundary.
+        _KNEE_DB = 3.0
+        amp = np.clip((amp_db - noise_floor) / _KNEE_DB, 0.0, 1.0) * MAX_AMP
 
-        # --- Pitch (logarithmic — perceptually uniform across octaves) ---
+        # --- Pitch: power → frequency (logarithmic, perceptually uniform) ---
+        power_norm = np.clip(
+            (amp_db - noise_floor) / _DYNAMIC_RANGE_DB, 0.0, 1.0,
+        )
         log_ratio = math.log(max(self.max_pitch, self.min_pitch + 1) / self.min_pitch)
-        freq = self.min_pitch * np.exp(log_ratio * pos_norm)
+        freq = self.min_pitch * np.exp(log_ratio * power_norm)
+
+        # --- Pan: equal-power L/R from sweep position ---
+        gain_l = np.cos(pos_norm * (np.pi / 2.0))
+        gain_r = np.sin(pos_norm * (np.pi / 2.0))
 
         # --- Phase accumulation (continuous across blocks, no clicks) ---
         phase_inc = freq / SAMPLE_RATE
         phases    = self._phase + np.cumsum(phase_inc)
         self._phase = float(phases[-1]) % 1.0
 
-        out = amp * np.sin(2.0 * np.pi * phases)
-        outdata[:n, 0] = out.astype(np.float32)
+        # Warm timbre: fundamental + soft 2nd & 3rd harmonics (organ-like)
+        two_pi = 2.0 * np.pi
+        raw = (np.sin(two_pi * phases)
+               + 0.3 * np.sin(2.0 * two_pi * phases)
+               + 0.1 * np.sin(3.0 * two_pi * phases))
+        tone = (amp / 1.4 * raw).astype(np.float32)
+        outdata[:n, 0] = gain_l.astype(np.float32) * tone
+        outdata[:n, 1] = gain_r.astype(np.float32) * tone
 
         if stop_after:
             self._running = False

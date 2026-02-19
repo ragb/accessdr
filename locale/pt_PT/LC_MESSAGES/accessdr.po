@@ -763,13 +763,13 @@ msgstr "Sonificação"
 msgid "Enable sonification"
 msgstr "Ativar sonificação"
 
-#: ui/dialogs/spectrum_dialog.py:81
-msgid "Min pitch (Hz):"
-msgstr "Tom mínimo (Hz):"
+#: ui/dialogs/spectrum_dialog.py:75
+msgid "Weak signal pitch (Hz):"
+msgstr "Tom de sinal fraco (Hz):"
 
-#: ui/dialogs/spectrum_dialog.py:88
-msgid "Max pitch (Hz):"
-msgstr "Tom máximo (Hz):"
+#: ui/dialogs/spectrum_dialog.py:82
+msgid "Strong signal pitch (Hz):"
+msgstr "Tom de sinal forte (Hz):"
 
 #: ui/dialogs/spectrum_dialog.py:95
 msgid "Sweep speed (s):"

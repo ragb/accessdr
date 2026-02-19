@@ -77,10 +77,10 @@ Sonification converts the FFT spectrum into audio, letting you "see" the spectru
 
 ### How It Works
 
-- The spectrum is swept from left to right as a tone
-- **Pitch** encodes frequency position (low pitch = left side, high pitch = right side)
-- **Volume** encodes signal strength (louder = stronger signal)
-- Strong signals pop out as clearly audible bumps in the sweep
+- The spectrum is swept from left to right using **stereo panning** — left ear = low end, right ear = high end
+- **Pitch** encodes signal power — stronger signals produce a higher pitch, weak signals a low pitch
+- Signals below the noise floor are silent, so only real signals are audible
+- Strong signals pop out as clearly audible high-pitched tones at their position in the stereo field
 
 ### Using Sonification
 
@@ -91,7 +91,7 @@ Sonification converts the FFT spectrum into audio, letting you "see" the spectru
 
 ### Sonification Settings
 
-- **Min/Max pitch** — frequency range of the tone (default 200-4000 Hz)
+- **Weak/Strong signal pitch** — pitch range mapped to signal power (default 200-4000 Hz)
 - **Sweep speed** — how long one full L-to-R sweep takes (default 5 seconds)
 
 ### Spectrum Peaks

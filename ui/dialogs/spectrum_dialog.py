@@ -1,8 +1,7 @@
 """
-ui/dialogs/spectrum_dialog.py — Spectrum & Sonification settings dialog.
+ui/dialogs/spectrum_dialog.py — Spectrum settings dialog.
 
-Controls FFT settings, sonification parameters, speech readout options,
-and provides a manual snapshot trigger.
+Controls FFT settings, sonification parameters, and speech readout options.
 """
 
 from __future__ import annotations
@@ -27,18 +26,17 @@ class SpectrumDialog(wx.Frame):
     ) -> None:
         super().__init__(
             parent,
-            title=_("Spectrum & Sonification"),
+            title=_("Spectrum Settings"),
             style=wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT,
         )
-        self.SetName("Spectrum and Sonification dialog")
+        self.SetName("Spectrum Settings dialog")
         self._settings = settings
         self._son = sonification
         self._on_change = on_change
-        self._sweeping = False
         self._build_ui()
-        self.SetSize(440, 480)
+        self.SetSize(440, 340)
         self.Centre()
-        speech.output(_("Spectrum and Sonification dialog opened."))
+        speech.output(_("Spectrum Settings dialog opened."))
 
     # ------------------------------------------------------------------
 
@@ -72,23 +70,17 @@ class SpectrumDialog(wx.Frame):
         son_grid = wx.FlexGridSizer(cols=2, vgap=6, hgap=8)
         son_grid.AddGrowableCol(1)
 
-        self._son_enable = wx.CheckBox(
-            panel, label=_("Enable sonification"), name="Enable sonification"
-        )
-        self._son_enable.SetValue(self._settings.sonification_enabled)
-        son_sizer.Add(self._son_enable, 0, wx.ALL, 4)
-
-        son_grid.Add(wx.StaticText(panel, label=_("Min pitch (Hz):")), 0, wx.ALIGN_CENTER_VERTICAL)
+        son_grid.Add(wx.StaticText(panel, label=_("Weak signal pitch (Hz):")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._min_pitch = wx.SpinCtrl(
             panel, value=str(self._settings.sonification_min_hz),
-            min=100, max=2000, name="Minimum pitch Hz"
+            min=100, max=2000, name="Weak signal pitch Hz"
         )
         son_grid.Add(self._min_pitch, 1, wx.EXPAND)
 
-        son_grid.Add(wx.StaticText(panel, label=_("Max pitch (Hz):")), 0, wx.ALIGN_CENTER_VERTICAL)
+        son_grid.Add(wx.StaticText(panel, label=_("Strong signal pitch (Hz):")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._max_pitch = wx.SpinCtrl(
             panel, value=str(self._settings.sonification_max_hz),
-            min=500, max=8000, name="Maximum pitch Hz"
+            min=500, max=8000, name="Strong signal pitch Hz"
         )
         son_grid.Add(self._max_pitch, 1, wx.EXPAND)
 
@@ -100,20 +92,6 @@ class SpectrumDialog(wx.Frame):
         son_grid.Add(self._sweep_speed, 1, wx.EXPAND)
 
         son_sizer.Add(son_grid, 0, wx.EXPAND | wx.ALL, 6)
-
-        # Snapshot button
-        snap_btn = wx.Button(
-            panel, label=_("Snapshot Sweep (Space)"), name="Sonification snapshot"
-        )
-        snap_btn.Bind(wx.EVT_BUTTON, self._on_snapshot)
-        son_sizer.Add(snap_btn, 0, wx.ALL, 6)
-
-        sweep_btn = wx.Button(
-            panel, label=_("Toggle Continuous Sweep"), name="Toggle continuous sweep"
-        )
-        sweep_btn.Bind(wx.EVT_BUTTON, self._on_toggle_sweep)
-        son_sizer.Add(sweep_btn, 0, wx.ALL | wx.BOTTOM, 6)
-
         main_sizer.Add(son_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
         # --- Speech readout section ---
@@ -157,27 +135,12 @@ class SpectrumDialog(wx.Frame):
 
     # ------------------------------------------------------------------
 
-    def _on_snapshot(self, _event: wx.CommandEvent) -> None:
-        self._son.snapshot()
-        speech.output(_("Sonification snapshot started."))
-
-    def _on_toggle_sweep(self, _event: wx.CommandEvent) -> None:
-        if self._sweeping:
-            self._son.stop()
-            self._sweeping = False
-            speech.output(_("Continuous sweep stopped."))
-        else:
-            self._son.start_sweep()
-            self._sweeping = True
-            speech.output(_("Continuous sweep started."))
-
     def _on_apply(self, _event: wx.CommandEvent) -> None:
         fft_sizes = [256, 512, 1024, 2048, 4096]
         idx = self._fft_choice.GetSelection()
         if 0 <= idx < len(fft_sizes):
             self._settings.fft_size = fft_sizes[idx]
 
-        self._settings.sonification_enabled = self._son_enable.GetValue()
         self._settings.sonification_min_hz = self._min_pitch.GetValue()
         self._settings.sonification_max_hz = self._max_pitch.GetValue()
         self._settings.sonification_sweep_speed = self._sweep_speed.GetValue()
@@ -197,9 +160,7 @@ class SpectrumDialog(wx.Frame):
         speech.output(_("Spectrum settings applied."))
 
     def _on_key(self, event: wx.KeyEvent) -> None:
-        if event.GetKeyCode() == wx.WXK_SPACE:
-            self._on_snapshot(event)
-        elif event.GetKeyCode() == wx.WXK_ESCAPE:
+        if event.GetKeyCode() == wx.WXK_ESCAPE:
             self.Close()
         else:
             event.Skip()
