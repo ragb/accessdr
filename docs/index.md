@@ -27,3 +27,8 @@ Software-defined radio uses a small USB dongle to receive radio signals across a
 5. Use ++up++ / ++down++ to tune
 
 See the [Getting Started](getting-started.md) guide for detailed setup instructions.
+
+## Links
+
+- [GitHub Repository](https://github.com/ragb/accessdr)
+- [Latest Release](https://github.com/ragb/accessdr/releases/latest)
