@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "AccessDR"
+dynamic = ["version"]
+description = "Accessible SDR radio application for blind and visually impaired users"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [{ name = "AccessDR Contributors" }]
+keywords = ["sdr", "radio", "accessibility", "blind", "rtl-sdr"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Communications :: Ham Radio",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "wxPython>=4.2.0",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "sounddevice>=0.4.6",
+    "accessible_output2>=0.17",
+    "pyrtlsdr>=0.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pyinstaller>=6.0",
+    "babel>=2.14",
+    "invoke>=2.0",
+]
+
+[project.scripts]
+accessdr = "main:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "accessdr_version.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["accessdr*", "ui*", "config*", "core*", "accessibility*"]

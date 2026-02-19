@@ -11,46 +11,46 @@ import wx
 from accessibility import speech
 
 SHORTCUTS = [
-    ("--- Main Window ---", ""),
-    ("Start / Stop radio", "Space  (or toolbar button)"),
-    ("Tune up by step", "Up Arrow"),
-    ("Tune down by step", "Down Arrow"),
-    ("Tune up by 10× step", "Ctrl+Up"),
-    ("Tune down by 10× step", "Ctrl+Down"),
-    ("Cycle step size", "S"),
-    ("Mute / Unmute", "M"),
-    ("Read signal strength", "I"),
+    (N_("--- Main Window ---"), ""),
+    (N_("Start / Stop radio"), "Space  (or toolbar button)"),
+    (N_("Tune up by step"), "Up Arrow"),
+    (N_("Tune down by step"), "Down Arrow"),
+    (N_("Tune up by 10× step"), "Ctrl+Up"),
+    (N_("Tune down by 10× step"), "Ctrl+Down"),
+    (N_("Cycle step size"), "S"),
+    (N_("Mute / Unmute"), "M"),
+    (N_("Read signal strength"), "I"),
     ("", ""),
-    ("--- Demodulation modes ---", ""),
-    ("Wide FM", "W"),
-    ("Narrow FM", "N"),
+    (N_("--- Demodulation modes ---"), ""),
+    (N_("Wide FM"), "W"),
+    (N_("Narrow FM"), "N"),
     ("AM", "A"),
     ("USB", "U"),
     ("LSB", "L"),
     ("CW", "C"),
     ("DSB", "D"),
     ("", ""),
-    ("--- Spectrum / Sonification ---", ""),
-    ("Speak top peaks", "F"),
-    ("Sonification snapshot sweep", "Space  (in Spectrum dialog)"),
+    (N_("--- Spectrum / Sonification ---"), ""),
+    (N_("Speak top peaks"), "F"),
+    (N_("Sonification snapshot sweep"), "Space  (in Spectrum dialog)"),
     ("", ""),
-    ("--- Dialogs ---", ""),
-    ("RF Settings", "Ctrl+R"),
-    ("Spectrum & Sonification", "Ctrl+S"),
-    ("Scanner", "Ctrl+N"),
-    ("Bookmarks", "Ctrl+B"),
-    ("Audio Settings", "Ctrl+D"),
-    ("Help (this window)", "F1"),
+    (N_("--- Dialogs ---"), ""),
+    (N_("RF Settings"), "Ctrl+R"),
+    (N_("Spectrum & Sonification"), "Ctrl+S"),
+    (N_("Scanner"), "Ctrl+N"),
+    (N_("Bookmarks"), "Ctrl+B"),
+    (N_("Audio Settings"), "Ctrl+D"),
+    (N_("Help (this window)"), "F1"),
     ("", ""),
-    ("--- Scanner (when open) ---", ""),
-    ("Hold on frequency", "H"),
-    ("Skip to next", "K"),
-    ("Stop scan", "Escape"),
+    (N_("--- Scanner (when open) ---"), ""),
+    (N_("Hold on frequency"), "H"),
+    (N_("Skip to next"), "K"),
+    (N_("Stop scan"), "Escape"),
     ("", ""),
-    ("--- General ---", ""),
-    ("Open Bands menu", "Alt+R  (Radio menu)"),
-    ("Save bookmark", "Ctrl+Shift+B"),
-    ("Quit", "Alt+F4"),
+    (N_("--- General ---"), ""),
+    (N_("Open Bands menu"), "Alt+R  (Radio menu)"),
+    (N_("Save bookmark"), "Ctrl+Shift+B"),
+    (N_("Quit"), "Alt+F4"),
 ]
 
 
@@ -60,7 +60,7 @@ class HelpDialog(wx.Frame):
     def __init__(self, parent: wx.Window) -> None:
         super().__init__(
             parent,
-            title="Keyboard Shortcuts — AccessDR",
+            title=_("Keyboard Shortcuts — AccessDR"),
             style=wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT,
         )
         self.SetName("Keyboard Shortcuts dialog")
@@ -77,7 +77,7 @@ class HelpDialog(wx.Frame):
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        lbl = wx.StaticText(panel, label="AccessDR Keyboard Shortcuts")
+        lbl = wx.StaticText(panel, label=_("AccessDR Keyboard Shortcuts"))
         lbl.SetFont(lbl.GetFont().Bold())
         sizer.Add(lbl, 0, wx.ALL, 8)
 
@@ -87,16 +87,16 @@ class HelpDialog(wx.Frame):
             style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.BORDER_SUNKEN,
             name="Shortcut list",
         )
-        self._list.InsertColumn(0, "Action", width=300)
-        self._list.InsertColumn(1, "Key(s)", width=200)
+        self._list.InsertColumn(0, _("Action"), width=300)
+        self._list.InsertColumn(1, _("Key(s)"), width=200)
 
         for action, key in SHORTCUTS:
-            idx = self._list.InsertItem(self._list.GetItemCount(), action)
+            idx = self._list.InsertItem(self._list.GetItemCount(), _(action) if action else "")
             self._list.SetItem(idx, 1, key)
 
         sizer.Add(self._list, 1, wx.EXPAND | wx.ALL, 8)
 
-        close_btn = wx.Button(panel, wx.ID_CLOSE, label="Close")
+        close_btn = wx.Button(panel, wx.ID_CLOSE, label=_("Close"))
         close_btn.SetName("Close help dialog")
         close_btn.Bind(wx.EVT_BUTTON, lambda e: self.Close())
         sizer.Add(close_btn, 0, wx.ALIGN_RIGHT | wx.ALL, 8)
@@ -111,8 +111,8 @@ class HelpDialog(wx.Frame):
             event.Skip()
 
     def _announce(self) -> None:
-        lines = ["Keyboard Shortcuts for AccessDR."]
+        lines = [_("Keyboard Shortcuts for AccessDR.")]
         for action, key in SHORTCUTS:
             if action and key:
-                lines.append(f"{action}: {key}")
+                lines.append(f"{_(action)}: {key}")
         speech.speak("  ".join(lines), interrupt=False)

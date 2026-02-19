@@ -13,6 +13,14 @@ __pycache__/
 settings.json
 bookmarks.json
 
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# Downloaded installers
+is_setup.exe
+
 # Claude Code internal
 .claude/
 

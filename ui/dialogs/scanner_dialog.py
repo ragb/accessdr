@@ -30,7 +30,7 @@ class ScannerDialog(wx.Frame):
     ) -> None:
         super().__init__(
             parent,
-            title="Frequency Scanner",
+            title=_("Frequency Scanner"),
             style=wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT,
         )
         self.SetName("Frequency Scanner dialog")
@@ -40,7 +40,7 @@ class ScannerDialog(wx.Frame):
         self._build_ui()
         self.SetSize(520, 560)
         self.Centre()
-        speech.speak("Scanner dialog opened.")
+        speech.speak(_("Scanner dialog opened."))
 
     # ------------------------------------------------------------------
 
@@ -49,24 +49,24 @@ class ScannerDialog(wx.Frame):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         # --- Parameters ---
-        param_box = wx.StaticBox(panel, label="Scan Parameters")
+        param_box = wx.StaticBox(panel, label=_("Scan Parameters"))
         param_sizer = wx.StaticBoxSizer(param_box, wx.VERTICAL)
         grid = wx.FlexGridSizer(cols=2, vgap=6, hgap=8)
         grid.AddGrowableCol(1)
 
-        grid.Add(wx.StaticText(panel, label="Start (MHz):"), 0, wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(wx.StaticText(panel, label=_("Start (MHz):")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._start = wx.TextCtrl(panel, value="88.0", name="Scan start frequency MHz")
         grid.Add(self._start, 1, wx.EXPAND)
 
-        grid.Add(wx.StaticText(panel, label="Stop (MHz):"), 0, wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(wx.StaticText(panel, label=_("Stop (MHz):")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._stop = wx.TextCtrl(panel, value="108.0", name="Scan stop frequency MHz")
         grid.Add(self._stop, 1, wx.EXPAND)
 
-        grid.Add(wx.StaticText(panel, label="Step (kHz):"), 0, wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(wx.StaticText(panel, label=_("Step (kHz):")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._step = wx.TextCtrl(panel, value="100", name="Scan step kHz")
         grid.Add(self._step, 1, wx.EXPAND)
 
-        grid.Add(wx.StaticText(panel, label="Squelch (dBm):"), 0, wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(wx.StaticText(panel, label=_("Squelch (dBm):")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._squelch = wx.SpinCtrl(
             panel, value="-60", min=-120, max=0, name="Scan squelch threshold dBm"
         )
@@ -77,33 +77,33 @@ class ScannerDialog(wx.Frame):
 
         # --- Controls ---
         ctrl_row = wx.BoxSizer(wx.HORIZONTAL)
-        self._start_btn = wx.Button(panel, label="Start Scan", name="Start scan")
-        self._hold_btn = wx.Button(panel, label="Hold (H)", name="Hold on frequency")
-        self._skip_btn = wx.Button(panel, label="Skip (K)", name="Skip frequency")
-        self._stop_btn = wx.Button(panel, label="Stop (Esc)", name="Stop scan")
+        self._start_btn = wx.Button(panel, label=_("Start Scan"), name="Start scan")
+        self._hold_btn = wx.Button(panel, label=_("Hold (H)"), name="Hold on frequency")
+        self._skip_btn = wx.Button(panel, label=_("Skip (K)"), name="Skip frequency")
+        self._stop_btn = wx.Button(panel, label=_("Stop (Esc)"), name="Stop scan")
         for btn in (self._start_btn, self._hold_btn, self._skip_btn, self._stop_btn):
             ctrl_row.Add(btn, 0, wx.RIGHT, 6)
         sizer.Add(ctrl_row, 0, wx.ALL, 8)
 
         # --- Results ---
-        res_box = wx.StaticBox(panel, label="Results")
+        res_box = wx.StaticBox(panel, label=_("Results"))
         res_sizer = wx.StaticBoxSizer(res_box, wx.VERTICAL)
         self._results_list = wx.ListCtrl(
             panel,
             style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.BORDER_SUNKEN,
             name="Scan results list",
         )
-        self._results_list.InsertColumn(0, "Frequency", width=160)
-        self._results_list.InsertColumn(1, "Strength (dBm)", width=140)
+        self._results_list.InsertColumn(0, _("Frequency"), width=160)
+        self._results_list.InsertColumn(1, _("Strength (dBm)"), width=140)
         res_sizer.Add(self._results_list, 1, wx.EXPAND | wx.ALL, 4)
 
-        clear_btn = wx.Button(panel, label="Clear Results", name="Clear scan results")
+        clear_btn = wx.Button(panel, label=_("Clear Results"), name="Clear scan results")
         clear_btn.Bind(wx.EVT_BUTTON, self._on_clear)
         res_sizer.Add(clear_btn, 0, wx.ALL, 4)
         sizer.Add(res_sizer, 1, wx.EXPAND | wx.ALL, 8)
 
         # Status
-        self._status = wx.StaticText(panel, label="Idle", name="Scanner status")
+        self._status = wx.StaticText(panel, label=_("Idle"), name="Scanner status")
         sizer.Add(self._status, 0, wx.ALL, 8)
 
         panel.SetSizer(sizer)
@@ -124,21 +124,24 @@ class ScannerDialog(wx.Frame):
             step_hz = int(float(self._step.GetValue()) * 1_000)
             squelch = float(self._squelch.GetValue())
         except ValueError:
-            speech.speak("Invalid scan parameters.")
+            speech.speak(_("Invalid scan parameters."))
             return
 
         self._results_list.DeleteAllItems()
-        self._status.SetLabel("Scanning…")
+        self._status.SetLabel(_("Scanning…"))
         self._scanner.start(start_hz, stop_hz, step_hz, squelch)
         speech.speak(
-            f"Scan started from {_fmt_freq(start_hz)} to {_fmt_freq(stop_hz)}, "
-            f"step {step_hz // 1000} kHz."
+            _("Scan started from {start} to {stop}, step {step} kHz.").format(
+                start=_fmt_freq(start_hz),
+                stop=_fmt_freq(stop_hz),
+                step=step_hz // 1000,
+            )
         )
 
     def _on_stop(self, _event: wx.CommandEvent) -> None:
         self._scanner.stop()
-        self._status.SetLabel("Stopped.")
-        speech.speak("Scan stopped.")
+        self._status.SetLabel(_("Stopped."))
+        speech.speak(_("Scan stopped."))
 
     def _on_clear(self, _event: wx.CommandEvent) -> None:
         self._results_list.DeleteAllItems()
@@ -150,13 +153,27 @@ class ScannerDialog(wx.Frame):
         )
         self._results_list.SetItem(idx, 1, f"{result.strength_db:.1f}")
         speech.speak(
-            f"Signal found at {_fmt_freq(result.freq_hz)}, {result.strength_db:.0f} dBm."
+            _("Signal found at {freq}, {db:.0f} dBm.").format(
+                freq=_fmt_freq(result.freq_hz), db=result.strength_db
+            )
         )
 
     def _on_scan_complete(self, results: list) -> None:
         count = len(results)
-        self._status.SetLabel(f"Complete — {count} signal(s) found.")
-        speech.speak(f"Scan complete. {count} signal{'s' if count != 1 else ''} found.")
+        self._status.SetLabel(
+            ngettext(
+                "Complete — {count} signal found.",
+                "Complete — {count} signals found.",
+                count,
+            ).format(count=count)
+        )
+        speech.speak(
+            ngettext(
+                "Scan complete. {count} signal found.",
+                "Scan complete. {count} signals found.",
+                count,
+            ).format(count=count)
+        )
 
     def _on_key(self, event: wx.KeyEvent) -> None:
         code = event.GetKeyCode()

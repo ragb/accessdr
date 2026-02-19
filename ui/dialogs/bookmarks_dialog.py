@@ -25,17 +25,17 @@ class BookmarksDialog(wx.Frame):
     ) -> None:
         super().__init__(
             parent,
-            title="Bookmarks",
+            title=_("Bookmarks"),
             style=wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT,
         )
         self.SetName("Bookmarks dialog")
         self._store = store
-        self._on_load = on_load
+        self._on_load_cb = on_load
         self._build_ui()
         self.SetSize(480, 420)
         self.Centre()
         self._refresh_list()
-        speech.speak("Bookmarks dialog opened.")
+        speech.speak(_("Bookmarks dialog opened."))
 
     # ------------------------------------------------------------------
 
@@ -49,26 +49,28 @@ class BookmarksDialog(wx.Frame):
             style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.BORDER_SUNKEN,
             name="Bookmarks list",
         )
-        self._list.InsertColumn(0, "Label", width=200)
-        self._list.InsertColumn(1, "Frequency", width=130)
-        self._list.InsertColumn(2, "Mode", width=80)
+        self._list.InsertColumn(0, _("Label"), width=200)
+        self._list.InsertColumn(1, _("Frequency"), width=130)
+        self._list.InsertColumn(2, _("Mode"), width=80)
         sizer.Add(self._list, 1, wx.EXPAND | wx.ALL, 8)
 
         # Add new bookmark section
-        add_box = wx.StaticBox(panel, label="Add Bookmark")
+        add_box = wx.StaticBox(panel, label=_("Add Bookmark"))
         add_sizer = wx.StaticBoxSizer(add_box, wx.VERTICAL)
         add_grid = wx.FlexGridSizer(cols=2, vgap=6, hgap=8)
         add_grid.AddGrowableCol(1)
 
-        add_grid.Add(wx.StaticText(panel, label="Label:"), 0, wx.ALIGN_CENTER_VERTICAL)
+        add_grid.Add(wx.StaticText(panel, label=_("Label:")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._label_ctrl = wx.TextCtrl(panel, name="Bookmark label")
         add_grid.Add(self._label_ctrl, 1, wx.EXPAND)
 
-        add_grid.Add(wx.StaticText(panel, label="Frequency (MHz):"), 0, wx.ALIGN_CENTER_VERTICAL)
+        add_grid.Add(
+            wx.StaticText(panel, label=_("Frequency (MHz):")), 0, wx.ALIGN_CENTER_VERTICAL
+        )
         self._freq_ctrl = wx.TextCtrl(panel, name="Bookmark frequency MHz")
         add_grid.Add(self._freq_ctrl, 1, wx.EXPAND)
 
-        add_grid.Add(wx.StaticText(panel, label="Mode:"), 0, wx.ALIGN_CENTER_VERTICAL)
+        add_grid.Add(wx.StaticText(panel, label=_("Mode:")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._mode_ctrl = wx.Choice(
             panel,
             choices=["WFM", "NFM", "AM", "USB", "LSB", "CW", "DSB"],
@@ -79,17 +81,17 @@ class BookmarksDialog(wx.Frame):
 
         add_sizer.Add(add_grid, 0, wx.EXPAND | wx.ALL, 6)
 
-        add_btn = wx.Button(panel, label="Add Bookmark", name="Add bookmark")
+        add_btn = wx.Button(panel, label=_("Add Bookmark"), name="Add bookmark")
         add_btn.Bind(wx.EVT_BUTTON, self._on_add)
         add_sizer.Add(add_btn, 0, wx.ALL, 4)
         sizer.Add(add_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
         # Action buttons
         btn_row = wx.BoxSizer(wx.HORIZONTAL)
-        load_btn = wx.Button(panel, label="Load Selected", name="Load selected bookmark")
-        del_btn = wx.Button(panel, label="Delete Selected", name="Delete selected bookmark")
-        close_btn = wx.Button(panel, wx.ID_CLOSE, label="Close")
-        load_btn.Bind(wx.EVT_BUTTON, self._on_load)
+        load_btn = wx.Button(panel, label=_("Load Selected"), name="Load selected bookmark")
+        del_btn = wx.Button(panel, label=_("Delete Selected"), name="Delete selected bookmark")
+        close_btn = wx.Button(panel, wx.ID_CLOSE, label=_("Close"))
+        load_btn.Bind(wx.EVT_BUTTON, self._on_load_selected)
         del_btn.Bind(wx.EVT_BUTTON, self._on_delete)
         close_btn.Bind(wx.EVT_BUTTON, lambda e: self.Close())
         for b in (load_btn, del_btn, close_btn):
@@ -97,7 +99,7 @@ class BookmarksDialog(wx.Frame):
         sizer.Add(btn_row, 0, wx.ALL, 8)
 
         panel.SetSizer(sizer)
-        self._list.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self._on_load)
+        self._list.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self._on_load_selected)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
 
     # ------------------------------------------------------------------
@@ -115,12 +117,12 @@ class BookmarksDialog(wx.Frame):
         mode = self._mode_ctrl.GetStringSelection()
 
         if not label:
-            speech.speak("Please enter a label.")
+            speech.speak(_("Please enter a label."))
             return
         try:
             freq_hz = int(float(freq_str) * 1_000_000)
         except ValueError:
-            speech.speak("Invalid frequency.")
+            speech.speak(_("Invalid frequency."))
             return
 
         self._store.add(label, freq_hz, mode)
@@ -128,34 +130,42 @@ class BookmarksDialog(wx.Frame):
         self._refresh_list()
         self._label_ctrl.Clear()
         self._freq_ctrl.Clear()
-        speech.speak(f"Bookmark added: {label}, {freq_hz / 1e6:.3f} MHz, {mode}.")
+        speech.speak(
+            _("Bookmark added: {label}, {freq} MHz, {mode}.").format(
+                label=label, freq=f"{freq_hz / 1e6:.3f}", mode=mode
+            )
+        )
 
-    def _on_load(self, _event) -> None:  # noqa: ANN001
+    def _on_load_selected(self, _event) -> None:  # noqa: ANN001
         idx = self._list.GetFirstSelected()
         if idx < 0:
-            speech.speak("No bookmark selected.")
+            speech.speak(_("No bookmark selected."))
             return
         bm = self._store.get_all()[idx]
-        if self._on_load:
-            self._on_load(bm)
-        speech.speak(f"Loaded bookmark: {bm.label}, {bm.frequency / 1e6:.3f} MHz, {bm.mode}.")
+        if self._on_load_cb:
+            self._on_load_cb(bm)
+        speech.speak(
+            _("Loaded bookmark: {label}, {freq} MHz, {mode}.").format(
+                label=bm.label, freq=f"{bm.frequency / 1e6:.3f}", mode=bm.mode
+            )
+        )
 
     def _on_delete(self, _event: wx.CommandEvent) -> None:
         idx = self._list.GetFirstSelected()
         if idx < 0:
-            speech.speak("No bookmark selected.")
+            speech.speak(_("No bookmark selected."))
             return
         bm = self._store.get_all()[idx]
         self._store.remove(idx)
         self._store.save()
         self._refresh_list()
-        speech.speak(f"Deleted bookmark: {bm.label}.")
+        speech.speak(_("Deleted bookmark: {label}.").format(label=bm.label))
 
     def _on_key(self, event: wx.KeyEvent) -> None:
         if event.GetKeyCode() == wx.WXK_ESCAPE:
             self.Close()
         elif event.GetKeyCode() == wx.WXK_RETURN:
-            self._on_load(event)
+            self._on_load_selected(event)
         elif event.GetKeyCode() == wx.WXK_DELETE:
             self._on_delete(event)
         else:

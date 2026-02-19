@@ -11,9 +11,9 @@ import os
 from dataclasses import asdict, dataclass, field
 from typing import List
 
-BOOKMARKS_FILE = os.path.join(
-    os.path.dirname(__file__), "..", "bookmarks.json"
-)
+from config.paths import app_data_dir
+
+BOOKMARKS_FILE = os.path.join(app_data_dir(), "bookmarks.json")
 
 
 @dataclass

@@ -9,9 +9,9 @@ import os
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
-SETTINGS_FILE = os.path.join(
-    os.path.dirname(__file__), "..", "settings.json"
-)
+from config.paths import app_data_dir
+
+SETTINGS_FILE = os.path.join(app_data_dir(), "settings.json")
 
 
 @dataclass
@@ -41,6 +41,9 @@ class Settings:
     sonification_sweep_speed: float = 5.0   # seconds per sweep
     speech_peak_count: int = 3
     auto_announce_threshold: float = -60.0  # dBm
+
+    # i18n — empty string means system default
+    language: str = ""
 
     # Step
     step: int = 1_000               # Hz

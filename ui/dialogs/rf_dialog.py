@@ -29,7 +29,7 @@ class RFDialog(wx.Frame):
     ) -> None:
         super().__init__(
             parent,
-            title="RF Settings",
+            title=_("RF Settings"),
             style=wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT,
         )
         self.SetName("RF Settings dialog")
@@ -38,7 +38,7 @@ class RFDialog(wx.Frame):
         self._build_ui()
         self.SetSize(400, 340)
         self.Centre()
-        speech.speak("RF Settings dialog opened.")
+        speech.speak(_("RF Settings dialog opened."))
 
     # ------------------------------------------------------------------
 
@@ -50,8 +50,8 @@ class RFDialog(wx.Frame):
 
         # Device selector
         devices = enumerate_devices()
-        device_labels = [d.get("label", str(d)) for d in devices] or ["Default / Auto"]
-        grid.Add(wx.StaticText(panel, label="SDR Device:"), 0, wx.ALIGN_CENTER_VERTICAL)
+        device_labels = [d.get("label", str(d)) for d in devices] or [_("Default / Auto")]
+        grid.Add(wx.StaticText(panel, label=_("SDR Device:")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._device_choice = wx.Choice(panel, choices=device_labels, name="SDR Device")
         idx = min(self._settings.device_index, len(device_labels) - 1)
         self._device_choice.SetSelection(idx)
@@ -59,7 +59,7 @@ class RFDialog(wx.Frame):
 
         # Sample rate
         rate_labels = [f"{r // 1000} kHz" for r in SAMPLE_RATES]
-        grid.Add(wx.StaticText(panel, label="Sample Rate:"), 0, wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(wx.StaticText(panel, label=_("Sample Rate:")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._rate_choice = wx.Choice(panel, choices=rate_labels, name="Sample Rate")
         try:
             rate_idx = SAMPLE_RATES.index(self._settings.sample_rate)
@@ -69,7 +69,7 @@ class RFDialog(wx.Frame):
         grid.Add(self._rate_choice, 1, wx.EXPAND)
 
         # Gain slider
-        grid.Add(wx.StaticText(panel, label="RF Gain (dB):"), 0, wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(wx.StaticText(panel, label=_("RF Gain (dB):")), 0, wx.ALIGN_CENTER_VERTICAL)
         gain_panel = wx.Panel(panel)
         gain_row = wx.BoxSizer(wx.HORIZONTAL)
         self._gain_slider = wx.Slider(
@@ -85,7 +85,7 @@ class RFDialog(wx.Frame):
         grid.Add(gain_panel, 1, wx.EXPAND)
 
         # PPM correction
-        grid.Add(wx.StaticText(panel, label="PPM Correction:"), 0, wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(wx.StaticText(panel, label=_("PPM Correction:")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._ppm_spin = wx.SpinCtrl(
             panel, value=str(self._settings.ppm),
             min=-150, max=150, name="PPM Correction"
@@ -95,8 +95,8 @@ class RFDialog(wx.Frame):
         sizer.Add(grid, 1, wx.EXPAND | wx.ALL, 12)
 
         btn_row = wx.BoxSizer(wx.HORIZONTAL)
-        apply_btn = wx.Button(panel, label="Apply", name="Apply RF settings")
-        close_btn = wx.Button(panel, wx.ID_CLOSE, label="Close")
+        apply_btn = wx.Button(panel, label=_("Apply"), name="Apply RF settings")
+        close_btn = wx.Button(panel, wx.ID_CLOSE, label=_("Close"))
         btn_row.Add(apply_btn, 0, wx.RIGHT, 8)
         btn_row.Add(close_btn, 0)
         sizer.Add(btn_row, 0, wx.ALIGN_RIGHT | wx.ALL, 12)
@@ -112,7 +112,7 @@ class RFDialog(wx.Frame):
     def _on_gain_slide(self, event: wx.CommandEvent) -> None:
         val = self._gain_slider.GetValue()
         self._gain_label.SetLabel(f"{val} dB")
-        speech.speak(f"Gain {val} dB")
+        speech.speak(_("Gain {val} dB").format(val=val))
 
     def _on_apply(self, _event: wx.CommandEvent) -> None:
         self._settings.device_index = self._device_choice.GetSelection()
@@ -127,9 +127,12 @@ class RFDialog(wx.Frame):
             self._on_change(self._settings)
 
         speech.speak(
-            f"RF settings applied. Gain {self._settings.gain:.0f} dB, "
-            f"Sample rate {self._settings.sample_rate // 1000} kHz, "
-            f"PPM {self._settings.ppm}."
+            _("RF settings applied. Gain {gain:.0f} dB, "
+              "Sample rate {rate} kHz, PPM {ppm}.").format(
+                gain=self._settings.gain,
+                rate=self._settings.sample_rate // 1000,
+                ppm=self._settings.ppm,
+            )
         )
 
     def _on_key(self, event: wx.KeyEvent) -> None:
