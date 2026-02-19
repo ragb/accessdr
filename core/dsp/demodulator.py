@@ -14,11 +14,14 @@ Public API
 
 from __future__ import annotations
 
+import logging
 import numpy as np
 from abc import ABC, abstractmethod
 from scipy import signal as sp_signal
 
 from .filters import make_lowpass, make_bandpass, deemphasis_filter
+
+logger = logging.getLogger(__name__)
 
 AUDIO_RATE = 48_000
 
@@ -74,21 +77,120 @@ def _make_zi(b, a, n: int) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 class WFMDemodulator(Demodulator):
+    """Wide-band FM demodulator with automatic MPX stereo decoding.
+
+    Stereo decoding is active whenever a 19 kHz pilot tone is detected above
+    _PILOT_THRESHOLD.  When stereo, process() returns a (N, 2) float32 array
+    with left in column 0 and right in column 1.  When mono, it returns (N,).
+
+    MPX signal structure (IEC 60268-3 / NRSC-4):
+      0–15 kHz   — L+R (mono sum)
+      19 kHz     — stereo pilot (always present on stereo stations)
+      23–53 kHz  — (L-R) DSB-SC centred at 38 kHz
+    """
+
+    # Pilot RMS threshold in FM-discriminant units (rad/sample).
+    # Typical broadcast pilot is ~0.05–0.15; threshold of 0.004 is safe.
+    _PILOT_THRESHOLD = 0.004
+
     def __init__(self, baseband_rate: int, audio_rate: int) -> None:
         super().__init__(baseband_rate, audio_rate)
-        self._deemph_b, self._deemph_a = deemphasis_filter(baseband_rate, tau=75e-6)
-        self._lp_b = make_lowpass(15_000, baseband_rate)
-        self._lp_a = np.array([1.0])
-        # Carry filter state between chunks
-        self._zi_deemph = sp_signal.lfilter_zi(self._deemph_b, self._deemph_a) * 0.0
-        self._zi_lp = sp_signal.lfilter_zi(self._lp_b, self._lp_a) * 0.0
+        rate = baseband_rate
+
+        # Shared de-emphasis filter (75 µs, standard for WFM)
+        self._deemph_b, self._deemph_a = deemphasis_filter(rate, tau=75e-6)
+
+        # L+R extraction: LPF 0–15 kHz
+        self._lpr_b = make_lowpass(15_000, rate, num_taps=127)
+        self._lpr_a = np.array([1.0])
+
+        # 19 kHz pilot BPF — narrow bandwidth needs many taps for selectivity
+        # 1023 taps at 240 kHz → transition BW ≈ 1.9 kHz (clears 15 kHz mono
+        # content and 23 kHz L-R subcarrier)
+        self._pilot_b = make_bandpass(18_000, 20_000, rate, num_taps=1023)
+        self._pilot_a = np.array([1.0])
+
+        # L-R DSB-SC subcarrier BPF (23–53 kHz)
+        self._lmr_b = make_bandpass(23_000, 53_000, rate, num_taps=511)
+        self._lmr_a = np.array([1.0])
+
+        # Post-demodulation LPF: removes 76 kHz image after product detection
+        self._lmr_lp_b = make_lowpass(15_000, rate, num_taps=127)
+        self._lmr_lp_a = np.array([1.0])
+
+        # Filter states — zero-initialised, carried between chunks
+        self._zi_lpr     = sp_signal.lfilter_zi(self._lpr_b,    self._lpr_a)    * 0.0
+        self._zi_pilot   = sp_signal.lfilter_zi(self._pilot_b,  self._pilot_a)  * 0.0
+        self._zi_lmr     = sp_signal.lfilter_zi(self._lmr_b,    self._lmr_a)    * 0.0
+        self._zi_lmr_lp  = sp_signal.lfilter_zi(self._lmr_lp_b, self._lmr_lp_a)* 0.0
+        self._zi_deemph_l = sp_signal.lfilter_zi(self._deemph_b, self._deemph_a)* 0.0
+        self._zi_deemph_r = sp_signal.lfilter_zi(self._deemph_b, self._deemph_a)* 0.0
+
+        self.stereo_detected: bool = False
 
     def process(self, iq: np.ndarray) -> np.ndarray:
-        disc = _fm_discriminant(iq)
-        audio, self._zi_deemph = sp_signal.lfilter(
-            self._deemph_b, self._deemph_a, disc, zi=self._zi_deemph)
-        audio, self._zi_lp = sp_signal.lfilter(
-            self._lp_b, self._lp_a, audio, zi=self._zi_lp)
+        # FM discriminant → MPX baseband (rad/sample)
+        mpx = _fm_discriminant(iq)
+
+        # Extract L+R (mono sum, 0–15 kHz)
+        lpr, self._zi_lpr = sp_signal.lfilter(
+            self._lpr_b, self._lpr_a, mpx, zi=self._zi_lpr)
+
+        # Extract 19 kHz pilot
+        pilot, self._zi_pilot = sp_signal.lfilter(
+            self._pilot_b, self._pilot_a, mpx, zi=self._zi_pilot)
+
+        # Stereo detection: pilot RMS above threshold
+        pilot_rms = float(np.sqrt(np.mean(pilot ** 2))) if len(pilot) > 0 else 0.0
+        self.stereo_detected = pilot_rms > self._PILOT_THRESHOLD
+        logger.debug("pilot_rms=%.4f stereo=%s", pilot_rms, self.stereo_detected)
+
+        if self.stereo_detected:
+            return self._process_stereo(mpx, lpr, pilot)
+        else:
+            return self._process_mono(lpr)
+
+    # ------------------------------------------------------------------
+
+    def _process_stereo(
+        self, mpx: np.ndarray, lpr: np.ndarray, pilot: np.ndarray
+    ) -> np.ndarray:
+        # Generate a unit-amplitude 38 kHz reference by squaring the analytic
+        # pilot signal.  pilot_analytic = A·e^(j·2π·19k·t + φ), so squaring
+        # gives A²·e^(j·2π·38k·t + 2φ) which, after normalisation, is the
+        # coherent carrier needed for DSB-SC demodulation.
+        pilot_analytic = sp_signal.hilbert(pilot)
+        ref = pilot_analytic ** 2
+        ref_norm_real = (ref / (np.abs(ref) + 1e-10)).real   # cos(2π·38k·t)
+
+        # Extract L-R DSB-SC subcarrier (23–53 kHz)
+        lmr_band, self._zi_lmr = sp_signal.lfilter(
+            self._lmr_b, self._lmr_a, mpx, zi=self._zi_lmr)
+
+        # Product demodulation → baseband L-R + 76 kHz image
+        lmr_product = lmr_band * ref_norm_real * 2.0
+
+        # LPF to remove the 76 kHz image
+        lmr, self._zi_lmr_lp = sp_signal.lfilter(
+            self._lmr_lp_b, self._lmr_lp_a, lmr_product, zi=self._zi_lmr_lp)
+
+        # Stereo matrix: L = (L+R) + (L-R),  R = (L+R) - (L-R)
+        left  = lpr + lmr
+        right = lpr - lmr
+
+        # De-emphasis on each channel independently
+        left,  self._zi_deemph_l = sp_signal.lfilter(
+            self._deemph_b, self._deemph_a, left,  zi=self._zi_deemph_l)
+        right, self._zi_deemph_r = sp_signal.lfilter(
+            self._deemph_b, self._deemph_a, right, zi=self._zi_deemph_r)
+
+        left_out  = self._resample(left)
+        right_out = self._resample(right)
+        return np.stack([left_out, right_out], axis=1).astype(np.float32)
+
+    def _process_mono(self, lpr: np.ndarray) -> np.ndarray:
+        audio, self._zi_deemph_l = sp_signal.lfilter(
+            self._deemph_b, self._deemph_a, lpr, zi=self._zi_deemph_l)
         return self._resample(audio)
 
 

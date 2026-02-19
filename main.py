@@ -4,9 +4,16 @@ main.py — AccessDR application entry point.
 Initialises the wx.App and opens the main window.
 """
 
+import logging
 import sys
 import wx
 from ui.main_window import MainWindow
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(levelname)s %(name)s: %(message)s",
+    stream=sys.stderr,
+)
 
 
 class AccessDRApp(wx.App):

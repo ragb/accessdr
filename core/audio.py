@@ -31,7 +31,7 @@ except Exception:                  # noqa: BLE001
     logger.warning("sounddevice not available — audio output disabled")
 
 AUDIO_RATE = 48_000
-CHANNELS = 1
+CHANNELS = 2          # always stereo output; mono sources are upmixed in write()
 DEFAULT_BLOCKSIZE = 4096
 
 
@@ -96,17 +96,29 @@ class AudioOutput:
     # ------------------------------------------------------------------
 
     def write(self, audio: np.ndarray) -> None:
-        """Push float32 audio samples to the output queue.
+        """Push audio samples to the output queue.
 
+        Accepts either (N,) mono or (N, 2) stereo float32 arrays.
+        Mono input is duplicated to both channels before queuing.
         Called from the DSP thread — non-blocking, drops if full.
         """
-        # Measure signal strength in dBFS
-        rms = float(np.sqrt(np.mean(audio ** 2))) if len(audio) > 0 else 1e-10
+        if audio.size == 0:
+            return
+
+        # Measure signal strength in dBFS (mean power across all samples/channels)
+        rms = float(np.sqrt(np.mean(audio.astype(np.float64) ** 2)))
         rms = max(rms, 1e-10)
         self.signal_db = 20.0 * np.log10(rms)
 
+        # Normalise to (N, 2) stereo
+        a = audio.astype(np.float32)
+        if a.ndim == 1:
+            stereo = np.stack([a, a], axis=1)   # upmix mono → both channels
+        else:
+            stereo = a                           # already (N, 2)
+
         try:
-            self._audio_queue.put_nowait(audio.astype(np.float32))
+            self._audio_queue.put_nowait(stereo)
         except queue.Full:
             pass  # drop — latency is more important than completeness
 
@@ -155,14 +167,14 @@ class AudioOutput:
         time,                      # noqa: ANN001
         status,                    # noqa: ANN001
     ) -> None:
-        """Fill *outdata* with demodulated audio, applying volume + squelch."""
-        combined = np.zeros(frames, dtype=np.float32)
+        """Fill *outdata* (frames, 2) with demodulated audio."""
+        combined = np.zeros((frames, 2), dtype=np.float32)
         samples_needed = frames
         offset = 0
 
         while samples_needed > 0:
             try:
-                chunk = self._audio_queue.get_nowait()
+                chunk = self._audio_queue.get_nowait()   # shape (N, 2)
             except queue.Empty:
                 break
             take = min(len(chunk), samples_needed)
@@ -187,12 +199,12 @@ class AudioOutput:
         else:
             combined *= self.volume
 
-        outdata[:, 0] = combined
+        outdata[:] = combined
 
-        # Record (convert float → int16)
+        # Record (convert float → int16, interleaved stereo)
         if self._recording and self._wav_file is not None:
             try:
-                pcm = (combined * 32767.0).astype(np.int16)
+                pcm = (combined * 32767.0).astype(np.int16)  # (frames, 2)
                 self._wav_file.writeframes(pcm.tobytes())
             except Exception:      # noqa: BLE001
                 pass

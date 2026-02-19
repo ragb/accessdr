@@ -93,6 +93,8 @@ class MainWindow(wx.Frame):
         self._running = False
         self._dsp_thread: Optional[threading.Thread] = None
         self._step_idx = STEPS.index(self._settings.step) if self._settings.step in STEPS else 3
+        self._was_stereo: Optional[bool] = None   # tracks last announced stereo state
+        self._retune_pending: bool = False        # set by _tune(), cleared by DSP loop
 
         # Open dialogs cache (so we don't create duplicates)
         self._dialogs: dict = {}
@@ -307,6 +309,7 @@ class MainWindow(wx.Frame):
         """Set frequency (may be called from any thread)."""
         self._settings.frequency = freq_hz
         self._sdr.set_frequency(freq_hz)
+        self._retune_pending = True   # ask DSP loop to re-announce stereo status
         wx.CallAfter(self._freq_ctrl.SetValue, _fmt_freq(freq_hz))
         wx.CallAfter(speech.speak, _fmt_freq(freq_hz))
         wx.CallAfter(self._statusbar.SetStatusText, f"Tuned to {_fmt_freq(freq_hz)}")
@@ -363,6 +366,7 @@ class MainWindow(wx.Frame):
         mode = event.GetString()
         self._settings.mode = mode
         self._update_bw_choices(mode)
+        self._was_stereo = None
         speech.speak(f"Mode {mode}")
 
     def _on_bw_change(self, event: wx.CommandEvent) -> None:
@@ -379,6 +383,7 @@ class MainWindow(wx.Frame):
         self._mode_choice.SetStringSelection(mode)
         self._settings.mode = mode
         self._update_bw_choices(mode)
+        self._was_stereo = None
         speech.speak(f"Mode {mode}")
 
     # ==================================================================
@@ -424,6 +429,7 @@ class MainWindow(wx.Frame):
         if self._dsp_thread:
             self._dsp_thread.join(timeout=2.0)
             self._dsp_thread = None
+        self._was_stereo = None
         self._start_btn.SetLabel("▶ Start")
         self._statusbar.SetStatusText("Stopped.")
         speech.speak("Radio stopped.")
@@ -435,6 +441,8 @@ class MainWindow(wx.Frame):
     def _dsp_loop(self) -> None:
         """Main DSP thread: demodulate IQ and feed audio + spectrum."""
         current_mode = self._settings.mode
+        dsp_stereo: Optional[bool] = None   # tracks last announced stereo state (DSP thread)
+
         while self._running:
             try:
                 iq = self._sdr.iq_queue.get(timeout=0.1)
@@ -445,17 +453,37 @@ class MainWindow(wx.Frame):
             if self._settings.mode != current_mode:
                 current_mode = self._settings.mode
                 self._demodulator = make_demodulator(current_mode, BASEBAND_RATE, AUDIO_RATE)
+                dsp_stereo = None
+
+            # Re-announce stereo status after a retune
+            if self._retune_pending:
+                self._retune_pending = False
+                dsp_stereo = None
 
             # Decimate to baseband
             bb = decimate(iq, self._settings.sample_rate, BASEBAND_RATE)
 
-            # Spectrum analysis (every other chunk to halve UI update rate)
+            # Spectrum analysis
             spec = self._spectrum.process(bb)
             wx.CallAfter(self._on_spectrum_update, spec)
 
             # Demodulate using stateful demodulator (filter state carried between chunks)
             audio = self._demodulator.process(bb)
             self._audio.write(audio)
+
+            # Announce stereo/mono changes (fired from DSP thread via CallAfter)
+            if current_mode == "WFM":
+                stereo = getattr(self._demodulator, "stereo_detected", False)
+                if stereo != dsp_stereo:
+                    prev = dsp_stereo
+                    dsp_stereo = stereo
+                    if stereo or prev is not None:   # skip initial None→False
+                        label = "Stereo" if stereo else "Mono"
+                        wx.CallAfter(speech.speak, label)
+                        wx.CallAfter(
+                            self._statusbar.SetStatusText,
+                            f"Receiving — {_fmt_freq(self._settings.frequency)} [{label}]",
+                        )
 
     def _on_spectrum_update(self, spectrum: np.ndarray) -> None:
         """Called on UI thread with updated spectrum data."""
