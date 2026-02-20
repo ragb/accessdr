@@ -98,25 +98,6 @@ msgstr ""
 msgid "1 MHz"
 msgstr ""
 
-#: ui/main_window.py:63 ui/main_window.py:65
-msgid "Excellent"
-msgstr ""
-
-#: ui/main_window.py:67
-msgid "Good"
-msgstr ""
-
-#: ui/main_window.py:69
-msgid "Fair"
-msgstr ""
-
-#: ui/main_window.py:71
-msgid "Weak"
-msgstr ""
-
-#: ui/main_window.py:72
-msgid "None"
-msgstr ""
 
 #: ui/main_window.py:139
 msgid "E&xit\tAlt+F4"
@@ -272,9 +253,9 @@ msgstr ""
 msgid "Receiving — {freq} [{label}]"
 msgstr ""
 
-#: ui/main_window.py:515
+#: ui/main_window.py
 #, python-brace-format
-msgid "Signal: {db:.1f} dBFS  [{quality}]"
+msgid "Signal: {db:.1f} dBFS  [{s_unit}]"
 msgstr ""
 
 #: ui/main_window.py:537
@@ -299,9 +280,9 @@ msgstr ""
 msgid "Radio not running."
 msgstr ""
 
-#: ui/main_window.py:597
+#: ui/main_window.py
 #, python-brace-format
-msgid "Signal {db:.1f} dBFS, {quality}"
+msgid "Signal {db:.1f} dBFS, {s_unit}"
 msgstr ""
 
 #: ui/main_window.py:605
@@ -804,5 +785,151 @@ msgstr ""
 
 #: ui/dialogs/spectrum_dialog.py:197
 msgid "Spectrum settings applied."
+msgstr ""
+
+#: ui/main_window.py
+#, python-brace-format
+msgid "Zoom {level}x, {start} to {end} MHz"
+msgstr ""
+
+#: ui/main_window.py
+#, python-brace-format
+msgid "Full spectrum, {start} to {end} MHz"
+msgstr ""
+
+#: ui/main_window.py
+msgid "Already at maximum zoom."
+msgstr ""
+
+#: ui/main_window.py
+msgid "Already at full spectrum."
+msgstr ""
+
+#: ui/main_window.py
+msgid ", sweep active"
+msgstr ""
+
+#: ui/main_window.py
+#, python-brace-format
+msgid "Spectrum {start} to {end} MHz"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py
+msgid "Describe spectrum"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py
+msgid "Zoom in spectrum"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py
+msgid "Zoom out spectrum"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py
+msgid "Reset zoom"
+msgstr ""
+
+#: ui/main_window.py
+msgid "Start Sweep (Ctrl+F5)"
+msgstr ""
+
+#: ui/main_window.py
+msgid "Stop Sweep (Ctrl+F5)"
+msgstr ""
+
+#: ui/main_window.py
+msgid "Continuous sweep stopped."
+msgstr ""
+
+#: ui/main_window.py
+msgid "Continuous sweep started."
+msgstr ""
+
+#: ui/main_window.py
+msgid "Select modulation."
+msgstr ""
+
+#: ui/main_window.py
+msgid "Modulation selection cancelled."
+msgstr ""
+
+#: ui/dialogs/help_dialog.py
+msgid "--- Modulation (press M, then letter) ---"
+msgstr ""
+
+#: ui/main_window.py
+#, python-brace-format
+msgid "Enter frequency (MHz):"
+msgstr ""
+
+#: ui/main_window.py
+msgid "Tune to Frequency"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py
+msgid "Enter frequency"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py
+msgid "RTL AGC"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py
+msgid "RTL AGC enabled"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py
+msgid "RTL AGC disabled"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py
+msgid "Offset Tuning (remove DC spike)"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py
+msgid "Offset tuning enabled"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py
+msgid "Offset tuning disabled"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py
+msgid "IF Bandwidth:"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py
+msgid "Auto"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py
+#, python-brace-format
+msgid "IF Bandwidth {bw}"
+msgstr ""
+
+#: ui/main_window.py
+#, python-brace-format
+msgid "Signal {s_unit}, {db:.0f} dBFS"
+msgstr ""
+
+#: ui/main_window.py
+msgid "No frequency history."
+msgstr ""
+
+#: ui/main_window.py
+msgid "No forward history."
+msgstr ""
+
+#: ui/dialogs/help_dialog.py
+msgid "--- Navigation ---"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py
+msgid "Frequency back"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py
+msgid "Frequency forward"
 msgstr ""
 

@@ -81,6 +81,7 @@ class Sonification:
         self._sweep_pos  = 0.0                 # 0.0–1.0 across spectrum
         self._running    = False
         self._is_snapshot = False              # True → stop after one full sweep
+        self._amp_smooth = 0.0                 # smoothed amplitude carried between blocks
 
     # ------------------------------------------------------------------
     # Public interface
@@ -102,6 +103,7 @@ class Sonification:
         self._is_snapshot = False
         self._sweep_pos   = 0.0
         self._phase       = 0.0
+        self._amp_smooth  = 0.0
         self._running     = True
         self._open_stream()
 
@@ -113,6 +115,7 @@ class Sonification:
         self._is_snapshot = True
         self._sweep_pos   = 0.0
         self._phase       = 0.0
+        self._amp_smooth  = 0.0
         self._running     = True
         self._open_stream()
 
@@ -222,10 +225,22 @@ class Sonification:
         frac   = bin_f - bin_lo
         amp_db = spectrum[bin_lo] * (1.0 - frac) + spectrum[bin_hi] * frac
 
-        # --- Amplitude: ramp quickly from silence to MAX_AMP over a few dB ---
-        # A 3 dB soft knee avoids clicks at the noise-floor boundary.
-        _KNEE_DB = 3.0
-        amp = np.clip((amp_db - noise_floor) / _KNEE_DB, 0.0, 1.0) * MAX_AMP
+        # --- Amplitude: gradual ramp from silence to MAX_AMP over dynamic range ---
+        # Maps power above noise floor to amplitude using sqrt for perceptual
+        # uniformity (weak signals still audible, strong signals louder).
+        above_floor = np.clip(
+            (amp_db - noise_floor) / _DYNAMIC_RANGE_DB, 0.0, 1.0,
+        )
+        amp_raw = np.sqrt(above_floor) * MAX_AMP
+
+        # One-pole IIR smoothing to prevent clicks at bin boundaries.
+        # ~3 ms time constant at 44100 Hz ≈ alpha 0.0075 per sample.
+        _SMOOTH_ALPHA = 1.0 - math.exp(-1.0 / (SAMPLE_RATE * 0.003))
+        amp = np.empty_like(amp_raw)
+        amp[0] = self._amp_smooth + _SMOOTH_ALPHA * (amp_raw[0] - self._amp_smooth)
+        for i in range(1, n):
+            amp[i] = amp[i - 1] + _SMOOTH_ALPHA * (amp_raw[i] - amp[i - 1])
+        self._amp_smooth = float(amp[-1]) if n > 0 else self._amp_smooth
 
         # --- Pitch: power → frequency (logarithmic, perceptually uniform) ---
         power_norm = np.clip(

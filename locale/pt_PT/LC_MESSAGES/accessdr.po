@@ -99,25 +99,6 @@ msgstr "100 kHz"
 msgid "1 MHz"
 msgstr "1 MHz"
 
-#: ui/main_window.py:63 ui/main_window.py:65
-msgid "Excellent"
-msgstr "Excelente"
-
-#: ui/main_window.py:67
-msgid "Good"
-msgstr "Bom"
-
-#: ui/main_window.py:69
-msgid "Fair"
-msgstr "Razoável"
-
-#: ui/main_window.py:71
-msgid "Weak"
-msgstr "Fraco"
-
-#: ui/main_window.py:72
-msgid "None"
-msgstr "Nenhum"
 
 #: ui/main_window.py:139
 msgid "E&xit\tAlt+F4"
@@ -273,10 +254,10 @@ msgstr "Mono"
 msgid "Receiving — {freq} [{label}]"
 msgstr "A receber — {freq} [{label}]"
 
-#: ui/main_window.py:515
+#: ui/main_window.py
 #, python-brace-format
-msgid "Signal: {db:.1f} dBFS  [{quality}]"
-msgstr "Sinal: {db:.1f} dBFS  [{quality}]"
+msgid "Signal: {db:.1f} dBFS  [{s_unit}]"
+msgstr "Sinal: {db:.1f} dBFS  [{s_unit}]"
 
 #: ui/main_window.py:537
 #, python-brace-format
@@ -300,10 +281,10 @@ msgstr "Squelch {val:.0f} dBm"
 msgid "Radio not running."
 msgstr "Rádio não está em funcionamento."
 
-#: ui/main_window.py:597
+#: ui/main_window.py
 #, python-brace-format
-msgid "Signal {db:.1f} dBFS, {quality}"
-msgstr "Sinal {db:.1f} dBFS, {quality}"
+msgid "Signal {db:.1f} dBFS, {s_unit}"
+msgstr "Sinal {db:.1f} dBFS, {s_unit}"
 
 #: ui/main_window.py:605
 msgid "Squelch open"
@@ -520,6 +501,22 @@ msgstr "Silenciar / Ativar som"
 #: ui/dialogs/help_dialog.py:22
 msgid "Read signal strength"
 msgstr "Ler intensidade do sinal"
+
+#: ui/dialogs/help_dialog.py
+msgid "--- Modulation (press M, then letter) ---"
+msgstr "--- Modulação (prima M, depois a letra) ---"
+
+#: ui/main_window.py
+msgid "Enter frequency (MHz):"
+msgstr "Introduzir frequência (MHz):"
+
+#: ui/main_window.py
+msgid "Tune to Frequency"
+msgstr "Sintonizar Frequência"
+
+#: ui/dialogs/help_dialog.py
+msgid "Enter frequency"
+msgstr "Introduzir frequência"
 
 #: ui/dialogs/help_dialog.py:24
 msgid "--- Demodulation modes ---"
@@ -810,4 +807,133 @@ msgstr "Varrimento contínuo iniciado."
 #: ui/dialogs/spectrum_dialog.py:197
 msgid "Spectrum settings applied."
 msgstr "Definições de espectro aplicadas."
+
+#: ui/main_window.py
+#, python-brace-format
+msgid "Zoom {level}x, {start} to {end} MHz"
+msgstr "Zoom {level}x, {start} a {end} MHz"
+
+#: ui/main_window.py
+#, python-brace-format
+msgid "Full spectrum, {start} to {end} MHz"
+msgstr "Espectro completo, {start} a {end} MHz"
+
+#: ui/main_window.py
+msgid "Already at maximum zoom."
+msgstr "Já no zoom máximo."
+
+#: ui/main_window.py
+msgid "Already at full spectrum."
+msgstr "Já no espectro completo."
+
+#: ui/main_window.py
+msgid ", sweep active"
+msgstr ", varrimento ativo"
+
+#: ui/main_window.py
+#, python-brace-format
+msgid "Spectrum {start} to {end} MHz"
+msgstr "Espectro {start} a {end} MHz"
+
+#: ui/dialogs/help_dialog.py
+msgid "Describe spectrum"
+msgstr "Descrever espectro"
+
+#: ui/dialogs/help_dialog.py
+msgid "Zoom in spectrum"
+msgstr "Ampliar espectro"
+
+#: ui/dialogs/help_dialog.py
+msgid "Zoom out spectrum"
+msgstr "Reduzir espectro"
+
+#: ui/dialogs/help_dialog.py
+msgid "Reset zoom"
+msgstr "Repor zoom"
+
+#: ui/main_window.py
+msgid "Start Sweep (Ctrl+F5)"
+msgstr "Iniciar Varrimento (Ctrl+F5)"
+
+#: ui/main_window.py
+msgid "Stop Sweep (Ctrl+F5)"
+msgstr "Parar Varrimento (Ctrl+F5)"
+
+#: ui/main_window.py
+msgid "Continuous sweep stopped."
+msgstr "Varrimento contínuo parado."
+
+#: ui/main_window.py
+msgid "Continuous sweep started."
+msgstr "Varrimento contínuo iniciado."
+
+#: ui/main_window.py
+msgid "Select modulation."
+msgstr "Selecionar modulação."
+
+#: ui/main_window.py
+msgid "Modulation selection cancelled."
+msgstr "Seleção de modulação cancelada."
+
+#: ui/dialogs/rf_dialog.py
+msgid "RTL AGC"
+msgstr "AGC RTL"
+
+#: ui/dialogs/rf_dialog.py
+msgid "RTL AGC enabled"
+msgstr "AGC RTL ativado"
+
+#: ui/dialogs/rf_dialog.py
+msgid "RTL AGC disabled"
+msgstr "AGC RTL desativado"
+
+#: ui/dialogs/rf_dialog.py
+msgid "Offset Tuning (remove DC spike)"
+msgstr "Sintonização offset (remover pico DC)"
+
+#: ui/dialogs/rf_dialog.py
+msgid "Offset tuning enabled"
+msgstr "Sintonização offset ativada"
+
+#: ui/dialogs/rf_dialog.py
+msgid "Offset tuning disabled"
+msgstr "Sintonização offset desativada"
+
+#: ui/dialogs/rf_dialog.py
+msgid "IF Bandwidth:"
+msgstr "Largura de Banda IF:"
+
+#: ui/dialogs/rf_dialog.py
+msgid "Auto"
+msgstr "Auto"
+
+#: ui/dialogs/rf_dialog.py
+#, python-brace-format
+msgid "IF Bandwidth {bw}"
+msgstr "Largura de banda IF {bw}"
+
+#: ui/main_window.py
+#, python-brace-format
+msgid "Signal {s_unit}, {db:.0f} dBFS"
+msgstr "Sinal {s_unit}, {db:.0f} dBFS"
+
+#: ui/main_window.py
+msgid "No frequency history."
+msgstr "Sem histórico de frequências."
+
+#: ui/main_window.py
+msgid "No forward history."
+msgstr "Sem histórico seguinte."
+
+#: ui/dialogs/help_dialog.py
+msgid "--- Navigation ---"
+msgstr "--- Navegação ---"
+
+#: ui/dialogs/help_dialog.py
+msgid "Frequency back"
+msgstr "Frequência anterior"
+
+#: ui/dialogs/help_dialog.py
+msgid "Frequency forward"
+msgstr "Frequência seguinte"
 

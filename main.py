@@ -5,8 +5,11 @@ Initialises the wx.App and opens the main window.
 """
 
 import builtins
+import faulthandler
 import logging
 import sys
+
+faulthandler.enable()
 
 # Install a no-op _() so that all module-level _("...") calls resolve
 # before wx.App exists and i18n.install() can set up the real one.

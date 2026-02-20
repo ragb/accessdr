@@ -14,6 +14,7 @@ Python wrapper so there is no GIL interaction with the blocking read.
 
 from __future__ import annotations
 
+import ctypes
 import logging
 import queue
 import threading
@@ -91,6 +92,10 @@ class SDRDevice:
         self.sample_rate: int = 2_400_000
         self.gain: float = 30.0
         self.ppm: int = 0
+        self.agc_mode: bool = False
+        self.offset_tuning: bool = False
+        self.tuner_bandwidth: int = 0   # Hz, 0 = auto
+        self._valid_gains: List[float] = []
 
         self.on_error: Optional[Callable[[str], None]] = None
 
@@ -132,6 +137,17 @@ class SDRDevice:
                 _librtlsdr.rtlsdr_set_tuner_gain(self._dev_handle, int(self.gain * 10))
             except Exception as exc:   # noqa: BLE001
                 logger.warning("set gain failed: %s", exc)
+
+            # Register ctypes prototypes for functions pyrtlsdr doesn't wrap
+            self._register_extra_prototypes()
+
+            # Retrieve hardware-valid gain steps
+            self._valid_gains = self._fetch_valid_gains()
+
+            # Apply optional hardware settings
+            self.set_agc_mode(self.agc_mode)
+            self.set_offset_tuning(self.offset_tuning)
+            self.set_tuner_bandwidth(self.tuner_bandwidth)
 
             logger.info("Opened RTL-SDR device %d", device_index)
             return True
@@ -219,6 +235,79 @@ class SDRDevice:
                 self._soapy.setFrequencyCorrection(_SOAPY_SDR_RX, 0, float(ppm))
             except Exception as exc:   # noqa: BLE001
                 logger.warning("setFrequencyCorrection failed: %s", exc)
+
+    def set_agc_mode(self, on: bool) -> None:
+        self.agc_mode = on
+        if self._dev_handle is not None:
+            try:
+                _librtlsdr.rtlsdr_set_agc_mode(self._dev_handle, int(on))
+                # Switch tuner gain mode: 0 = auto (AGC), 1 = manual
+                _librtlsdr.rtlsdr_set_tuner_gain_mode(self._dev_handle, 0 if on else 1)
+                if not on:
+                    # Re-apply manual gain after leaving AGC
+                    _librtlsdr.rtlsdr_set_tuner_gain(
+                        self._dev_handle, int(self.gain * 10)
+                    )
+            except Exception as exc:   # noqa: BLE001
+                logger.warning("set_agc_mode failed: %s", exc)
+
+    def set_offset_tuning(self, on: bool) -> None:
+        self.offset_tuning = on
+        if self._dev_handle is not None:
+            try:
+                _librtlsdr.rtlsdr_set_offset_tuning(self._dev_handle, int(on))
+            except Exception as exc:   # noqa: BLE001
+                logger.warning("set_offset_tuning failed: %s", exc)
+
+    def set_tuner_bandwidth(self, bw_hz: int) -> None:
+        """Set hardware IF bandwidth. 0 = automatic."""
+        self.tuner_bandwidth = bw_hz
+        if self._dev_handle is not None:
+            try:
+                _librtlsdr.rtlsdr_set_tuner_bandwidth(self._dev_handle, bw_hz)
+            except Exception as exc:   # noqa: BLE001
+                logger.warning("set_tuner_bandwidth failed: %s", exc)
+
+    def get_valid_gains(self) -> List[float]:
+        """Return cached list of valid tuner gain values in dB."""
+        return list(self._valid_gains)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _register_extra_prototypes(self) -> None:
+        """Register ctypes prototypes for librtlsdr functions not wrapped by pyrtlsdr."""
+        if not _PYRTLSDR_AVAILABLE:
+            return
+        lib = _librtlsdr
+        try:
+            if not hasattr(lib.rtlsdr_set_offset_tuning, "argtypes"):
+                lib.rtlsdr_set_offset_tuning.argtypes = [ctypes.c_void_p, ctypes.c_int]
+                lib.rtlsdr_set_offset_tuning.restype = ctypes.c_int
+        except Exception:   # noqa: BLE001
+            pass
+        try:
+            if not hasattr(lib.rtlsdr_set_tuner_bandwidth, "argtypes"):
+                lib.rtlsdr_set_tuner_bandwidth.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+                lib.rtlsdr_set_tuner_bandwidth.restype = ctypes.c_int
+        except Exception:   # noqa: BLE001
+            pass
+
+    def _fetch_valid_gains(self) -> List[float]:
+        """Query the tuner for its list of valid gain steps."""
+        if self._dev_handle is None:
+            return []
+        try:
+            count = _librtlsdr.rtlsdr_get_tuner_gains(self._dev_handle, None)
+            if count <= 0:
+                return []
+            gains_buf = (ctypes.c_int * count)()
+            _librtlsdr.rtlsdr_get_tuner_gains(self._dev_handle, gains_buf)
+            return [g / 10.0 for g in gains_buf]
+        except Exception as exc:   # noqa: BLE001
+            logger.warning("get_tuner_gains failed: %s", exc)
+            return []
 
     # ------------------------------------------------------------------
     # Streaming

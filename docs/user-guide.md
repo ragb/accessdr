@@ -4,13 +4,15 @@
 
 ### Frequency Entry
 
-You can type a frequency directly into the frequency field:
+Press ++q++ to open the frequency entry dialog. You can also click the frequency display or the "..." button next to it.
+
+Enter a frequency in one of these formats:
 
 - **MHz** (most common): `98.1` or `98.1 MHz`
 - **kHz**: values between 30,000 and 30,000,000 are treated as kHz
 - **Hz**: values above 30,000,000 are treated as Hz
 
-Press ++enter++ to tune to the entered frequency.
+Press ++enter++ to confirm or ++escape++ to cancel.
 
 ### Step Tuning
 
@@ -27,6 +29,10 @@ Press ++s++ to cycle through step sizes:
 | 10 kHz | Default general tuning |
 | 100 kHz | FM broadcast scanning |
 | 1 MHz | Quick band scanning |
+
+### Frequency History
+
+AccessDR keeps a history of the last 50 frequencies you tuned to. Use ++alt+left++ to go back and ++alt+right++ to go forward, similar to a web browser.
 
 ### Band Presets
 
@@ -48,25 +54,34 @@ Available bands:
 
 ## Demodulation Modes
 
-Switch modes with a single key press:
+Press ++m++ to enter mode selection, then press the mode letter:
 
 | Key | Mode | Description |
 |---|---|---|
-| ++w++ | WFM | Wideband FM — for broadcast radio. Automatically detects stereo. |
-| ++n++ | NFM | Narrowband FM — for two-way radio, amateur, PMR, etc. |
-| ++a++ | AM | Amplitude modulation — for air band, AM broadcast, shortwave. |
-| ++u++ | USB | Upper sideband — for amateur HF above 10 MHz. |
-| ++l++ | LSB | Lower sideband — for amateur HF below 10 MHz. |
-| ++c++ | CW | Continuous wave — for Morse code, with narrow filter. |
-| ++d++ | DSB | Double sideband — full carrier AM without filtering. |
+| ++m++ ++w++ | WFM | Wideband FM — for broadcast radio. Automatically detects stereo. |
+| ++m++ ++n++ | NFM | Narrowband FM — for two-way radio, amateur, PMR, etc. |
+| ++m++ ++a++ | AM | Amplitude modulation — for air band, AM broadcast, shortwave. |
+| ++m++ ++u++ | USB | Upper sideband — for amateur HF above 10 MHz. |
+| ++m++ ++l++ | LSB | Lower sideband — for amateur HF below 10 MHz. |
+| ++m++ ++c++ | CW | Continuous wave — for Morse code, with narrow filter. |
+| ++m++ ++d++ | DSB | Double sideband — full carrier AM without filtering. |
 
 Each mode has selectable filter bandwidths. Open the main window's BW dropdown or the RF Settings dialog (++ctrl+r++) to adjust.
+
+## RF Settings
+
+Open the RF Settings dialog with ++ctrl+r++ to configure hardware parameters:
+
+- **RF Gain** — when the radio is running, shows the actual valid gain steps for your tuner (e.g. 0.0, 0.9, ... 49.6 dB for R820T)
+- **RTL AGC** — enables the RTL2832U's digital automatic gain control
+- **Offset Tuning** — eliminates the DC spike at the centre frequency by offsetting the tuner's LO
+- **IF Bandwidth** — sets the hardware IF filter bandwidth (Auto, 250 kHz, 500 kHz, 1 MHz, 1.5 MHz, 2 MHz). Narrower bandwidths improve selectivity at the cost of bandwidth
 
 ## Signal Information
 
 Press ++i++ at any time to hear a spoken status report including:
 
-- Signal strength in dBFS with a quality rating (Excellent / Good / Fair / Weak / None)
+- Signal strength in dBFS with S-meter reading (S0–S9+30)
 - Stereo or Mono (in WFM mode)
 - Squelch state (open or closed)
 - Mute state
@@ -93,6 +108,23 @@ Sonification converts the FFT spectrum into audio, letting you "see" the spectru
 
 - **Weak/Strong signal pitch** — pitch range mapped to signal power (default 200-4000 Hz)
 - **Sweep speed** — how long one full L-to-R sweep takes (default 5 seconds)
+
+### Spectrum Zoom
+
+By default sonification sweeps the entire SDR bandwidth (typically ±1.2 MHz around the tuned frequency). Zoom narrows the sonified range so closely-spaced signals get more sweep time and are easier to distinguish.
+
+| Key | Action |
+|---|---|
+| ++=++ or ++plus++ | Zoom in (halve the span) |
+| ++-++ | Zoom out (double the span) |
+| ++backspace++ | Reset to full spectrum |
+| ++g++ | Describe current spectrum range |
+
+Zoom levels: 1x (full) → 2x → 4x → 8x → 16x → 32x. At 2.4 MSPS, 32x zoom gives a ~75 kHz span — still useful for NFM or AM signals.
+
+The visual spectrum panel always shows the full bandwidth, with yellow dashed lines marking the zoom boundaries and dimmed regions outside the zoom.
+
+Zoom is session-only and resets when you restart the app.
 
 ### Spectrum Peaks
 

@@ -4,28 +4,37 @@
 
 | Key | Action |
 |---|---|
-| ++r++ | Start / Stop radio |
+| ++f2++ | Start / Stop radio |
+| ++q++ | Enter frequency (opens dialog) |
 | ++up++ | Tune up by step |
 | ++down++ | Tune down by step |
 | ++ctrl+up++ | Tune up by 10x step |
 | ++ctrl+down++ | Tune down by 10x step |
 | ++s++ | Cycle tuning step size |
-| ++m++ | Mute / Unmute |
+| ++f3++ | Mute / Unmute |
 | ++i++ | Read signal strength, stereo/mono, squelch state |
 | ++f++ | Speak top spectrum peaks |
+| ++g++ | Describe current spectrum range |
+| ++=++ / ++plus++ | Zoom in spectrum (halve span) |
+| ++-++ | Zoom out spectrum (double span) |
+| ++backspace++ | Reset zoom to full spectrum |
 | ++space++ | Sonification snapshot sweep |
+| ++alt+left++ | Frequency back (history) |
+| ++alt+right++ | Frequency forward (history) |
 
 ## Demodulation Modes
 
+Press ++m++ first, then the mode letter:
+
 | Key | Mode |
 |---|---|
-| ++w++ | Wide FM (broadcast) |
-| ++n++ | Narrow FM |
-| ++a++ | AM |
-| ++u++ | USB (Upper Sideband) |
-| ++l++ | LSB (Lower Sideband) |
-| ++c++ | CW (Morse) |
-| ++d++ | DSB (Double Sideband) |
+| ++m++ ++w++ | Wide FM (broadcast) |
+| ++m++ ++n++ | Narrow FM |
+| ++m++ ++a++ | AM |
+| ++m++ ++u++ | USB (Upper Sideband) |
+| ++m++ ++l++ | LSB (Lower Sideband) |
+| ++m++ ++c++ | CW (Morse) |
+| ++m++ ++d++ | DSB (Double Sideband) |
 
 ## Dialogs
 

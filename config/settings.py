@@ -24,6 +24,9 @@ class Settings:
     sample_rate: int = 2_400_000     # sps
     gain: float = 30.0               # dB
     ppm: int = 0
+    agc_mode: bool = False
+    offset_tuning: bool = False
+    tuner_bandwidth: int = 0         # Hz, 0 = auto
 
     # Audio
     volume: float = 0.75             # 0.0 – 1.0
