@@ -19,8 +19,6 @@
 | ++-++ | Zoom out spectrum (double span) |
 | ++backspace++ | Reset zoom to full spectrum |
 | ++space++ | Sonification snapshot sweep |
-| ++alt+left++ | Frequency back (history) |
-| ++alt+right++ | Frequency forward (history) |
 
 ## Demodulation Modes
 
