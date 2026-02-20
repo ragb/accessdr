@@ -157,15 +157,18 @@ Sonification converts the FFT spectrum into audio, letting you "see" the spectru
 
 ### Using Sonification
 
-1. Open the Spectrum & Sonification dialog with ++ctrl+s++
-2. Enable sonification with the checkbox
-3. Choose between **Continuous sweep** or **Snapshot** mode
-4. Press ++space++ in the main window for a one-shot snapshot sweep
+- Press ++f5++ for a **snapshot sweep** — a single left-to-right pass, then stops
+- Press ++ctrl+f5++ to toggle **continuous sweep** — repeats until you press ++ctrl+f5++ again
+
+No need to enable sonification separately — it activates automatically when you start a sweep.
 
 ### Sonification Settings
 
-- **Weak/Strong signal pitch** — pitch range mapped to signal power (default 200-4000 Hz)
-- **Sweep speed** — how long one full L-to-R sweep takes (default 5 seconds)
+Open the Spectrum Settings dialog with ++ctrl+s++ to adjust:
+
+- **Weak signal pitch** — the pitch for signals at the noise floor (default 200 Hz)
+- **Strong signal pitch** — the pitch for the strongest signals (default 4000 Hz)
+- **Sweep speed** — how long one full left-to-right sweep takes (default 5 seconds; slower speeds give more time to distinguish closely-spaced signals)
 
 ### Spectrum Zoom
 

@@ -18,7 +18,8 @@
 | ++=++ / ++plus++ | Zoom in spectrum (halve span) |
 | ++-++ | Zoom out spectrum (double span) |
 | ++backspace++ | Reset zoom to full spectrum |
-| ++space++ | Sonification snapshot sweep |
+| ++f5++ | Sonification snapshot sweep |
+| ++ctrl+f5++ | Toggle continuous sweep |
 
 ## Demodulation Modes
 
@@ -39,7 +40,7 @@ Press ++m++ first, then the mode letter:
 | Key | Dialog |
 |---|---|
 | ++ctrl+r++ | RF Settings (gain, PPM, sample rate) |
-| ++ctrl+s++ | Spectrum & Sonification |
+| ++ctrl+s++ | Spectrum Settings |
 | ++ctrl+n++ | Scanner |
 | ++ctrl+b++ | Bookmarks |
 | ++ctrl+d++ | Audio Settings (device, buffer size) |
