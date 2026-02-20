@@ -4,25 +4,11 @@
 
 **[Documentation](https://ragb.github.io/accessdr/)** | **[Download](https://github.com/ragb/accessdr/releases/latest)**
 
-Accessible SDR radio application for blind and visually impaired users. Built with Python, wxPython, and pyrtlsdr.
+Accessible SDR radio application designed for blind and visually impaired users. Screen reader driven, fully keyboard operated, with spectrum sonification. Built with Python, wxPython, and pyrtlsdr.
 
-## Features
+## Development Setup
 
-- **Fully accessible** — complete keyboard navigation, screen reader output (NVDA, JAWS, Narrator), and spectrum sonification so you can explore RF signals by ear
-- **7 demodulation modes** — WFM (stereo), NFM, AM, USB, LSB, CW, DSB with software VFO offset
-- **Spectrum tools** — interactive probe tone, peak detection, zoom, frequency scanner, and pause-to-explore
-- **Portable** — single RTL-SDR dongle, no additional dependencies beyond Python
-
-See the [User Guide](https://ragb.github.io/accessdr/user-guide/) and [Keyboard Shortcuts](https://ragb.github.io/accessdr/keyboard-shortcuts/) for usage documentation.
-
-## Requirements
-
-- **OS:** Windows 10/11
-- **Hardware:** RTL-SDR dongle (any RTL2832U-based device)
-- **Driver:** WinUSB (use [Zadig](https://zadig.akeo.ie/) if needed)
-- **Python:** 3.12+
-
-## Getting Started
+Requires Windows 10/11, Python 3.12+, and an RTL-SDR dongle with WinUSB driver ([Zadig](https://zadig.akeo.ie/)).
 
 ```bash
 git clone https://github.com/ragb/accessdr.git
@@ -34,7 +20,7 @@ invoke fetch-dlls
 python main.py
 ```
 
-`invoke fetch-dlls` downloads the librtlsdr static build. Alternatively, copy `rtlsdr.dll` from [SDR#](https://airspy.com/download/) or [librtlsdr releases](https://github.com/librtlsdr/librtlsdr/releases).
+`invoke fetch-dlls` downloads the librtlsdr static build. Alternatively, copy `rtlsdr.dll` from [librtlsdr releases](https://github.com/librtlsdr/librtlsdr/releases).
 
 ## Architecture
 
@@ -89,7 +75,7 @@ NSIS required for `invoke installer` ([download](https://nsis.sourceforge.io/Dow
 
 ## Internationalisation
 
-Uses gettext. Portuguese (pt_PT) included. Extract → translate → compile:
+Uses gettext. Portuguese (pt_PT) included.
 
 ```bash
 invoke extract-messages   # update locale/accessdr.pot
