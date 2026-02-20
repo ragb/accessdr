@@ -96,6 +96,30 @@ Used for **Morse code** (CW) transmissions. CW uses an extremely narrow filter (
 
 Similar to AM but **without carrier filtering**. Useful for receiving AM signals that don't quite fit the standard AM demodulator, or for experimenting. In practice, most users will use AM mode instead. Typical bandwidth: 6–10 kHz.
 
+## Volume, Mute, and Squelch
+
+| Key | Action |
+|---|---|
+| ++page-up++ | Volume up (+5%) |
+| ++page-down++ | Volume down (-5%) |
+| ++f3++ | Mute / Unmute |
+| ++shift+page-up++ | Squelch up (+3 dB) |
+| ++shift+page-down++ | Squelch down (-3 dB) |
+
+Volume and squelch sliders are also available in the main window. The mute toggle button is labelled "Mute (M)" in the UI.
+
+The **squelch** silences audio when the signal drops below a threshold. This is useful for scanning or monitoring — you only hear audio when someone is transmitting. Set it just above the noise level so that only real signals open the squelch. A value of -80 dBm is a good starting point; raise it if you hear too much noise.
+
+## Signal Information
+
+Press ++i++ at any time to hear a spoken status report including:
+
+- Signal strength in dBFS with S-meter reading (S0–S9+30)
+- Stereo or Mono (in WFM mode)
+- Squelch state (open or closed)
+- Mute state
+- Demod offset and listening frequency (when a software VFO offset is active)
+
 ## RF Settings
 
 Open the RF Settings dialog with ++ctrl+r++ to configure hardware parameters.
@@ -139,76 +163,21 @@ Sets the hardware **intermediate frequency (IF) filter** bandwidth inside the R8
 
 In most cases, Auto is the best choice. Manual IF bandwidth is useful when you have a strong interfering signal near the frequency you are listening to.
 
-## Signal Information
+## Spectrum
 
-Press ++i++ at any time to hear a spoken status report including:
+The spectrum display shows signal power across the SDR's bandwidth. AccessDR provides multiple ways to explore the spectrum: sonification sweeps, an interactive cursor with probe tone, zoom, and peak detection. All spectrum features work on paused (frozen) data as well as live data.
 
-- Signal strength in dBFS with S-meter reading (S0–S9+30)
-- Stereo or Mono (in WFM mode)
-- Squelch state (open or closed)
-- Mute state
-- Demod offset and listening frequency (when a software VFO offset is active)
-
-## Spectrum and Sonification
-
-Sonification converts the FFT spectrum into audio, letting you "see" the spectrum with your ears.
-
-### How It Works
-
-- The spectrum is swept from left to right using **stereo panning** — left ear = low end, right ear = high end
-- **Pitch** encodes signal power — stronger signals produce a higher pitch, weak signals a low pitch
-- Signals below the noise floor are silent, so only real signals are audible
-- Strong signals pop out as clearly audible high-pitched tones at their position in the stereo field
-
-### Using Sonification
-
-- Press ++f5++ for a **snapshot sweep** — a single left-to-right pass, then stops
-- Press ++ctrl+f5++ to toggle **continuous sweep** — repeats until you press ++ctrl+f5++ again
-
-No need to enable sonification separately — it activates automatically when you start a sweep.
-
-### Sonification Settings
-
-Open the Spectrum Settings dialog with ++ctrl+s++ to adjust:
-
-- **Weak signal pitch** — the pitch for signals at the noise floor (default 200 Hz)
-- **Strong signal pitch** — the pitch for the strongest signals (default 4000 Hz)
-- **Sweep speed** — how long one full left-to-right sweep takes (default 5 seconds; slower speeds give more time to distinguish closely-spaced signals)
-
-### Spectrum Zoom
-
-By default sonification sweeps the entire SDR bandwidth (typically ±1.2 MHz around the tuned frequency). Zoom narrows the sonified range so closely-spaced signals get more sweep time and are easier to distinguish.
+### Shortcuts
 
 | Key | Action |
 |---|---|
-| ++=++ or ++plus++ | Zoom in (halve the span) |
-| ++-++ | Zoom out (double the span) |
-| ++backspace++ | Reset to full spectrum |
+| ++f++ | Speak top spectrum peaks |
 | ++g++ | Describe current spectrum range |
-
-Zoom levels: 1x (full) → 2x → 4x → 8x → 16x → 32x. At 2.4 MSPS, 32x zoom gives a ~75 kHz span — still useful for NFM or AM signals.
-
-The visual spectrum panel always shows the full bandwidth, with yellow dashed lines marking the zoom boundaries and dimmed regions outside the zoom.
-
-Zoom is session-only and resets when you restart the app.
-
-### Spectrum Cursor
-
-The spectrum cursor lets you interactively explore specific points in the spectrum. Think of it as clicking on a waterfall display — you move a cursor through the spectrum and hear a tone that represents the signal at that point.
-
-#### Using the Cursor
-
-Hold ++ctrl++ to hear a continuous probe tone at the cursor's current position:
-
-- **Pitch** encodes signal power at the cursor position — same mapping as sweep sonification
-- **Stereo pan** encodes frequency position — left ear = low end, right ear = high end
-
-While Ctrl is held, press ++left++ or ++right++ to move the cursor through the spectrum. The cursor moves at a configurable speed (default: 30% of visible spectrum per second). Release the arrow keys to stop moving — the tone continues playing at the current position. Release Ctrl to stop the tone.
-
-Use ++left++ / ++right++ without Ctrl to step the cursor and hear the position announced via speech.
-
-| Key | Action |
-|---|---|
+| ++=++ / ++plus++ | Zoom in (halve span) |
+| ++-++ | Zoom out (double span) |
+| ++backspace++ | Reset zoom to full spectrum |
+| ++f5++ | Sonification snapshot sweep |
+| ++ctrl+f5++ | Toggle continuous sweep |
 | ++ctrl++ (hold) | Play probe tone at cursor |
 | ++ctrl+left++ / ++ctrl+right++ | Move cursor while probing |
 | ++left++ / ++right++ | Step cursor and announce position |
@@ -217,30 +186,51 @@ Use ++left++ / ++right++ without Ctrl to step the cursor and hear the position a
 | ++ctrl+t++ | Tune LO to cursor frequency, clear offset |
 | ++shift+c++ | Toggle "demod follows cursor" mode |
 
-You can also click on the spectrum panel with the mouse to jump the cursor to that position.
+### Sonification
 
-The cursor respects zoom — when zoomed in, the cursor range narrows to the visible portion of the spectrum.
+Sonification converts the FFT spectrum into audio, letting you "hear" the spectrum:
 
-#### Software VFO Offset (Demod Follows Cursor)
+- The spectrum is swept from left to right using **stereo panning** — left ear = low end, right ear = high end
+- **Pitch** encodes signal power — stronger signals produce a higher pitch, weak signals a low pitch
+- Signals below the noise floor are silent, so only real signals are audible
 
-By default, the demodulator always processes the signal at the hardware LO (centre frequency). Press ++shift+c++ to enable **"demod follows cursor"** mode — when enabled, moving the cursor with Left/Right arrows or Ctrl+arrows also shifts the demodulator to listen at the cursor's frequency. This works like clicking on a waterfall in HDSDR or SDR++ to move a software VFO.
+Press ++f5++ for a **snapshot sweep** — a single left-to-right pass. Press ++ctrl+f5++ to toggle **continuous sweep** — repeats until you press ++ctrl+f5++ again. Sonification activates automatically when you start a sweep.
 
-The offset is applied by a software mixer in the DSP chain that shifts the selected signal down to DC for demodulation. The hardware LO does not move, so the full spectrum remains visible and the probe tone continues to work normally.
+### Zoom
 
-- **Shift+C** — toggle follow mode on/off (announced via speech)
-- **Left/Right** — step cursor; when follow mode is on, audio shifts to the new position
-- **Ctrl+hold arrows** — probe and move cursor; when follow mode is on, audio follows
-- **C** — reset cursor to centre and clear the offset (audio returns to centre frequency)
-- **Ctrl+T** — retune the hardware LO to the cursor frequency and clear the offset
-- **Up/Down** — tune the LO by step; the offset is preserved, so the listening frequency shifts with the LO
-- **Ctrl+Q** (enter LO frequency) — sets the LO directly and clears the offset
-- **Ctrl+O** (enter listening frequency) — sets the demod offset so the listening frequency matches
+Zoom narrows the visible and sonified range so closely-spaced signals are easier to distinguish. Press ++=++ to zoom in, ++-++ to zoom out, and ++backspace++ to reset. Press ++g++ to hear the current range.
 
-The offset is clamped to ±120 kHz (half the baseband rate). A yellow dashed "D" marker appears on the spectrum panel to show where the demodulator is listening. Press ++i++ to hear the current offset and listening frequency in the status report.
+Zoom levels: 1x (full) → 2x → 4x → 8x → 16x → 32x. At 2.4 MSPS, 32x zoom gives a ~75 kHz span — still useful for NFM or AM signals.
 
-### Spectrum Peaks
+The visual spectrum panel always shows the full bandwidth, with yellow dashed lines marking the zoom boundaries and dimmed regions outside the zoom.
 
-Press ++f++ to hear the top spectrum peaks announced as frequency and power level. The number of peaks reported is configurable in settings.
+### Cursor and Probe Tone
+
+The spectrum cursor lets you explore specific points in the spectrum interactively.
+
+**Probe tone:** Hold ++ctrl++ to hear a continuous tone at the cursor's position. Pitch encodes signal power (same mapping as sweep sonification) and stereo pan encodes frequency position (left = low, right = high). While Ctrl is held, press ++left++ / ++right++ to move through the spectrum. Release the arrows to stop moving — the tone continues. Release Ctrl to stop the tone entirely.
+
+**Stepping:** Press ++left++ / ++right++ without Ctrl to step the cursor one position and hear the frequency, power, and S-meter reading announced via speech. Press ++t++ to re-announce the current cursor position at any time.
+
+**Peaks:** Press ++f++ to hear the top spectrum peaks announced as frequency and power level. The number of peaks reported is configurable in the Spectrum Settings dialog (++ctrl+s++).
+
+You can also click on the spectrum panel with the mouse to jump the cursor to that position. The cursor respects zoom — when zoomed in, the range narrows to the visible spectrum.
+
+### Software VFO Offset
+
+By default, the demodulator processes the signal at the hardware LO (centre frequency). Press ++shift+c++ to enable **"demod follows cursor"** mode — moving the cursor also shifts the demodulator to listen at the cursor's frequency. This works like clicking on a waterfall in HDSDR or SDR++ to move a software VFO.
+
+The offset is applied by a software mixer in the DSP chain. The hardware LO does not move, so the full spectrum remains visible and the probe tone works normally.
+
+Press ++c++ to reset the cursor and offset to centre. Press ++ctrl+t++ to retune the hardware LO to the cursor and clear the offset. The offset is clamped to ±120 kHz (half the baseband rate). A yellow dashed "D" marker appears on the spectrum panel to show where the demodulator is listening. Press ++i++ to hear the current offset and listening frequency.
+
+### Sonification Settings
+
+Open the Spectrum Settings dialog with ++ctrl+s++ to adjust:
+
+- **Weak signal pitch** — the pitch for signals at the noise floor (default 200 Hz)
+- **Strong signal pitch** — the pitch for the strongest signals (default 4000 Hz)
+- **Sweep speed** — how long one full left-to-right sweep takes (default 5 seconds; slower speeds give more time to distinguish closely-spaced signals)
 
 ## Scanner
 
@@ -270,13 +260,3 @@ Save and recall favourite frequencies:
 3. **Load** a bookmark to tune to it instantly
 
 Bookmarks are stored in a JSON file and persist across sessions.
-
-## Squelch
-
-The squelch control silences audio output when the signal drops below a threshold. This is useful for scanning or monitoring — you only hear audio when someone is transmitting.
-
-- Adjust the squelch slider in the main window
-- Set it just above the noise level so that only real signals open the squelch
-- A value of -80 dBm is a good starting point; raise it if you hear too much noise
-
-Press ++i++ to check whether the squelch is currently open or closed.

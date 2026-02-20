@@ -1,11 +1,18 @@
 # Keyboard Shortcuts
 
-## Main Window
+## Radio Controls
 
 | Key | Action |
 |---|---|
 | ++f2++ | Start / Stop radio |
 | ++space++ | Pause / Resume radio |
+| ++f3++ | Mute / Unmute |
+| ++i++ | Read signal strength, stereo/mono, squelch state |
+
+## Tuning
+
+| Key | Action |
+|---|---|
 | ++q++ | Report LO (tuned) frequency |
 | ++o++ | Report listening (demod) frequency |
 | ++ctrl+q++ | Enter LO frequency (opens dialog) |
@@ -15,12 +22,38 @@
 | ++shift+up++ | Tune up by 10x step |
 | ++shift+down++ | Tune down by 10x step |
 | ++s++ | Cycle tuning step size |
-| ++f3++ | Mute / Unmute |
-| ++i++ | Read signal strength, stereo/mono, squelch state |
+
+## Volume and Squelch
+
+| Key | Action |
+|---|---|
+| ++page-up++ | Volume up (+5%) |
+| ++page-down++ | Volume down (-5%) |
+| ++shift+page-up++ | Squelch up (+3 dB) |
+| ++shift+page-down++ | Squelch down (-3 dB) |
+
+## Demodulation Modes
+
+Press ++m++ first, then the mode letter:
+
+| Key | Mode |
+|---|---|
+| ++m++ ++w++ | Wide FM (broadcast) |
+| ++m++ ++n++ | Narrow FM |
+| ++m++ ++a++ | AM |
+| ++m++ ++u++ | USB (Upper Sideband) |
+| ++m++ ++l++ | LSB (Lower Sideband) |
+| ++m++ ++c++ | CW (Morse) |
+| ++m++ ++d++ | DSB (Double Sideband) |
+
+## Spectrum
+
+| Key | Action |
+|---|---|
 | ++f++ | Speak top spectrum peaks |
 | ++g++ | Describe current spectrum range |
-| ++=++ / ++plus++ | Zoom in spectrum (halve span) |
-| ++-++ | Zoom out spectrum (double span) |
+| ++=++ / ++plus++ | Zoom in (halve span) |
+| ++-++ | Zoom out (double span) |
 | ++backspace++ | Reset zoom to full spectrum |
 | ++f5++ | Sonification snapshot sweep |
 | ++ctrl+f5++ | Toggle continuous sweep |
@@ -41,20 +74,6 @@
 Hold Ctrl to hear a continuous probe tone at the cursor's position — pitch indicates signal power, stereo pan indicates frequency position. While Ctrl is held, press Left/Right arrows to move the cursor through the spectrum. Release the arrows to stop moving (tone continues). Release Ctrl to stop the tone. Use Left/Right without Ctrl to step the cursor silently and hear the position announced.
 
 When "demod follows cursor" is enabled (Shift+C), moving the cursor with Left/Right or Ctrl+arrows also shifts the demodulator to listen at the cursor's frequency via a software VFO offset. Press C to reset the cursor and offset to centre. Press Ctrl+T to retune the hardware LO to the cursor and clear the offset.
-
-## Demodulation Modes
-
-Press ++m++ first, then the mode letter:
-
-| Key | Mode |
-|---|---|
-| ++m++ ++w++ | Wide FM (broadcast) |
-| ++m++ ++n++ | Narrow FM |
-| ++m++ ++a++ | AM |
-| ++m++ ++u++ | USB (Upper Sideband) |
-| ++m++ ++l++ | LSB (Lower Sideband) |
-| ++m++ ++c++ | CW (Morse) |
-| ++m++ ++d++ | DSB (Double Sideband) |
 
 ## Dialogs
 
