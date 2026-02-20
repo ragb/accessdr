@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import queue
 import threading
+import time
 from typing import Optional
 
 import numpy as np
@@ -25,6 +26,7 @@ from config.settings import Settings
 from core.audio import AudioOutput
 from core.dsp.demodulator import make_demodulator, Demodulator
 from core.dsp.filters import decimate
+from core.dsp.mixer import Mixer
 from core.dsp.spectrum import SpectrumAnalyser
 from core.scanner import Scanner
 from core.sdr_device import SDRDevice
@@ -123,6 +125,8 @@ class MainWindow(wx.Frame):
             min_pitch=self._settings.sonification_min_hz,
             max_pitch=self._settings.sonification_max_hz,
             sweep_speed=self._settings.sonification_sweep_speed,
+            spectrum_averaging_ms=self._settings.spectrum_averaging_ms,
+            pitch_smoothing_ms=self._settings.pitch_smoothing_ms,
         )
         self._scanner = Scanner(
             set_frequency_cb=self._tune,
@@ -134,6 +138,7 @@ class MainWindow(wx.Frame):
 
         # Runtime state
         self._running = False
+        self._paused = False
         self._dsp_thread: Optional[threading.Thread] = None
         self._step_idx = STEPS.index(self._settings.step) if self._settings.step in STEPS else 3
         self._was_stereo: Optional[bool] = None   # tracks last announced stereo state
@@ -143,6 +148,19 @@ class MainWindow(wx.Frame):
         self._zoom_level: int = 0                  # 0–5: factor = 2^level
         self._mode_pending: bool = False           # waiting for mode letter after M
         self._above_threshold: bool = False        # auto-announce threshold state
+
+        # Software VFO offset state
+        self._demod_offset: float = 0.0           # Hz from LO
+        self._mixer: Optional[Mixer] = None       # created in _start_radio
+
+        # Spectrum cursor state
+        self._cursor_pos: float = 0.5            # 0.0–1.0 within zoomed range
+        self._cursor_active: bool = False         # probe tone playing
+        self._ctrl_was_down: bool = False         # tracks Ctrl state transitions
+        self._cursor_last_time: float = 0.0       # for delta-time movement
+        self._cursor_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self._on_cursor_timer, self._cursor_timer)
+        self._cursor_timer.Start(50)              # always polling Ctrl state
 
         # Open dialogs cache (so we don't create duplicates)
         self._dialogs: dict = {}
@@ -175,7 +193,7 @@ class MainWindow(wx.Frame):
             item = bands_menu.Append(wx.ID_ANY, _(name))
             self.Bind(wx.EVT_MENU, self._make_band_handler(name), item)
         radio_menu.AppendSubMenu(bands_menu, _("&Bands"))
-        item_freq = radio_menu.Append(wx.ID_ANY, _("&Enter Frequency…"))
+        item_freq = radio_menu.Append(wx.ID_ANY, _("&Enter Frequency…\tCtrl+Q"))
         self.Bind(wx.EVT_MENU, self._on_enter_freq_menu, item_freq)
         mb.Append(radio_menu, _("&Radio"))
 
@@ -323,6 +341,7 @@ class MainWindow(wx.Frame):
 
         # --- Spectrum display ---
         self._spectrum_panel = SpectrumPanel(panel, self._sonification)
+        self._spectrum_panel.set_cursor_click_callback(self._on_spectrum_click)
         outer.Add(self._spectrum_panel, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
 
         panel.SetSizer(outer)
@@ -336,6 +355,17 @@ class MainWindow(wx.Frame):
         self._vol_slider.MoveBeforeInTabOrder(self._mute_btn)
         self._mute_btn.MoveBeforeInTabOrder(self._sq_slider)
         self._sq_slider.MoveBeforeInTabOrder(self._sweep_btn)
+
+        # Prevent native Left/Right handling on widgets that would steal
+        # arrow keys from the spectrum cursor (horizontal sliders, choices).
+        def _eat_left_right(event: wx.KeyEvent) -> None:
+            code = event.GetKeyCode()
+            if code in (wx.WXK_LEFT, wx.WXK_RIGHT) and event.GetModifiers() in (0, wx.MOD_CONTROL):
+                return  # consumed — main _on_key handler will process
+            event.Skip()
+        for w in (self._step_choice, self._mode_choice, self._bw_choice,
+                  self._vol_slider, self._sq_slider, self._sweep_btn):
+            w.Bind(wx.EVT_KEY_DOWN, _eat_left_right)
 
         self._update_bw_choices(self._settings.mode)
 
@@ -366,12 +396,14 @@ class MainWindow(wx.Frame):
         self._settings.frequency = freq_hz
         self._sdr.set_frequency(freq_hz)
         self._retune_pending = True   # ask DSP loop to re-announce stereo status
-        wx.CallAfter(self._freq_ctrl.SetValue, _fmt_freq(freq_hz))
-        wx.CallAfter(speech.output, _fmt_freq(freq_hz))
+        listen = int(freq_hz + self._demod_offset)
+        wx.CallAfter(self._freq_ctrl.SetValue, _fmt_freq(listen))
+        wx.CallAfter(speech.output, _fmt_freq(listen))
         wx.CallAfter(
             self._statusbar.SetStatusText,
-            _("Tuned to {freq}").format(freq=_fmt_freq(freq_hz)),
+            _("Tuned to {freq}").format(freq=_fmt_freq(listen)),
         )
+        wx.CallAfter(self._update_demod_marker)
 
     def _step_frequency(self, direction: int) -> None:
         step = STEPS[self._step_idx]
@@ -406,7 +438,37 @@ class MainWindow(wx.Frame):
                 speech.output(_("Invalid frequency."))
                 dlg.Destroy()
                 return
+            self._reset_offset()
             self._tune(freq_hz)
+        dlg.Destroy()
+
+    def _open_demod_freq_dialog(self) -> None:
+        """Open a modal dialog to set the demod (listening) frequency."""
+        current = self._listening_freq() / 1_000_000
+        dlg = wx.TextEntryDialog(
+            self,
+            _("Enter listening frequency (MHz):"),
+            _("Set Listening Frequency"),
+            value=f"{current:.3f}",
+        )
+        if dlg.ShowModal() == wx.ID_OK:
+            text = dlg.GetValue().strip().lower()
+            try:
+                text = text.replace("mhz", "").replace("khz", "").replace("hz", "").strip()
+                val = float(text)
+                if val < 30_000:
+                    freq_hz = int(val * 1_000_000)
+                elif val < 30_000_000:
+                    freq_hz = int(val * 1_000)
+                else:
+                    freq_hz = int(val)
+            except ValueError:
+                speech.output(_("Invalid frequency."))
+                dlg.Destroy()
+                return
+            offset = freq_hz - self._settings.frequency
+            self._set_demod_offset(offset)
+            speech.output(_("Listening {freq}").format(freq=_fmt_freq(self._listening_freq())))
         dlg.Destroy()
 
     def _on_step_change(self, event: wx.CommandEvent) -> None:
@@ -474,7 +536,11 @@ class MainWindow(wx.Frame):
     # ==================================================================
 
     def _on_start_stop(self, _event: wx.CommandEvent) -> None:
-        if self._running:
+        if self._paused:
+            # Full stop from paused state
+            self._paused = False
+            self._stop_radio()
+        elif self._running:
             self._stop_radio()
         else:
             self._start_radio()
@@ -487,6 +553,8 @@ class MainWindow(wx.Frame):
         self._demodulator: Demodulator = make_demodulator(
             self._settings.mode, BASEBAND_RATE, AUDIO_RATE
         )
+        self._mixer = Mixer(BASEBAND_RATE)
+        self._demod_offset = 0.0
         self._sdr.set_frequency(self._settings.frequency)
         self._sdr.set_sample_rate(self._settings.sample_rate)
         self._sdr.set_gain(self._settings.gain)
@@ -509,13 +577,15 @@ class MainWindow(wx.Frame):
 
         self._start_btn.SetLabel(_("\u25a0 Stop"))
         self._statusbar.SetStatusText(
-            _("Receiving — {freq}").format(freq=_fmt_freq(self._settings.frequency))
+            _("Receiving — {freq}").format(freq=_fmt_freq(self._listening_freq()))
         )
         speech.output(_("Radio started."))
 
     def _stop_radio(self) -> None:
         self._running = False
+        self._paused = False
         self._sdr.stop()
+        self._sdr.close()
         self._audio.stop()
         if self._dsp_thread:
             self._dsp_thread.join(timeout=2.0)
@@ -525,6 +595,50 @@ class MainWindow(wx.Frame):
         self._start_btn.SetLabel(_("\u25b6 Start"))
         self._statusbar.SetStatusText(_("Stopped."))
         speech.output(_("Radio stopped."))
+
+    def _toggle_pause(self) -> None:
+        """Toggle pause/resume. Pause freezes IQ capture and audio but keeps
+        the last spectrum visible and navigable."""
+        if not self._running and not self._paused:
+            return  # can't pause a stopped radio
+
+        if not self._paused:
+            # --- Pause ---
+            self._paused = True
+            self._sdr.pause()                    # stop IQ capture (keeps device open)
+            self._running = False                 # let DSP thread exit naturally
+            if self._dsp_thread:
+                self._dsp_thread.join(timeout=2.0)
+                self._dsp_thread = None
+            self._audio.pause()                   # stop audio stream, drain queue
+            listen = self._listening_freq()
+            self._start_btn.SetLabel(_("▶ Resume"))
+            self._statusbar.SetStatusText(
+                _("Paused — {freq}").format(freq=_fmt_freq(listen))
+            )
+            speech.output(_("Paused."))
+        else:
+            # --- Resume ---
+            # Drain stale IQ data
+            while not self._sdr.iq_queue.empty():
+                try:
+                    self._sdr.iq_queue.get_nowait()
+                except queue.Empty:
+                    break
+            self._sdr.start()                     # restart IQ capture
+            self._audio.resume()                  # restart audio stream
+            self._running = True
+            self._dsp_thread = threading.Thread(
+                target=self._dsp_loop, daemon=True, name="DSPThread"
+            )
+            self._dsp_thread.start()
+            self._paused = False
+            listen = self._listening_freq()
+            self._start_btn.SetLabel(_("■ Stop"))
+            self._statusbar.SetStatusText(
+                _("Receiving — {freq}").format(freq=_fmt_freq(listen))
+            )
+            speech.output(_("Resumed."))
 
     # ==================================================================
     # DSP thread
@@ -564,12 +678,15 @@ class MainWindow(wx.Frame):
             # Decimate to baseband
             bb = decimate(iq, self._settings.sample_rate, BASEBAND_RATE)
 
-            # Spectrum analysis
+            # Spectrum analysis (full baseband for display)
             spec = self._spectrum.process(bb)
             wx.CallAfter(self._on_spectrum_update, spec)
 
+            # Shift desired signal to DC via software VFO offset
+            mixed = self._mixer.process(bb, self._demod_offset)
+
             # Demodulate using stateful demodulator (filter state carried between chunks)
-            audio = self._demodulator.process(bb)
+            audio = self._demodulator.process(mixed)
             self._audio.write(audio)
 
             # Track stereo/mono state; update status bar silently on change.
@@ -582,10 +699,11 @@ class MainWindow(wx.Frame):
                 elif stereo != dsp_stereo:
                     dsp_stereo = stereo
                     label = _("Stereo") if stereo else _("Mono")
+                    listen = int(self._settings.frequency + self._demod_offset)
                     wx.CallAfter(
                         self._statusbar.SetStatusText,
                         _("Receiving — {freq} [{label}]").format(
-                            freq=_fmt_freq(self._settings.frequency), label=label
+                            freq=_fmt_freq(listen), label=label
                         ),
                     )
 
@@ -610,6 +728,10 @@ class MainWindow(wx.Frame):
         # Feed sonification (zoomed slice so sweep covers only visible range)
         if self._settings.sonification_enabled:
             self._sonification.set_spectrum(self._zoom_slice(spectrum))
+
+        # Update probe tone with latest spectrum data
+        if self._cursor_active:
+            self._sonification.update_probe(self._cursor_pos)
 
         # Update spectrum panel accessible name with current range
         start_hz, end_hz = self._spectrum_range()
@@ -652,6 +774,24 @@ class MainWindow(wx.Frame):
         val = float(event.GetInt())
         self._audio.squelch = val
         self._settings.squelch = val
+        self._sq_lbl.SetLabel(f"{val:.0f} dBm")
+        speech.output(_("Squelch {val:.0f} dBm").format(val=val))
+
+    def _adjust_volume(self, delta_pct: int) -> None:
+        """Change volume by *delta_pct* percentage points and announce."""
+        pct = max(0, min(100, int(self._settings.volume * 100) + delta_pct))
+        val = pct / 100.0
+        self._audio.volume = val
+        self._settings.volume = val
+        self._vol_slider.SetValue(pct)
+        speech.output(_("Volume {v} percent").format(v=pct))
+
+    def _adjust_squelch(self, delta_db: int) -> None:
+        """Change squelch by *delta_db* dB and announce."""
+        val = max(-120.0, min(0.0, self._settings.squelch + delta_db))
+        self._audio.squelch = val
+        self._settings.squelch = val
+        self._sq_slider.SetValue(int(val))
         self._sq_lbl.SetLabel(f"{val:.0f} dBm")
         speech.output(_("Squelch {val:.0f} dBm").format(val=val))
 
@@ -754,6 +894,178 @@ class MainWindow(wx.Frame):
         speech.output(msg)
 
     # ==================================================================
+    # Spectrum cursor
+    # ==================================================================
+
+    def _cursor_freq(self) -> int:
+        """Convert cursor position (0.0–1.0) to Hz within zoomed range."""
+        start_hz, end_hz = self._spectrum_range()
+        span = end_hz - start_hz
+        return int(start_hz + self._cursor_pos * span)
+
+    def _cursor_db(self) -> float:
+        """Interpolate spectrum power at the cursor position (dBFS)."""
+        if self._last_spectrum is None:
+            return -100.0
+        zoomed = self._zoom_slice(self._last_spectrum)
+        n = len(zoomed)
+        if n < 2:
+            return -100.0
+        bin_f = self._cursor_pos * (n - 1)
+        lo = int(bin_f)
+        hi = min(lo + 1, n - 1)
+        frac = bin_f - lo
+        return float(zoomed[lo] * (1.0 - frac) + zoomed[hi] * frac)
+
+    def _start_cursor_probe(self) -> None:
+        """Start the cursor probe tone at the current position."""
+        if self._cursor_active:
+            return
+        self._cursor_active = True
+        self._cursor_last_time = time.monotonic()
+        self._settings.sonification_enabled = True
+        self._audio.duck(0.1)  # fade radio down while probing
+        self._sonification.start_probe(self._cursor_pos)
+
+    def _stop_cursor_probe(self) -> None:
+        """Stop the cursor probe tone."""
+        if not self._cursor_active:
+            return
+        self._cursor_active = False
+        self._sonification.stop_probe()
+        self._audio.duck(1.0)  # fade radio back up
+
+    def _on_cursor_timer(self, _event: wx.TimerEvent) -> None:
+        """50 ms tick: poll Ctrl for probe start/stop, poll arrows for movement."""
+        # Only track when main window is active
+        if wx.GetActiveWindow() is not self:
+            if self._cursor_active:
+                self._stop_cursor_probe()
+            self._ctrl_was_down = False
+            return
+
+        ctrl_down = wx.GetKeyState(wx.WXK_CONTROL)
+
+        # Ctrl transition: pressed → start probe, released → stop probe
+        if ctrl_down and not self._ctrl_was_down:
+            self._start_cursor_probe()
+        elif not ctrl_down and self._ctrl_was_down:
+            self._stop_cursor_probe()
+        self._ctrl_was_down = ctrl_down
+
+        if not self._cursor_active:
+            return
+
+        # Poll arrow keys for direction while probe is active
+        left = wx.GetKeyState(wx.WXK_LEFT)
+        right = wx.GetKeyState(wx.WXK_RIGHT)
+        direction = (-1 if left else 0) + (1 if right else 0)
+
+        now = time.monotonic()
+        dt = now - self._cursor_last_time
+        self._cursor_last_time = now
+
+        if direction != 0:
+            speed = self._settings.cursor_speed
+            self._cursor_pos += direction * speed * dt
+            self._cursor_pos = max(0.0, min(1.0, self._cursor_pos))
+
+        self._sonification.update_probe(self._cursor_pos)
+        self._spectrum_panel.set_cursor(self._cursor_pos)
+        if self._settings.demod_follows_cursor:
+            self._update_offset_from_cursor()
+
+    def _step_cursor(self, direction: int) -> None:
+        """Move the cursor by one discrete step and announce position."""
+        step = self._settings.cursor_speed * 0.1
+        self._cursor_pos += direction * step
+        self._cursor_pos = max(0.0, min(1.0, self._cursor_pos))
+        self._spectrum_panel.set_cursor(self._cursor_pos)
+        if self._settings.demod_follows_cursor:
+            self._update_offset_from_cursor()
+        self._speak_cursor()
+
+    def _speak_cursor(self) -> None:
+        """Speak the cursor's current frequency and power."""
+        freq_hz = self._cursor_freq()
+        db = self._cursor_db()
+        s_unit = _s_meter(db)
+        speech.output(
+            _("{freq}, {db:.0f} dBFS, {s_unit}").format(
+                freq=_fmt_freq(freq_hz), db=db, s_unit=s_unit,
+            )
+        )
+
+    def _reset_cursor(self) -> None:
+        """Reset the spectrum cursor to the centre and clear demod offset."""
+        self._cursor_pos = 0.5
+        self._spectrum_panel.set_cursor(self._cursor_pos)
+        self._reset_offset()
+        speech.output(_("Cursor centred, offset cleared."))
+
+    def _tune_to_cursor(self) -> None:
+        """Tune the LO to the cursor frequency and reset offset."""
+        freq_hz = self._cursor_freq()
+        self._reset_offset()
+        self._cursor_pos = 0.5
+        self._spectrum_panel.set_cursor(self._cursor_pos)
+        self._tune(freq_hz)
+
+    def _on_spectrum_click(self, pos: float) -> None:
+        """Handle mouse click on spectrum panel — move cursor to position."""
+        self._cursor_pos = pos
+        self._spectrum_panel.set_cursor(pos)
+        if self._settings.demod_follows_cursor:
+            self._update_offset_from_cursor()
+
+    # ==================================================================
+    # Software VFO offset
+    # ==================================================================
+
+    def _listening_freq(self) -> int:
+        """Return the actual listening frequency (LO + demod offset)."""
+        return int(self._settings.frequency + self._demod_offset)
+
+    def _set_demod_offset(self, hz: float) -> None:
+        """Set the demod offset, clamping to ±half baseband."""
+        max_offset = BASEBAND_RATE / 2.0   # ±120 kHz
+        self._demod_offset = max(-max_offset, min(max_offset, hz))
+        self._update_demod_marker()
+        listen = self._listening_freq()
+        self._freq_ctrl.SetValue(_fmt_freq(listen))
+
+    def _reset_offset(self) -> None:
+        """Zero the demod offset and reset mixer phase."""
+        self._demod_offset = 0.0
+        if self._mixer is not None:
+            self._mixer.reset()
+        self._update_demod_marker()
+        self._freq_ctrl.SetValue(_fmt_freq(self._settings.frequency))
+
+    def _update_offset_from_cursor(self) -> None:
+        """Convert cursor position to demod offset Hz."""
+        start_hz, end_hz = self._spectrum_range()
+        span = end_hz - start_hz
+        cursor_hz = start_hz + self._cursor_pos * span
+        offset = cursor_hz - self._settings.frequency
+        self._set_demod_offset(offset)
+
+    def _update_demod_marker(self) -> None:
+        """Sync the spectrum panel demod marker to the current offset."""
+        if self._demod_offset == 0.0:
+            self._spectrum_panel.set_demod_marker(None)
+        else:
+            # Convert offset Hz to 0.0–1.0 position within zoomed spectrum range
+            start_hz, end_hz = self._spectrum_range()
+            span = end_hz - start_hz
+            if span > 0:
+                pos = (self._settings.frequency + self._demod_offset - start_hz) / span
+                pos = max(0.0, min(1.0, pos))
+                self._spectrum_panel.set_demod_marker(pos)
+            else:
+                self._spectrum_panel.set_demod_marker(None)
+
+    # ==================================================================
     # Keyboard shortcuts
     # ==================================================================
 
@@ -791,7 +1103,11 @@ class MainWindow(wx.Frame):
             return
 
         if code == ord("Q") and modifiers == 0:
-            self._open_freq_dialog()
+            speech.output(_("LO {freq}").format(freq=_fmt_freq(self._settings.frequency)))
+            return
+
+        if code == ord("O") and modifiers == 0:
+            speech.output(_("Listening {freq}").format(freq=_fmt_freq(self._listening_freq())))
             return
 
         if code == ord("S") and modifiers == 0:
@@ -800,6 +1116,10 @@ class MainWindow(wx.Frame):
 
         if code == wx.WXK_F2 and modifiers == 0:
             self._on_start_stop(event)
+            return
+
+        if code == wx.WXK_SPACE and modifiers in (0, wx.MOD_CONTROL):
+            self._toggle_pause()
             return
 
         if code == wx.WXK_F3 and modifiers == 0:
@@ -828,6 +1148,13 @@ class MainWindow(wx.Frame):
                 )
                 if self._audio.muted:
                     parts.append(_("Muted"))
+                if self._demod_offset != 0.0:
+                    parts.append(_("Offset {khz:+.1f} kHz").format(
+                        khz=self._demod_offset / 1000.0
+                    ))
+                    parts.append(_("Listening {freq}").format(
+                        freq=_fmt_freq(self._listening_freq())
+                    ))
                 speech.output(", ".join(parts))
             return
 
@@ -850,6 +1177,42 @@ class MainWindow(wx.Frame):
             self._describe_spectrum()
             return
 
+        if code == ord("C") and modifiers == wx.MOD_SHIFT:
+            self._settings.demod_follows_cursor = not self._settings.demod_follows_cursor
+            state = _("on") if self._settings.demod_follows_cursor else _("off")
+            speech.output(_("Demod follows cursor {state}").format(state=state))
+            if not self._settings.demod_follows_cursor:
+                self._reset_offset()
+            return
+
+        if code == ord("C") and modifiers == 0:
+            self._reset_cursor()
+            return
+
+        if code == ord("T") and modifiers == 0:
+            self._speak_cursor()
+            return
+
+        if code == ord("T") and modifiers == wx.MOD_CONTROL:
+            self._tune_to_cursor()
+            return
+
+        # Volume: PageUp / PageDown (±5%)
+        if code == wx.WXK_PAGEUP and modifiers == 0:
+            self._adjust_volume(+5)
+            return
+        if code == wx.WXK_PAGEDOWN and modifiers == 0:
+            self._adjust_volume(-5)
+            return
+
+        # Squelch: Shift+PageUp / Shift+PageDown (±3 dB)
+        if code == wx.WXK_PAGEUP and modifiers == wx.MOD_SHIFT:
+            self._adjust_squelch(+3)
+            return
+        if code == wx.WXK_PAGEDOWN and modifiers == wx.MOD_SHIFT:
+            self._adjust_squelch(-3)
+            return
+
         # Zoom: = / + / numpad+ to zoom in, - / numpad- to zoom out
         if code in (ord("="), ord("+"), wx.WXK_NUMPAD_ADD) and modifiers == 0:
             self._zoom_in()
@@ -869,17 +1232,40 @@ class MainWindow(wx.Frame):
             self._step_frequency(-1)
             return
 
-        if code == wx.WXK_UP and modifiers == wx.ACCEL_CTRL:
+        if code == wx.WXK_UP and modifiers == wx.MOD_SHIFT:
             self._step_frequency(+10)
             return
 
-        if code == wx.WXK_DOWN and modifiers == wx.ACCEL_CTRL:
+        if code == wx.WXK_DOWN and modifiers == wx.MOD_SHIFT:
             self._step_frequency(-10)
+            return
+
+        if code == wx.WXK_LEFT and modifiers == wx.MOD_CONTROL:
+            return  # movement handled by cursor timer polling
+
+        if code == wx.WXK_RIGHT and modifiers == wx.MOD_CONTROL:
+            return  # movement handled by cursor timer polling
+
+        if code == wx.WXK_LEFT and modifiers == 0:
+            self._step_cursor(-1)
+            return
+
+        if code == wx.WXK_RIGHT and modifiers == 0:
+            self._step_cursor(+1)
             return
 
         if code == wx.WXK_F1:
             self._open_help_dialog()
             return
+
+        # Frequency entry shortcuts (Ctrl+letter)
+        if modifiers == wx.MOD_CONTROL:
+            if code == ord("Q"):
+                self._open_freq_dialog()
+                return
+            if code == ord("O"):
+                self._open_demod_freq_dialog()
+                return
 
         # Dialog shortcuts (Ctrl+letter)
         if modifiers == wx.MOD_CONTROL:
@@ -1044,6 +1430,8 @@ class MainWindow(wx.Frame):
         self.Close()
 
     def _on_close(self, event: wx.CloseEvent) -> None:
+        self._cursor_timer.Stop()
+        self._stop_cursor_probe()
         self._stop_radio()
         self._settings.save()
         self._bookmarks.save()

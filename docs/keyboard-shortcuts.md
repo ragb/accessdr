@@ -5,11 +5,15 @@
 | Key | Action |
 |---|---|
 | ++f2++ | Start / Stop radio |
-| ++q++ | Enter frequency (opens dialog) |
+| ++space++ | Pause / Resume radio |
+| ++q++ | Report LO (tuned) frequency |
+| ++o++ | Report listening (demod) frequency |
+| ++ctrl+q++ | Enter LO frequency (opens dialog) |
+| ++ctrl+o++ | Enter listening frequency (opens dialog) |
 | ++up++ | Tune up by step |
 | ++down++ | Tune down by step |
-| ++ctrl+up++ | Tune up by 10x step |
-| ++ctrl+down++ | Tune down by 10x step |
+| ++shift+up++ | Tune up by 10x step |
+| ++shift+down++ | Tune down by 10x step |
 | ++s++ | Cycle tuning step size |
 | ++f3++ | Mute / Unmute |
 | ++i++ | Read signal strength, stereo/mono, squelch state |
@@ -20,6 +24,23 @@
 | ++backspace++ | Reset zoom to full spectrum |
 | ++f5++ | Sonification snapshot sweep |
 | ++ctrl+f5++ | Toggle continuous sweep |
+
+## Spectrum Cursor
+
+| Key | Action |
+|---|---|
+| ++ctrl++ (hold) | Play probe tone at cursor position |
+| ++ctrl+left++ / ++ctrl+right++ | Move cursor while probing |
+| ++left++ | Step cursor left and announce |
+| ++right++ | Step cursor right and announce |
+| ++t++ | Speak cursor frequency and power |
+| ++c++ | Reset cursor to centre, clear demod offset |
+| ++ctrl+t++ | Tune LO to cursor frequency, clear offset |
+| ++shift+c++ | Toggle "demod follows cursor" mode |
+
+Hold Ctrl to hear a continuous probe tone at the cursor's position — pitch indicates signal power, stereo pan indicates frequency position. While Ctrl is held, press Left/Right arrows to move the cursor through the spectrum. Release the arrows to stop moving (tone continues). Release Ctrl to stop the tone. Use Left/Right without Ctrl to step the cursor silently and hear the position announced.
+
+When "demod follows cursor" is enabled (Shift+C), moving the cursor with Left/Right or Ctrl+arrows also shifts the demodulator to listen at the cursor's frequency via a software VFO offset. Press C to reset the cursor and offset to centre. Press Ctrl+T to retune the hardware LO to the cursor and clear the offset.
 
 ## Demodulation Modes
 

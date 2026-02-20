@@ -42,11 +42,17 @@ class Settings:
     sonification_min_hz: int = 200
     sonification_max_hz: int = 4000
     sonification_sweep_speed: float = 5.0   # seconds per sweep
+    spectrum_averaging_ms: float = 80.0     # spectrum EMA time constant (ms)
+    pitch_smoothing_ms: float = 30.0        # probe pitch IIR time constant (ms)
+    cursor_speed: float = 0.3               # fraction of visible spectrum per second
     speech_peak_count: int = 3
     auto_announce_threshold: float = -60.0  # dBm
 
     # i18n — empty string means system default
     language: str = ""
+
+    # VFO
+    demod_follows_cursor: bool = False
 
     # Step
     step: int = 1_000               # Hz

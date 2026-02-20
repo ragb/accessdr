@@ -1,14 +1,14 @@
 # Translations template for accessdr.
-# Copyright (C) 2026 AccessDR Contributors
+# Copyright (C) 2026 ORGANIZATION
 # This file is distributed under the same license as the accessdr project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: accessdr 0.1.0\n"
+"Project-Id-Version: accessdr 0.1.2\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-19 14:48+0000\n"
+"POT-Creation-Date: 2026-02-20 18:55+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: main.py:42
+#: main.py:45
 #, python-brace-format
 msgid "AccessDR — Accessible SDR Radio v{version}"
 msgstr ""
@@ -70,261 +70,391 @@ msgstr ""
 msgid "DECT"
 msgstr ""
 
-#: ui/main_window.py:37
+#: ui/main_window.py:40
 msgid "1 Hz"
 msgstr ""
 
-#: ui/main_window.py:37
+#: ui/main_window.py:40
 msgid "10 Hz"
 msgstr ""
 
-#: ui/main_window.py:37
+#: ui/main_window.py:40
 msgid "100 Hz"
 msgstr ""
 
-#: ui/main_window.py:37
+#: ui/main_window.py:40
 msgid "1 kHz"
 msgstr ""
 
-#: ui/main_window.py:38
+#: ui/main_window.py:41
 msgid "10 kHz"
 msgstr ""
 
-#: ui/main_window.py:38
+#: ui/main_window.py:41
 msgid "100 kHz"
 msgstr ""
 
-#: ui/main_window.py:38
+#: ui/main_window.py:41
 msgid "1 MHz"
 msgstr ""
 
-
-#: ui/main_window.py:139
+#: ui/main_window.py:185
 msgid "E&xit\tAlt+F4"
 msgstr ""
 
-#: ui/main_window.py:140
+#: ui/main_window.py:186
 msgid "&File"
 msgstr ""
 
-#: ui/main_window.py:144
-msgid "&RF Settings…\tCtrl+R"
-msgstr ""
-
-#: ui/main_window.py:150
+#: ui/main_window.py:194
 msgid "&Bands"
 msgstr ""
 
-#: ui/main_window.py:151
+#: ui/main_window.py:195
+msgid "&Enter Frequency…\tCtrl+Q"
+msgstr ""
+
+#: ui/main_window.py:197
 msgid "&Radio"
 msgstr ""
 
-#: ui/main_window.py:155
-msgid "&Spectrum Settings…\tCtrl+S"
+#: ui/main_window.py:201
+msgid "Sca&nner…\tCtrl+N"
 msgstr ""
 
-#: ui/main_window.py:157
-msgid "&View"
-msgstr ""
-
-#: ui/main_window.py:161
-msgid "&Scanner…\tCtrl+N"
-msgstr ""
-
-#: ui/main_window.py:162
+#: ui/main_window.py:202
 msgid "&Bookmarks…\tCtrl+B"
 msgstr ""
 
-#: ui/main_window.py:163
-msgid "&Audio Settings…\tCtrl+D"
-msgstr ""
-
-#: ui/main_window.py:167
+#: ui/main_window.py:205
 msgid "&Tools"
 msgstr ""
 
-#: ui/main_window.py:171
+#: ui/main_window.py:209
+msgid "&RF Settings…\tCtrl+R"
+msgstr ""
+
+#: ui/main_window.py:210
+msgid "&Spectrum Settings…\tCtrl+S"
+msgstr ""
+
+#: ui/main_window.py:211
+msgid "&Audio Settings…\tCtrl+D"
+msgstr ""
+
+#: ui/main_window.py:215
+msgid "&Options"
+msgstr ""
+
+#: ui/main_window.py:219
 msgid "&Keyboard Shortcuts…\tF1"
 msgstr ""
 
-#: ui/main_window.py:172
+#: ui/main_window.py:220
 msgid "&Help"
 msgstr ""
 
-#: ui/main_window.py:187
+#: ui/main_window.py:235
 msgid "Frequency:"
 msgstr ""
 
-#: ui/main_window.py:203
+#: ui/main_window.py:258
 msgid "Step:"
 msgstr ""
 
-#: ui/dialogs/bookmarks_dialog.py:73 ui/main_window.py:216
+#: ui/dialogs/bookmarks_dialog.py:73 ui/main_window.py:271
 msgid "Mode:"
 msgstr ""
 
-#: ui/main_window.py:221
+#: ui/main_window.py:276
 msgid "BW:"
 msgstr ""
 
-#: ui/main_window.py:231 ui/main_window.py:441
+#: ui/main_window.py:286 ui/main_window.py:589
 msgid "▶ Start"
 msgstr ""
 
-#: ui/main_window.py:234 ui/main_window.py:440
+#: ui/main_window.py:289 ui/main_window.py:588
 msgid "Signal: —"
 msgstr ""
 
-#: ui/main_window.py:242
+#: ui/main_window.py:297
 msgid "Volume:"
 msgstr ""
 
-#: ui/main_window.py:251
+#: ui/main_window.py:306
 msgid "Mute (M)"
 msgstr ""
 
-#: ui/dialogs/scanner_dialog.py:69 ui/main_window.py:261
+#: ui/dialogs/scanner_dialog.py:69 ui/main_window.py:316
 msgid "Squelch (dBm):"
 msgstr ""
 
-#: ui/main_window.py:290
+#: ui/main_window.py:335 ui/main_window.py:760
+msgid "Start Sweep (Ctrl+F5)"
+msgstr ""
+
+#: ui/main_window.py:373
 msgid "Ready — no device connected."
 msgstr ""
 
-#: ui/main_window.py:319
+#: ui/main_window.py:403
 #, python-brace-format
 msgid "Tuned to {freq}"
 msgstr ""
 
-#: ui/dialogs/bookmarks_dialog.py:125 ui/main_window.py:342
+#: ui/main_window.py:421
+msgid "Enter frequency (MHz):"
+msgstr ""
+
+#: ui/main_window.py:422
+msgid "Tune to Frequency"
+msgstr ""
+
+#: ui/dialogs/bookmarks_dialog.py:125 ui/main_window.py:437
+#: ui/main_window.py:465
 msgid "Invalid frequency."
 msgstr ""
 
-#: ui/main_window.py:349 ui/main_window.py:355
+#: ui/main_window.py:449
+msgid "Enter listening frequency (MHz):"
+msgstr ""
+
+#: ui/main_window.py:450
+msgid "Set Listening Frequency"
+msgstr ""
+
+#: ui/main_window.py:470 ui/main_window.py:1060 ui/main_window.py:1101
+#, python-brace-format
+msgid "Listening {freq}"
+msgstr ""
+
+#: ui/main_window.py:476 ui/main_window.py:482
 #, python-brace-format
 msgid "Step {step}"
 msgstr ""
 
-#: ui/main_window.py:375 ui/main_window.py:392
+#: ui/main_window.py:504 ui/main_window.py:531
 #, python-brace-format
 msgid "Mode {mode}"
 msgstr ""
 
-#: ui/main_window.py:383
+#: ui/main_window.py:520
 #, python-brace-format
 msgid "Bandwidth {bw}"
 msgstr ""
 
-#: ui/main_window.py:406
+#: ui/main_window.py:545
 msgid "Could not open SDR device."
 msgstr ""
 
-#: ui/main_window.py:426
+#: ui/main_window.py:573
 msgid "■ Stop"
 msgstr ""
 
-#: ui/main_window.py:428
+#: ui/main_window.py:575
 #, python-brace-format
 msgid "Receiving — {freq}"
 msgstr ""
 
-#: ui/main_window.py:430
+#: ui/main_window.py:577
 msgid "Radio started."
 msgstr ""
 
-#: ui/dialogs/scanner_dialog.py:143 ui/main_window.py:442
+#: ui/dialogs/scanner_dialog.py:143 ui/main_window.py:590
 msgid "Stopped."
 msgstr ""
 
-#: ui/main_window.py:443
+#: ui/main_window.py:591
 msgid "Radio stopped."
 msgstr ""
 
-#: ui/main_window.py:500 ui/main_window.py:602
+#: ui/main_window.py:611
+msgid "▶ Resume"
+msgstr ""
+
+#: ui/main_window.py:613
+#, python-brace-format
+msgid "Paused — {freq}"
+msgstr ""
+
+#: ui/main_window.py:615
+msgid "Paused."
+msgstr ""
+
+#: ui/main_window.py:636
+msgid "Resumed."
+msgstr ""
+
+#: ui/main_window.py:651 ui/main_window.py:1090
 msgid "Stereo"
 msgstr ""
 
-#: ui/main_window.py:500 ui/main_window.py:602
+#: ui/main_window.py:651 ui/main_window.py:1090
 msgid "Mono"
 msgstr ""
 
-#: ui/main_window.py:503
+#: ui/main_window.py:655
 #, python-brace-format
 msgid "Receiving — {freq} [{label}]"
 msgstr ""
 
-#: ui/main_window.py
+#: ui/main_window.py:668
 #, python-brace-format
 msgid "Signal: {db:.1f} dBFS  [{s_unit}]"
 msgstr ""
 
-#: ui/main_window.py:537
+#: ui/main_window.py:689
+#, python-brace-format
+msgid "Spectrum {start} to {end} MHz"
+msgstr ""
+
+#: ui/main_window.py:700
+#, python-brace-format
+msgid "Signal {s_unit}, {db:.0f} dBFS"
+msgstr ""
+
+#: ui/main_window.py:715 ui/main_window.py:737
 #, python-brace-format
 msgid "Volume {v} percent"
 msgstr ""
 
-#: ui/main_window.py:543 ui/main_window.py:588 ui/main_window.py:608
+#: ui/main_window.py:721 ui/main_window.py:1076 ui/main_window.py:1096
 msgid "Muted"
 msgstr ""
 
-#: ui/main_window.py:543 ui/main_window.py:588
+#: ui/main_window.py:721 ui/main_window.py:1076
 msgid "Unmuted"
 msgstr ""
 
-#: ui/main_window.py:550
+#: ui/main_window.py:728 ui/main_window.py:746
 #, python-brace-format
 msgid "Squelch {val:.0f} dBm"
 msgstr ""
 
-#: ui/main_window.py:593
+#: ui/main_window.py:761
+msgid "Continuous sweep stopped."
+msgstr ""
+
+#: ui/main_window.py:767
+msgid "Stop Sweep (Ctrl+F5)"
+msgstr ""
+
+#: ui/main_window.py:768
+msgid "Continuous sweep started."
+msgstr ""
+
+#: ui/main_window.py:792
+msgid "Already at maximum zoom."
+msgstr ""
+
+#: ui/main_window.py:800 ui/main_window.py:808
+msgid "Already at full spectrum."
+msgstr ""
+
+#: ui/main_window.py:819 ui/main_window.py:834
+#, python-brace-format
+msgid "Full spectrum, {start} to {end} MHz"
+msgstr ""
+
+#: ui/main_window.py:824 ui/main_window.py:839
+#, python-brace-format
+msgid "Zoom {level}x, {start} to {end} MHz"
+msgstr ""
+
+#: ui/main_window.py:843
+msgid ", sweep active"
+msgstr ""
+
+#: ui/main_window.py:944
+#, python-brace-format
+msgid "{freq}, {db:.0f} dBFS, {s_unit}"
+msgstr ""
+
+#: ui/main_window.py:954
+msgid "Cursor centred, offset cleared."
+msgstr ""
+
+#: ui/main_window.py:1047
+msgid "Modulation selection cancelled."
+msgstr ""
+
+#: ui/main_window.py:1052
+msgid "Select modulation."
+msgstr ""
+
+#: ui/main_window.py:1056
+#, python-brace-format
+msgid "LO {freq}"
+msgstr ""
+
+#: ui/main_window.py:1081
 msgid "Radio not running."
 msgstr ""
 
-#: ui/main_window.py
+#: ui/main_window.py:1085
 #, python-brace-format
 msgid "Signal {db:.1f} dBFS, {s_unit}"
 msgstr ""
 
-#: ui/main_window.py:605
+#: ui/main_window.py:1093
 msgid "Squelch open"
 msgstr ""
 
-#: ui/main_window.py:605
+#: ui/main_window.py:1093
 msgid "Squelch closed"
 msgstr ""
 
-#: ui/main_window.py:615
+#: ui/main_window.py:1098
+#, python-brace-format
+msgid "Offset {khz:+.1f} kHz"
+msgstr ""
+
+#: ui/main_window.py:1111
 msgid "Sonification snapshot."
 msgstr ""
 
-#: ui/main_window.py:669
+#: ui/main_window.py:1128
+msgid "on"
+msgstr ""
+
+#: ui/main_window.py:1128
+msgid "off"
+msgstr ""
+
+#: ui/main_window.py:1129
+#, python-brace-format
+msgid "Demod follows cursor {state}"
+msgstr ""
+
+#: ui/main_window.py:1239
 msgid "No spectrum data yet."
 msgstr ""
 
-#: ui/main_window.py:678
+#: ui/main_window.py:1250
 msgid "No peaks detected."
 msgstr ""
 
-#: ui/main_window.py:681
+#: ui/main_window.py:1253
 msgid "Peaks: "
 msgstr ""
 
-#: ui/main_window.py:694
+#: ui/main_window.py:1266
 #, python-brace-format
 msgid "Band: {name}, {freq}, mode {mode}"
 msgstr ""
 
-#: ui/main_window.py:785
+#: ui/main_window.py:1365
 #, python-brace-format
 msgid "SDR error: {msg}"
 msgstr ""
 
-#: ui/main_window.py:788
+#: ui/main_window.py:1368
 #, python-brace-format
 msgid "Error: {msg}"
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:30 ui/dialogs/help_dialog.py:42
+#: ui/dialogs/audio_dialog.py:30 ui/dialogs/help_dialog.py:65
 msgid "Audio Settings"
 msgstr ""
 
@@ -332,75 +462,75 @@ msgstr ""
 msgid "Audio Settings dialog opened."
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:55 ui/dialogs/audio_dialog.py:153
+#: ui/dialogs/audio_dialog.py:53 ui/dialogs/audio_dialog.py:148
 msgid "Default"
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:62
+#: ui/dialogs/audio_dialog.py:57
 msgid "Output Device:"
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:74
+#: ui/dialogs/audio_dialog.py:69
 msgid "Audio Buffer (samples):"
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:82
+#: ui/dialogs/audio_dialog.py:77
 msgid "Recording Folder:"
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:87
+#: ui/dialogs/audio_dialog.py:82
 msgid "Browse…"
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:97
+#: ui/dialogs/audio_dialog.py:92
 msgid "Start Recording (R)"
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:104 ui/dialogs/audio_dialog.py:148
+#: ui/dialogs/audio_dialog.py:99 ui/dialogs/audio_dialog.py:143
 msgid "Not recording."
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:109 ui/dialogs/rf_dialog.py:98
-#: ui/dialogs/spectrum_dialog.py:147
+#: ui/dialogs/audio_dialog.py:104 ui/dialogs/rf_dialog.py:159
+#: ui/dialogs/spectrum_dialog.py:145
 msgid "Apply"
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:110 ui/dialogs/bookmarks_dialog.py:93
-#: ui/dialogs/help_dialog.py:99 ui/dialogs/rf_dialog.py:99
-#: ui/dialogs/spectrum_dialog.py:148
+#: ui/dialogs/audio_dialog.py:105 ui/dialogs/bookmarks_dialog.py:93
+#: ui/dialogs/help_dialog.py:122 ui/dialogs/rf_dialog.py:160
+#: ui/dialogs/spectrum_dialog.py:146
 msgid "Close"
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:123
+#: ui/dialogs/audio_dialog.py:118
 msgid "Choose recording folder"
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:136
+#: ui/dialogs/audio_dialog.py:131
 #, python-brace-format
 msgid "Recording: {filename}"
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:139
+#: ui/dialogs/audio_dialog.py:134
 #, python-brace-format
 msgid "Recording started. File: {filename}"
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:145
+#: ui/dialogs/audio_dialog.py:140
 msgid "Could not start recording."
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:149
+#: ui/dialogs/audio_dialog.py:144
 msgid "Recording stopped."
 msgstr ""
 
-#: ui/dialogs/audio_dialog.py:162
+#: ui/dialogs/audio_dialog.py:157
 #, python-brace-format
 msgid ""
 "Audio settings applied. Buffer {size} samples. Restart radio for buffer "
 "change to take effect."
 msgstr ""
 
-#: ui/dialogs/bookmarks_dialog.py:28 ui/dialogs/help_dialog.py:41
+#: ui/dialogs/bookmarks_dialog.py:28 ui/dialogs/help_dialog.py:64
 msgid "Bookmarks"
 msgstr ""
 
@@ -472,159 +602,289 @@ msgid "Start / Stop radio"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:16
-msgid "Tune up by step"
+msgid "Pause / Resume radio"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:17
-msgid "Tune down by step"
+msgid "Report LO frequency"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:17
+msgid "Report listening frequency"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:18
-msgid "Tune up by 10× step"
+msgid "Enter LO frequency"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:19
-msgid "Tune down by 10× step"
+msgid "Enter listening frequency"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:20
-msgid "Cycle step size"
+msgid "Tune up by step"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:21
-msgid "Mute / Unmute"
+msgid "Tune down by step"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:22
-msgid "Read signal strength"
+msgid "Tune up by 10× step"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:23
+msgid "Tune down by 10× step"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:24
-msgid "--- Demodulation modes ---"
+msgid "Cycle step size"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:25
-msgid "Wide FM"
+msgid "Volume up"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:26
-msgid "Narrow FM"
+msgid "Volume down"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:27
+msgid "Squelch up"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:28
+msgid "Squelch down"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:29
+msgid "Mute / Unmute"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:30
+msgid "Read signal strength"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:32
+msgid "--- Modulation (press M, then letter) ---"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:33
-msgid "--- Spectrum / Sonification ---"
+msgid "Wide FM"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:34
+msgid "Narrow FM"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:41
+msgid "--- Spectrum / Sonification ---"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:42
 msgid "Speak top peaks"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:35
-msgid "Sonification snapshot sweep"
-msgstr ""
-
-#: ui/dialogs/help_dialog.py:37
-msgid "--- Dialogs ---"
-msgstr ""
-
-#: ui/dialogs/help_dialog.py:38 ui/dialogs/rf_dialog.py:32
-msgid "RF Settings"
-msgstr ""
-
-#: ui/dialogs/help_dialog.py:39 ui/dialogs/spectrum_dialog.py:30
-msgid "Spectrum Settings"
-msgstr ""
-
-#: ui/dialogs/help_dialog.py:40
-msgid "Scanner"
-msgstr ""
-
 #: ui/dialogs/help_dialog.py:43
-msgid "Help (this window)"
+msgid "Describe spectrum"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:44
+msgid "Zoom in spectrum"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:45
-msgid "--- Scanner (when open) ---"
+msgid "Zoom out spectrum"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:46
-msgid "Hold on frequency"
+msgid "Reset zoom"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:47
-msgid "Skip to next"
+msgid "Sonification snapshot sweep"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:48
-msgid "Stop scan"
+msgid "Toggle continuous sweep"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:50
-msgid "--- General ---"
+msgid "--- Spectrum Cursor ---"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:51
-msgid "Open Bands menu"
+msgid "Probe tone at cursor"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:52
-msgid "Save bookmark"
+msgid "Move cursor while probing"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:53
-msgid "Quit"
+msgid "Step cursor left"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:54
+msgid "Step cursor right"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:55
+msgid "Reset cursor to centre, clear offset"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:56
+msgid "Speak cursor frequency and power"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:57
+msgid "Tune LO to cursor, clear offset"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:58
+msgid "Toggle demod follows cursor"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:60
+msgid "--- Dialogs ---"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:61 ui/dialogs/rf_dialog.py:43
+msgid "RF Settings"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:62 ui/dialogs/spectrum_dialog.py:29
+msgid "Spectrum Settings"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:63
+msgid "Scanner"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:66
+msgid "Help (this window)"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:68
+msgid "--- Scanner (when open) ---"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:69
+msgid "Hold on frequency"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:70
+msgid "Skip to next"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:71
+msgid "Stop scan"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:73
+msgid "--- General ---"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:74
+msgid "Open Bands menu"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:75
+msgid "Save bookmark"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:76
+msgid "Quit"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:86
 msgid "Keyboard Shortcuts — AccessDR"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:80
+#: ui/dialogs/help_dialog.py:103
 msgid "AccessDR Keyboard Shortcuts"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:90
+#: ui/dialogs/help_dialog.py:113
 msgid "Action"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:91
+#: ui/dialogs/help_dialog.py:114
 msgid "Key(s)"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:114
+#: ui/dialogs/help_dialog.py:137
 msgid "Keyboard Shortcuts for AccessDR."
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:41
-msgid "RF Settings dialog opened."
+#: ui/dialogs/rf_dialog.py:22 ui/dialogs/rf_dialog.py:143
+#: ui/dialogs/rf_dialog.py:205
+msgid "Auto"
 msgstr ""
 
 #: ui/dialogs/rf_dialog.py:53
+msgid "RF Settings dialog opened."
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:65
 msgid "Default / Auto"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:54
+#: ui/dialogs/rf_dialog.py:66
 msgid "SDR Device:"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:62
+#: ui/dialogs/rf_dialog.py:74
 msgid "Sample Rate:"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:72
+#: ui/dialogs/rf_dialog.py:84
 msgid "RF Gain (dB):"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:88
+#: ui/dialogs/rf_dialog.py:114
 msgid "PPM Correction:"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:115
+#: ui/dialogs/rf_dialog.py:123
+msgid "RTL AGC"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:135
+msgid "Offset Tuning (remove DC spike)"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:144
+msgid "IF Bandwidth:"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:176 ui/dialogs/rf_dialog.py:181
 #, python-brace-format
 msgid "Gain {val} dB"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:130
+#: ui/dialogs/rf_dialog.py:186
+msgid "RTL AGC enabled"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:186
+msgid "RTL AGC disabled"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:198
+msgid "Offset tuning enabled"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:198
+msgid "Offset tuning disabled"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:206
+#, python-brace-format
+msgid "IF Bandwidth {bw}"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:235
 #, python-brace-format
 msgid ""
 "RF settings applied. Gain {gain:.0f} dB, Sample rate {rate} kHz, PPM "
@@ -719,217 +979,55 @@ msgstr ""
 msgid "Scan complete. {count} signal found."
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:41
+#: ui/dialogs/spectrum_dialog.py:39
 msgid "Spectrum Settings dialog opened."
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:50
+#: ui/dialogs/spectrum_dialog.py:48
 msgid "FFT Settings"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:57
+#: ui/dialogs/spectrum_dialog.py:55
 msgid "FFT Size:"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:70
+#: ui/dialogs/spectrum_dialog.py:68
 msgid "Sonification"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:76
-msgid "Enable sonification"
-msgstr ""
-
-#: ui/dialogs/spectrum_dialog.py:75
+#: ui/dialogs/spectrum_dialog.py:73
 msgid "Weak signal pitch (Hz):"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:82
+#: ui/dialogs/spectrum_dialog.py:80
 msgid "Strong signal pitch (Hz):"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:95
+#: ui/dialogs/spectrum_dialog.py:87
 msgid "Sweep speed (s):"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:106
-msgid "Snapshot Sweep (Space)"
+#: ui/dialogs/spectrum_dialog.py:95
+msgid "Spectrum averaging (ms):"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:112
-msgid "Toggle Continuous Sweep"
+#: ui/dialogs/spectrum_dialog.py:105
+msgid "Pitch smoothing (ms):"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:120
+#: ui/dialogs/spectrum_dialog.py:118
 msgid "Speech Readout"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:125
+#: ui/dialogs/spectrum_dialog.py:123
 msgid "Peak count (F key):"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:133
+#: ui/dialogs/spectrum_dialog.py:131
 msgid "Auto-announce threshold (dBm):"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:162
-msgid "Sonification snapshot started."
-msgstr ""
-
-#: ui/dialogs/spectrum_dialog.py:168
-msgid "Continuous sweep stopped."
-msgstr ""
-
-#: ui/dialogs/spectrum_dialog.py:172
-msgid "Continuous sweep started."
-msgstr ""
-
-#: ui/dialogs/spectrum_dialog.py:197
+#: ui/dialogs/spectrum_dialog.py:184
 msgid "Spectrum settings applied."
-msgstr ""
-
-#: ui/main_window.py
-#, python-brace-format
-msgid "Zoom {level}x, {start} to {end} MHz"
-msgstr ""
-
-#: ui/main_window.py
-#, python-brace-format
-msgid "Full spectrum, {start} to {end} MHz"
-msgstr ""
-
-#: ui/main_window.py
-msgid "Already at maximum zoom."
-msgstr ""
-
-#: ui/main_window.py
-msgid "Already at full spectrum."
-msgstr ""
-
-#: ui/main_window.py
-msgid ", sweep active"
-msgstr ""
-
-#: ui/main_window.py
-#, python-brace-format
-msgid "Spectrum {start} to {end} MHz"
-msgstr ""
-
-#: ui/dialogs/help_dialog.py
-msgid "Describe spectrum"
-msgstr ""
-
-#: ui/dialogs/help_dialog.py
-msgid "Zoom in spectrum"
-msgstr ""
-
-#: ui/dialogs/help_dialog.py
-msgid "Zoom out spectrum"
-msgstr ""
-
-#: ui/dialogs/help_dialog.py
-msgid "Reset zoom"
-msgstr ""
-
-#: ui/main_window.py
-msgid "Start Sweep (Ctrl+F5)"
-msgstr ""
-
-#: ui/main_window.py
-msgid "Stop Sweep (Ctrl+F5)"
-msgstr ""
-
-#: ui/main_window.py
-msgid "Continuous sweep stopped."
-msgstr ""
-
-#: ui/main_window.py
-msgid "Continuous sweep started."
-msgstr ""
-
-#: ui/main_window.py
-msgid "Select modulation."
-msgstr ""
-
-#: ui/main_window.py
-msgid "Modulation selection cancelled."
-msgstr ""
-
-#: ui/dialogs/help_dialog.py
-msgid "--- Modulation (press M, then letter) ---"
-msgstr ""
-
-#: ui/main_window.py
-#, python-brace-format
-msgid "Enter frequency (MHz):"
-msgstr ""
-
-#: ui/main_window.py
-msgid "Tune to Frequency"
-msgstr ""
-
-#: ui/dialogs/help_dialog.py
-msgid "Enter frequency"
-msgstr ""
-
-#: ui/dialogs/rf_dialog.py
-msgid "RTL AGC"
-msgstr ""
-
-#: ui/dialogs/rf_dialog.py
-msgid "RTL AGC enabled"
-msgstr ""
-
-#: ui/dialogs/rf_dialog.py
-msgid "RTL AGC disabled"
-msgstr ""
-
-#: ui/dialogs/rf_dialog.py
-msgid "Offset Tuning (remove DC spike)"
-msgstr ""
-
-#: ui/dialogs/rf_dialog.py
-msgid "Offset tuning enabled"
-msgstr ""
-
-#: ui/dialogs/rf_dialog.py
-msgid "Offset tuning disabled"
-msgstr ""
-
-#: ui/dialogs/rf_dialog.py
-msgid "IF Bandwidth:"
-msgstr ""
-
-#: ui/dialogs/rf_dialog.py
-msgid "Auto"
-msgstr ""
-
-#: ui/dialogs/rf_dialog.py
-#, python-brace-format
-msgid "IF Bandwidth {bw}"
-msgstr ""
-
-#: ui/main_window.py
-#, python-brace-format
-msgid "Signal {s_unit}, {db:.0f} dBFS"
-msgstr ""
-
-#: ui/main_window.py
-msgid "No frequency history."
-msgstr ""
-
-#: ui/main_window.py
-msgid "No forward history."
-msgstr ""
-
-#: ui/dialogs/help_dialog.py
-msgid "--- Navigation ---"
-msgstr ""
-
-#: ui/dialogs/help_dialog.py
-msgid "Frequency back"
-msgstr ""
-
-#: ui/dialogs/help_dialog.py
-msgid "Frequency forward"
 msgstr ""
 

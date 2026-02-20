@@ -4,7 +4,7 @@
 
 ### Frequency Entry
 
-Press ++q++ to open the frequency entry dialog. You can also click the frequency display or the "..." button next to it.
+Press ++ctrl+q++ to open the LO frequency entry dialog. Press ++q++ to hear the current LO frequency, or ++o++ to hear the listening (demod) frequency. Press ++ctrl+o++ to enter a listening frequency directly — AccessDR calculates the offset from the LO automatically.
 
 Enter a frequency in one of these formats:
 
@@ -16,7 +16,7 @@ Press ++enter++ to confirm or ++escape++ to cancel.
 
 ### Step Tuning
 
-Use ++up++ and ++down++ to tune by the current step size. Hold ++ctrl++ to tune by 10x the step size.
+Use ++up++ and ++down++ to tune by the current step size. Hold ++shift++ to tune by 10x the step size.
 
 Press ++s++ to cycle through step sizes:
 
@@ -29,6 +29,10 @@ Press ++s++ to cycle through step sizes:
 | 10 kHz | Default general tuning |
 | 100 kHz | FM broadcast scanning |
 | 1 MHz | Quick band scanning |
+
+### Pause / Resume
+
+Press ++space++ to **pause** the radio — IQ capture and audio stop, but the last spectrum snapshot remains visible and navigable. Cursor movement, probe tone, peaks, zoom and all other spectrum features continue to work on the frozen data. Press ++space++ again to **resume** reception. Press ++f2++ while paused to fully stop the radio and release the device.
 
 ### Band Presets
 
@@ -143,6 +147,7 @@ Press ++i++ at any time to hear a spoken status report including:
 - Stereo or Mono (in WFM mode)
 - Squelch state (open or closed)
 - Mute state
+- Demod offset and listening frequency (when a software VFO offset is active)
 
 ## Spectrum and Sonification
 
@@ -186,6 +191,52 @@ Zoom levels: 1x (full) → 2x → 4x → 8x → 16x → 32x. At 2.4 MSPS, 32x zo
 The visual spectrum panel always shows the full bandwidth, with yellow dashed lines marking the zoom boundaries and dimmed regions outside the zoom.
 
 Zoom is session-only and resets when you restart the app.
+
+### Spectrum Cursor
+
+The spectrum cursor lets you interactively explore specific points in the spectrum. Think of it as clicking on a waterfall display — you move a cursor through the spectrum and hear a tone that represents the signal at that point.
+
+#### Using the Cursor
+
+Hold ++ctrl++ to hear a continuous probe tone at the cursor's current position:
+
+- **Pitch** encodes signal power at the cursor position — same mapping as sweep sonification
+- **Stereo pan** encodes frequency position — left ear = low end, right ear = high end
+
+While Ctrl is held, press ++left++ or ++right++ to move the cursor through the spectrum. The cursor moves at a configurable speed (default: 30% of visible spectrum per second). Release the arrow keys to stop moving — the tone continues playing at the current position. Release Ctrl to stop the tone.
+
+Use ++left++ / ++right++ without Ctrl to step the cursor and hear the position announced via speech.
+
+| Key | Action |
+|---|---|
+| ++ctrl++ (hold) | Play probe tone at cursor |
+| ++ctrl+left++ / ++ctrl+right++ | Move cursor while probing |
+| ++left++ / ++right++ | Step cursor and announce position |
+| ++t++ | Speak cursor frequency, power, and S-meter reading |
+| ++c++ | Reset cursor to centre, clear demod offset |
+| ++ctrl+t++ | Tune LO to cursor frequency, clear offset |
+| ++shift+c++ | Toggle "demod follows cursor" mode |
+
+You can also click on the spectrum panel with the mouse to jump the cursor to that position.
+
+The cursor respects zoom — when zoomed in, the cursor range narrows to the visible portion of the spectrum.
+
+#### Software VFO Offset (Demod Follows Cursor)
+
+By default, the demodulator always processes the signal at the hardware LO (centre frequency). Press ++shift+c++ to enable **"demod follows cursor"** mode — when enabled, moving the cursor with Left/Right arrows or Ctrl+arrows also shifts the demodulator to listen at the cursor's frequency. This works like clicking on a waterfall in HDSDR or SDR++ to move a software VFO.
+
+The offset is applied by a software mixer in the DSP chain that shifts the selected signal down to DC for demodulation. The hardware LO does not move, so the full spectrum remains visible and the probe tone continues to work normally.
+
+- **Shift+C** — toggle follow mode on/off (announced via speech)
+- **Left/Right** — step cursor; when follow mode is on, audio shifts to the new position
+- **Ctrl+hold arrows** — probe and move cursor; when follow mode is on, audio follows
+- **C** — reset cursor to centre and clear the offset (audio returns to centre frequency)
+- **Ctrl+T** — retune the hardware LO to the cursor frequency and clear the offset
+- **Up/Down** — tune the LO by step; the offset is preserved, so the listening frequency shifts with the LO
+- **Ctrl+Q** (enter LO frequency) — sets the LO directly and clears the offset
+- **Ctrl+O** (enter listening frequency) — sets the demod offset so the listening frequency matches
+
+The offset is clamped to ±120 kHz (half the baseband rate). A yellow dashed "D" marker appears on the spectrum panel to show where the demodulator is listening. Press ++i++ to hear the current offset and listening frequency in the status report.
 
 ### Spectrum Peaks
 

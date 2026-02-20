@@ -104,6 +104,10 @@ class SDRDevice:
     # ------------------------------------------------------------------
 
     def open(self, device_index: int = 0) -> bool:
+        # Defensively close any existing connection to avoid double-open crashes
+        if self._rtl is not None or self._soapy is not None:
+            self.close()
+
         if _PYRTLSDR_AVAILABLE:
             try:
                 self._rtl = _RtlSdrBase(device_index)
@@ -293,6 +297,12 @@ class SDRDevice:
                 lib.rtlsdr_set_tuner_bandwidth.restype = ctypes.c_int
         except Exception:   # noqa: BLE001
             pass
+        try:
+            if not hasattr(lib.rtlsdr_reset_buffer, "argtypes"):
+                lib.rtlsdr_reset_buffer.argtypes = [ctypes.c_void_p]
+                lib.rtlsdr_reset_buffer.restype = ctypes.c_int
+        except Exception:   # noqa: BLE001
+            pass
 
     def _fetch_valid_gains(self) -> List[float]:
         """Query the tuner for its list of valid gain steps."""
@@ -316,6 +326,13 @@ class SDRDevice:
     def start(self) -> None:
         if self._running:
             return
+        # Reset the device buffer after a stop/cancel — required before
+        # read_samples will work again (avoids access-violation crash).
+        if self._dev_handle is not None:
+            try:
+                _librtlsdr.rtlsdr_reset_buffer(self._dev_handle)
+            except Exception:          # noqa: BLE001
+                pass
         self._running = True
         self._thread = threading.Thread(
             target=self._stream_loop, daemon=True, name="SDRCapture"
@@ -324,11 +341,25 @@ class SDRDevice:
 
     def stop(self) -> None:
         self._running = False
-        if self._rtl is not None:
-            try:
-                self._rtl.cancel_read_async()
-            except Exception:          # noqa: BLE001
-                pass
+        # Only cancel_read_async when a capture thread is actually running;
+        # calling it with no active read corrupts device state on Windows.
+        if self._thread is not None:
+            if self._rtl is not None:
+                try:
+                    self._rtl.cancel_read_async()
+                except Exception:      # noqa: BLE001
+                    pass
+            self._thread.join(timeout=3.0)
+            self._thread = None
+
+    def pause(self) -> None:
+        """Stop the capture thread gently — no cancel_read_async.
+
+        Safe for later resume via start(). The sync read_samples call
+        returns within ~7 ms so the thread exits almost immediately.
+        Unlike stop(), this preserves the device handle for reuse.
+        """
+        self._running = False
         if self._thread is not None:
             self._thread.join(timeout=3.0)
             self._thread = None

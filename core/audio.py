@@ -12,6 +12,7 @@ immediately without restarting the stream.
 from __future__ import annotations
 
 import logging
+import math
 import queue
 import threading
 import wave
@@ -26,6 +27,14 @@ logger = logging.getLogger(__name__)
 try:
     import sounddevice as sd
     _SD_AVAILABLE = True
+    # Force WASAPI on Windows — lower latency, no device-name ambiguity
+    for _api in sd.query_hostapis():
+        if "WASAPI" in _api.get("name", ""):
+            sd.default.device = (
+                _api["default_input_device"],
+                _api["default_output_device"],
+            )
+            break
 except Exception:                  # noqa: BLE001
     _SD_AVAILABLE = False
     logger.warning("sounddevice not available — audio output disabled")
@@ -51,6 +60,10 @@ class AudioOutput:
         self.squelch: float = -80.0     # dBm; signals below this → silence
         self.muted: bool = False
         self.signal_db: float = -120.0  # last measured signal strength
+
+        # Ducking: smoothly reduce radio volume while probe tone plays
+        self._duck_target: float = 1.0   # 1.0 = full, 0.0 = silent
+        self._duck_level: float = 1.0    # current level (ramped in callback)
 
         self._audio_queue: queue.Queue = queue.Queue(maxsize=128)
         self._stream: Optional["sd.OutputStream"] = None
@@ -90,6 +103,31 @@ class AudioOutput:
             except Exception:      # noqa: BLE001
                 pass
             self._stream = None
+
+    def pause(self) -> None:
+        """Pause audio output. Stops and closes the stream, drains the queue.
+        Call resume() to recreate a fresh stream."""
+        if self._stream is not None:
+            try:
+                self._stream.stop()
+                self._stream.close()
+            except Exception:      # noqa: BLE001
+                pass
+            self._stream = None
+        # Drain stale audio so resume doesn't burst old samples
+        while not self._audio_queue.empty():
+            try:
+                self._audio_queue.get_nowait()
+            except queue.Empty:
+                break
+
+    def resume(self) -> None:
+        """Resume audio after a pause by creating a fresh stream."""
+        self.start()
+
+    def duck(self, level: float) -> None:
+        """Set duck target (0.0–1.0). Radio volume ramps smoothly to this."""
+        self._duck_target = max(0.0, min(1.0, level))
 
     # ------------------------------------------------------------------
     # Sample input
@@ -188,11 +226,23 @@ class AudioOutput:
         if self.signal_db < self.squelch:
             combined[:] = 0.0
 
-        # Volume + mute
+        # Volume + mute + ducking
         if self.muted:
             combined[:] = 0.0
         else:
-            combined *= self.volume
+            duck_target = self._duck_target
+            duck_level = self._duck_level
+            if abs(duck_level - duck_target) > 0.001:
+                # ~15 ms exponential ramp to avoid clicks
+                alpha = 1.0 - math.exp(-1.0 / (self.sample_rate * 0.015))
+                k = 1.0 - alpha
+                idx = np.arange(1, frames + 1, dtype=np.float64)
+                ramp = duck_target + (duck_level - duck_target) * (k ** idx)
+                self._duck_level = float(ramp[-1])
+                combined *= (self.volume * ramp.astype(np.float32))[:, np.newaxis]
+            else:
+                self._duck_level = duck_target
+                combined *= self.volume * duck_target
 
         outdata[:] = combined
 
@@ -210,9 +260,18 @@ class AudioOutput:
 
     @staticmethod
     def list_devices() -> list:
+        """Return output devices from the WASAPI host API only."""
         if not _SD_AVAILABLE:
             return []
         try:
-            return list(sd.query_devices())
+            wasapi_devs: set = set()
+            for api in sd.query_hostapis():
+                if "WASAPI" in api.get("name", ""):
+                    wasapi_devs = set(api["devices"])
+                    break
+            return [
+                d for i, d in enumerate(sd.query_devices())
+                if i in wasapi_devs
+            ]
         except Exception:          # noqa: BLE001
             return []

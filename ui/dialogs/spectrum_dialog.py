@@ -34,7 +34,7 @@ class SpectrumDialog(wx.Frame):
         self._son = sonification
         self._on_change = on_change
         self._build_ui()
-        self.SetSize(440, 340)
+        self.SetSize(440, 420)
         self.Centre()
         speech.output(_("Spectrum Settings dialog opened."))
 
@@ -91,6 +91,26 @@ class SpectrumDialog(wx.Frame):
         )
         son_grid.Add(self._sweep_speed, 1, wx.EXPAND)
 
+        son_grid.Add(
+            wx.StaticText(panel, label=_("Spectrum averaging (ms):")),
+            0, wx.ALIGN_CENTER_VERTICAL,
+        )
+        self._spec_avg = wx.SpinCtrlDouble(
+            panel, value=str(self._settings.spectrum_averaging_ms),
+            min=0.0, max=500.0, inc=10.0, name="Spectrum averaging ms"
+        )
+        son_grid.Add(self._spec_avg, 1, wx.EXPAND)
+
+        son_grid.Add(
+            wx.StaticText(panel, label=_("Pitch smoothing (ms):")),
+            0, wx.ALIGN_CENTER_VERTICAL,
+        )
+        self._pitch_smooth = wx.SpinCtrlDouble(
+            panel, value=str(self._settings.pitch_smoothing_ms),
+            min=0.0, max=200.0, inc=5.0, name="Pitch smoothing ms"
+        )
+        son_grid.Add(self._pitch_smooth, 1, wx.EXPAND)
+
         son_sizer.Add(son_grid, 0, wx.EXPAND | wx.ALL, 6)
         main_sizer.Add(son_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
@@ -144,6 +164,8 @@ class SpectrumDialog(wx.Frame):
         self._settings.sonification_min_hz = self._min_pitch.GetValue()
         self._settings.sonification_max_hz = self._max_pitch.GetValue()
         self._settings.sonification_sweep_speed = self._sweep_speed.GetValue()
+        self._settings.spectrum_averaging_ms = self._spec_avg.GetValue()
+        self._settings.pitch_smoothing_ms = self._pitch_smooth.GetValue()
         self._settings.speech_peak_count = self._peak_count.GetValue()
         self._settings.auto_announce_threshold = float(self._announce_thresh.GetValue())
         self._settings.save()
@@ -152,6 +174,8 @@ class SpectrumDialog(wx.Frame):
             min_pitch=self._settings.sonification_min_hz,
             max_pitch=self._settings.sonification_max_hz,
             sweep_speed=self._settings.sonification_sweep_speed,
+            spectrum_averaging_ms=self._settings.spectrum_averaging_ms,
+            pitch_smoothing_ms=self._settings.pitch_smoothing_ms,
         )
 
         if self._on_change:

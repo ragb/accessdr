@@ -8,7 +8,7 @@ order, no keyboard interaction.
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 
 import numpy as np
 import wx
@@ -25,6 +25,8 @@ _LINE_DIM = wx.Colour(0x00, 0x80, 0x20)       # dimmer green — ahead of cursor
 _CURSOR_COLOUR = wx.Colour(0x00, 0xE0, 0xE0)  # cyan cursor
 _ZOOM_LINE_COLOUR = wx.Colour(0xFF, 0xFF, 0x00)  # yellow zoom boundaries
 _ZOOM_DIM_COLOUR = wx.Colour(0x10, 0x10, 0x10)  # dim outside zoom (solid, no alpha)
+_PROBE_CURSOR_COLOUR = wx.Colour(0xFF, 0x80, 0x00)  # orange probe cursor
+_DEMOD_MARKER_COLOUR = wx.Colour(0xFF, 0xFF, 0x00)  # yellow demod marker
 
 _MARGIN_LEFT = 48
 _MARGIN_RIGHT = 12
@@ -50,9 +52,13 @@ class SpectrumPanel(wx.Panel):
         self._centre_hz: float = 0.0
         self._sample_rate: float = 2_400_000.0
         self._zoom_level: int = 0
+        self._cursor_pos: Optional[float] = None   # None = hidden
+        self._demod_marker_pos: Optional[float] = None  # None = hidden
+        self._on_cursor_click: Optional[Callable[[float], None]] = None
 
         self.Bind(wx.EVT_PAINT, self._on_paint)
         self.Bind(wx.EVT_SIZE, self._on_size)
+        self.Bind(wx.EVT_LEFT_DOWN, self._on_mouse_click)
 
         self._timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self._on_timer, self._timer)
@@ -73,12 +79,36 @@ class SpectrumPanel(wx.Panel):
         """Set zoom level (0 = full, higher = narrower view)."""
         self._zoom_level = level
 
+    def set_cursor(self, pos: Optional[float]) -> None:
+        """Set the probe cursor position (0.0–1.0), or None to hide."""
+        self._cursor_pos = pos
+
+    def set_demod_marker(self, pos: Optional[float]) -> None:
+        """Set the demod marker position (0.0–1.0), or None to hide."""
+        self._demod_marker_pos = pos
+
+    def set_cursor_click_callback(self, cb: Optional[Callable[[float], None]]) -> None:
+        """Register a callback for mouse clicks on the spectrum panel."""
+        self._on_cursor_click = cb
+
     def _on_timer(self, _event: wx.TimerEvent) -> None:
         self.Refresh(eraseBackground=False)
 
     def _on_size(self, event: wx.SizeEvent) -> None:
         self.Refresh(eraseBackground=False)
         event.Skip()
+
+    def _on_mouse_click(self, event: wx.MouseEvent) -> None:
+        """Map mouse click x-coordinate to 0.0–1.0 cursor position."""
+        w, _h = self.GetClientSize()
+        plot_w = w - _MARGIN_LEFT - _MARGIN_RIGHT
+        if plot_w < 10:
+            return
+        x = event.GetX() - _MARGIN_LEFT
+        pos = max(0.0, min(1.0, x / plot_w))
+        self._cursor_pos = pos
+        if self._on_cursor_click is not None:
+            self._on_cursor_click(pos)
 
     def _on_paint(self, _event: wx.PaintEvent) -> None:
         dc = wx.BufferedPaintDC(self)
@@ -223,3 +253,32 @@ class SpectrumPanel(wx.Panel):
             dc.SetPen(wx.Pen(_ZOOM_LINE_COLOUR, 2, wx.PENSTYLE_SHORT_DASH))
             dc.DrawLine(left_x, py, left_x, py + ph)
             dc.DrawLine(right_x, py, right_x, py + ph)
+
+        # Draw demod marker (yellow dashed vertical line)
+        if self._demod_marker_pos is not None:
+            dx = px + int(self._demod_marker_pos * pw)
+            dc.SetPen(wx.Pen(_DEMOD_MARKER_COLOUR, 2, wx.PENSTYLE_SHORT_DASH))
+            dc.DrawLine(dx, py, dx, py + ph)
+            # "D" label
+            dc.SetTextForeground(_DEMOD_MARKER_COLOUR)
+            font = wx.Font(8, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
+            dc.SetFont(font)
+            tw, th = dc.GetTextExtent("D")
+            dlx = min(dx + 2, px + pw - tw)
+            dc.DrawText("D", dlx, py + ph - th - 2)
+
+        # Draw probe cursor (orange vertical line)
+        if self._cursor_pos is not None:
+            cx = px + int(self._cursor_pos * pw)
+            dc.SetPen(wx.Pen(_PROBE_CURSOR_COLOUR, 2))
+            dc.DrawLine(cx, py, cx, py + ph)
+            # Label with frequency
+            half_bw = self._sample_rate / 2.0
+            cursor_freq = (self._centre_hz - half_bw) + self._cursor_pos * self._sample_rate
+            label = f"{cursor_freq / 1e6:.3f}"
+            dc.SetTextForeground(_PROBE_CURSOR_COLOUR)
+            font = wx.Font(8, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+            dc.SetFont(font)
+            tw, th = dc.GetTextExtent(label)
+            lx = min(cx + 2, px + pw - tw)
+            dc.DrawText(label, lx, py + 2)
