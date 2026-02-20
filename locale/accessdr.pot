@@ -120,7 +120,7 @@ msgid "&Radio"
 msgstr ""
 
 #: ui/main_window.py:155
-msgid "&Spectrum && Sonification…\tCtrl+S"
+msgid "&Spectrum Settings…\tCtrl+S"
 msgstr ""
 
 #: ui/main_window.py:157
@@ -532,7 +532,7 @@ msgid "RF Settings"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:39 ui/dialogs/spectrum_dialog.py:30
-msgid "Spectrum & Sonification"
+msgid "Spectrum Settings"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:40
@@ -720,7 +720,7 @@ msgid "Scan complete. {count} signal found."
 msgstr ""
 
 #: ui/dialogs/spectrum_dialog.py:41
-msgid "Spectrum and Sonification dialog opened."
+msgid "Spectrum Settings dialog opened."
 msgstr ""
 
 #: ui/dialogs/spectrum_dialog.py:50

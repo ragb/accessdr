@@ -121,8 +121,8 @@ msgid "&Radio"
 msgstr "&Rádio"
 
 #: ui/main_window.py:155
-msgid "&Spectrum && Sonification…\tCtrl+S"
-msgstr "E&spectro && Sonificação…\tCtrl+S"
+msgid "&Spectrum Settings…\tCtrl+S"
+msgstr "Definições de E&spectro…\tCtrl+S"
 
 #: ui/main_window.py:157
 msgid "&View"
@@ -551,8 +551,8 @@ msgid "RF Settings"
 msgstr "Definições RF"
 
 #: ui/dialogs/help_dialog.py:39 ui/dialogs/spectrum_dialog.py:30
-msgid "Spectrum & Sonification"
-msgstr "Espectro e Sonificação"
+msgid "Spectrum Settings"
+msgstr "Definições de Espectro"
 
 #: ui/dialogs/help_dialog.py:40
 msgid "Scanner"
@@ -741,8 +741,8 @@ msgid "Scan complete. {count} signal found."
 msgstr "Varrimento concluído. {count} sinal encontrado."
 
 #: ui/dialogs/spectrum_dialog.py:41
-msgid "Spectrum and Sonification dialog opened."
-msgstr "Janela de espectro e sonificação aberta."
+msgid "Spectrum Settings dialog opened."
+msgstr "Janela de definições de espectro aberta."
 
 #: ui/dialogs/spectrum_dialog.py:50
 msgid "FFT Settings"
