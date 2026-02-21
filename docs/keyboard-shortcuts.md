@@ -7,7 +7,7 @@
 | ++f2++ | Start / Stop radio |
 | ++space++ | Pause / Resume radio |
 | ++f3++ | Mute / Unmute |
-| ++i++ | Read signal strength, stereo/mono, squelch state |
+| ++i++ | Read signal strength, stereo/mono, RDS, CTCSS, squelch state |
 
 ## Tuning
 
@@ -84,6 +84,7 @@ When "demod follows cursor" is enabled (Shift+C), moving the cursor with Left/Ri
 | ++ctrl+n++ | Scanner |
 | ++ctrl+b++ | Bookmarks |
 | ++ctrl+d++ | Audio Settings (device, buffer size) |
+| ++ctrl+w++ | WFM Settings (de-emphasis, stereo, hi-blend, RDS) |
 | ++f1++ | Keyboard Shortcuts help |
 
 ## Scanner (when open)

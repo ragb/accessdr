@@ -111,6 +111,39 @@ class SpectrumDialog(wx.Dialog):
         son_sizer.Add(son_grid, 0, wx.EXPAND | wx.ALL, 6)
         main_sizer.Add(son_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
+        # --- Waterfall section ---
+        wf_box = wx.StaticBox(panel, label=_("Waterfall Display"))
+        wf_sizer = wx.StaticBoxSizer(wf_box, wx.VERTICAL)
+        wf_grid = wx.FlexGridSizer(cols=2, vgap=6, hgap=8)
+        wf_grid.AddGrowableCol(1)
+
+        from ui.colormaps import COLORMAP_NAMES
+        wf_grid.Add(wx.StaticText(panel, label=_("Colour Scheme:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._wf_colormap = wx.Choice(panel, choices=COLORMAP_NAMES, name="Waterfall Colour Scheme")
+        try:
+            cm_idx = COLORMAP_NAMES.index(self._settings.waterfall_colormap)
+        except ValueError:
+            cm_idx = 0
+        self._wf_colormap.SetSelection(cm_idx)
+        wf_grid.Add(self._wf_colormap, 1, wx.EXPAND)
+
+        wf_grid.Add(wx.StaticText(panel, label=_("dB Floor (brightness):")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._wf_floor = wx.SpinCtrl(
+            panel, value=str(int(self._settings.waterfall_db_floor)),
+            min=-120, max=0, name="Waterfall dB Floor"
+        )
+        wf_grid.Add(self._wf_floor, 1, wx.EXPAND)
+
+        wf_grid.Add(wx.StaticText(panel, label=_("dB Ceiling (contrast):")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._wf_ceiling = wx.SpinCtrl(
+            panel, value=str(int(self._settings.waterfall_db_ceiling)),
+            min=-80, max=0, name="Waterfall dB Ceiling"
+        )
+        wf_grid.Add(self._wf_ceiling, 1, wx.EXPAND)
+
+        wf_sizer.Add(wf_grid, 0, wx.EXPAND | wx.ALL, 6)
+        main_sizer.Add(wf_sizer, 0, wx.EXPAND | wx.ALL, 8)
+
         # --- Speech readout section ---
         sp_box = wx.StaticBox(panel, label=_("Speech Readout"))
         sp_sizer = wx.StaticBoxSizer(sp_box, wx.VERTICAL)
@@ -169,6 +202,15 @@ class SpectrumDialog(wx.Dialog):
         self._settings.pitch_smoothing_ms = self._pitch_smooth.GetValue()
         self._settings.speech_peak_count = self._peak_count.GetValue()
         self._settings.auto_announce_threshold = float(self._announce_thresh.GetValue())
+
+        # Waterfall
+        from ui.colormaps import COLORMAP_NAMES
+        cm_idx = self._wf_colormap.GetSelection()
+        if 0 <= cm_idx < len(COLORMAP_NAMES):
+            self._settings.waterfall_colormap = COLORMAP_NAMES[cm_idx]
+        self._settings.waterfall_db_floor = float(self._wf_floor.GetValue())
+        self._settings.waterfall_db_ceiling = float(self._wf_ceiling.GetValue())
+
         self._settings.save()
 
         self._son.update_settings(

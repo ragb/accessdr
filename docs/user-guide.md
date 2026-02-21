@@ -72,9 +72,18 @@ Each mode has selectable filter bandwidths in the main window's BW dropdown.
 
 The standard mode for **FM broadcast radio** (87.5–108 MHz). Uses a 200 kHz channel and includes stereo decoding — AccessDR automatically detects and announces stereo or mono. This is the default mode and the best starting point for new users. Typical bandwidth: 150–200 kHz.
 
+WFM includes several sub-features configurable via **Options > WFM Settings** (++ctrl+w++):
+
+- **De-emphasis** — compensates for the FM pre-emphasis curve. Set to Auto (detects your region), 50 us (Europe/Asia), or 75 us (Americas/South Korea). Wrong de-emphasis makes audio sound too bright or too dull.
+- **Stereo mode** — Auto detects the 19 kHz pilot and blends between mono and stereo based on signal quality. Force Mono disables stereo decoding (quieter on weak signals). Force Stereo always decodes stereo regardless of signal quality.
+- **Hi-blend** — automatically reduces treble on weak stereo signals to cut FM hiss. Disable if you prefer full-bandwidth audio regardless of signal strength.
+- **RDS decoding** — extracts station name (PS), radio text (RT), and program type from the RDS subcarrier at 57 kHz. When enabled, the station name is announced automatically on tune. Press ++i++ to hear RDS info. Disable to save a small amount of CPU.
+
 ### NFM — Narrowband FM
 
 Used by most **two-way radio** systems: amateur (ham) radio repeaters, PMR446 walkie-talkies, marine VHF, NOAA weather radio, taxi and business radios, and public safety communications. NFM channels are much narrower than broadcast FM (12.5 or 25 kHz), so you will hear a single voice conversation rather than a music station. Set the step size to 12.5 or 25 kHz when scanning for NFM signals.
+
+NFM includes **CTCSS tone detection** — when a repeater or radio system uses a sub-audible tone (67.0–254.1 Hz) for access control, AccessDR detects and reports the tone. Press ++i++ to hear the detected CTCSS tone along with signal information.
 
 ### AM — Amplitude Modulation
 
@@ -116,6 +125,8 @@ Press ++i++ at any time to hear a spoken status report including:
 
 - Signal strength in dBFS with S-meter reading (S0–S9+30)
 - Stereo or Mono (in WFM mode)
+- RDS station name (in WFM mode, when available)
+- CTCSS tone frequency (in NFM mode, when detected)
 - Squelch state (open or closed)
 - Mute state
 - Demod offset and listening frequency (when a software VFO offset is active)
@@ -163,6 +174,19 @@ Sets the hardware **intermediate frequency (IF) filter** bandwidth inside the R8
 
 In most cases, Auto is the best choice. Manual IF bandwidth is useful when you have a strong interfering signal near the frequency you are listening to.
 
+### Noise Blanker
+
+The noise blanker suppresses short impulse noise (electrical interference, ignition noise, power line clicks) from the raw IQ signal before demodulation. Enable it in **Options > RF Settings** (++ctrl+r++).
+
+- **Threshold** controls sensitivity — a lower value blanks more aggressively. The default of 5.0 means any sample exceeding 5x the median signal magnitude is treated as an impulse. Raise the threshold if the blanker clips normal signal peaks; lower it if impulse noise persists.
+- Blanked samples are replaced by linear interpolation from neighbouring clean samples, avoiding the clicks that hard zeroing would produce.
+
+## WFM Settings
+
+Open the WFM Settings dialog with ++ctrl+w++ to configure broadcast FM-specific parameters. Changes take effect immediately if you are currently receiving in WFM mode.
+
+See the [WFM mode description](#wfm--wideband-fm) above for details on each setting.
+
 ## Spectrum
 
 The spectrum display shows signal power across the SDR's bandwidth. AccessDR provides multiple ways to explore the spectrum: sonification sweeps, an interactive cursor with probe tone, zoom, and peak detection. All spectrum features work on paused (frozen) data as well as live data.
@@ -185,6 +209,18 @@ The spectrum display shows signal power across the SDR's bandwidth. AccessDR pro
 | ++c++ | Reset cursor to centre, clear demod offset |
 | ++ctrl+t++ | Tune LO to cursor frequency, clear offset |
 | ++shift+c++ | Toggle "demod follows cursor" mode |
+
+### Waterfall Display
+
+Below the line graph, a **waterfall** (spectrogram) scrolls vertically with the newest data at the top. Each horizontal line represents one FFT snapshot, with colour encoding signal power — brighter colours mean stronger signals. This makes it easy to spot intermittent transmissions, drifting signals, and patterns over time.
+
+The waterfall uses colour-vision-deficiency-safe colour schemes. Open **Options > Spectrum Settings** (++ctrl+s++) to choose between:
+
+- **Viridis** — perceptually uniform with monotonic luminance, safe for all forms of colour blindness
+- **Magma** — high-contrast dark-to-bright scheme
+- **Grayscale** — pure black-to-white, universally accessible
+
+Adjust the **dB floor** (brightness) and **dB ceiling** (contrast) to control which signals are visible. A lower floor reveals weaker signals; a narrower range between floor and ceiling increases contrast.
 
 ### Sonification
 

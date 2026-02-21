@@ -51,6 +51,21 @@ class Settings:
     # i18n — empty string means system default
     language: str = ""
 
+    # Noise blanker
+    noise_blanker_enabled: bool = False
+    noise_blanker_threshold: float = 5.0   # multiplier above median magnitude
+
+    # WFM
+    wfm_deemphasis: str = "auto"        # "auto" | "50" | "75"
+    wfm_stereo_mode: str = "auto"       # "auto" | "mono" | "stereo"
+    wfm_hiblend_enabled: bool = True    # adaptive HF noise cut on weak signals
+    wfm_rds_enabled: bool = True        # RDS decoding
+
+    # Waterfall
+    waterfall_colormap: str = "Viridis"      # "Viridis" | "Magma" | "Grayscale"
+    waterfall_db_floor: float = -90.0        # maps to LUT index 0 (darkest)
+    waterfall_db_ceiling: float = -20.0      # maps to LUT index 255 (brightest)
+
     # VFO
     demod_follows_cursor: bool = False
 

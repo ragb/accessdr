@@ -44,6 +44,38 @@ Accessible via **Tools > Spectrum & Sonification** (++ctrl+s++).
 | `speech_peak_count` | 3 | Number of peaks announced when pressing ++f++ |
 | `auto_announce_threshold` | -60.0 dBm | Signal level for automatic announcements |
 
+## RF Settings (continued)
+
+Also accessible via **Options > RF Settings** (++ctrl+r++).
+
+| Setting | Default | Description |
+|---|---|---|
+| `noise_blanker_enabled` | false | Enable impulse noise blanker on raw IQ |
+| `noise_blanker_threshold` | 5.0 | Blanker threshold (multiplier above median magnitude) |
+
+## Waterfall Display
+
+Accessible via **Options > Spectrum Settings** (++ctrl+s++).
+
+| Setting | Default | Description |
+|---|---|---|
+| `waterfall_colormap` | Viridis | Colour scheme for the waterfall: `Viridis` (CVD-safe, perceptually uniform), `Magma` (high-contrast dark-to-bright), `Grayscale` (pure black-to-white) |
+| `waterfall_db_floor` | -90.0 dB | Maps to the darkest colour (LUT index 0). Lower values reveal weaker signals. |
+| `waterfall_db_ceiling` | -20.0 dB | Maps to the brightest colour (LUT index 255). The range ceiling − floor controls contrast. |
+
+The waterfall is always displayed below the line graph. The top 40% of the spectrum panel shows the line graph, and the bottom 60% shows the waterfall spectrogram scrolling newest-at-top. All three colour schemes are designed to be safe for colour-blind users (CVD-safe).
+
+## WFM Settings
+
+Accessible via **Options > WFM Settings** (++ctrl+w++).
+
+| Setting | Default | Description |
+|---|---|---|
+| `wfm_deemphasis` | auto | De-emphasis time constant: `auto` (detect by region), `50` (50 us, Europe), `75` (75 us, Americas) |
+| `wfm_stereo_mode` | auto | Stereo decoding: `auto` (pilot detection), `mono` (force mono), `stereo` (force stereo) |
+| `wfm_hiblend_enabled` | true | Reduce treble on weak signals to cut FM hiss |
+| `wfm_rds_enabled` | true | Decode RDS station name and radio text |
+
 ## Language
 
 | Setting | Default | Description |

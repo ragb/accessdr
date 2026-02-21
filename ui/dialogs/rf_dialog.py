@@ -133,6 +133,26 @@ class RFDialog(wx.Dialog):
         self._offset_cb.SetValue(self._settings.offset_tuning)
         grid.Add(self._offset_cb, 1, wx.EXPAND)
 
+        # Noise blanker
+        grid.Add(wx.StaticText(panel, label=""), 0)
+        self._nb_cb = wx.CheckBox(
+            panel, label=_("Noise Blanker"), name="Noise Blanker",
+        )
+        self._nb_cb.SetValue(self._settings.noise_blanker_enabled)
+        grid.Add(self._nb_cb, 1, wx.EXPAND)
+
+        grid.Add(
+            wx.StaticText(panel, label=_("NB Threshold:")), 0, wx.ALIGN_CENTER_VERTICAL,
+        )
+        self._nb_thresh = wx.SpinCtrlDouble(
+            panel,
+            value=f"{self._settings.noise_blanker_threshold:.1f}",
+            min=1.0, max=50.0, inc=1.0,
+            name="Noise Blanker Threshold",
+        )
+        self._nb_thresh.SetDigits(1)
+        grid.Add(self._nb_thresh, 1, wx.EXPAND)
+
         # IF Bandwidth
         bw_labels = [_(lbl) if lbl == N_("Auto") else lbl for _bw, lbl in IF_BW_OPTIONS]
         grid.Add(wx.StaticText(panel, label=_("IF Bandwidth:")), 0, wx.ALIGN_CENTER_VERTICAL)
@@ -197,6 +217,9 @@ class RFDialog(wx.Dialog):
         ifbw_idx = self._ifbw_choice.GetSelection()
         if 0 <= ifbw_idx < len(IF_BW_OPTIONS):
             self._settings.tuner_bandwidth = IF_BW_OPTIONS[ifbw_idx][0]
+
+        self._settings.noise_blanker_enabled = self._nb_cb.GetValue()
+        self._settings.noise_blanker_threshold = self._nb_thresh.GetValue()
 
         self._settings.save()
         self.EndModal(wx.ID_OK)

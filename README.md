@@ -32,6 +32,9 @@ core/
     demodulator.py       # Stateful WFM/NFM/AM/SSB/CW demodulators
     filters.py           # Decimation and filtering
     mixer.py             # Software VFO offset mixer
+    noise_blanker.py     # Impulse noise blanker (median + interpolation)
+    ctcss.py             # CTCSS tone detector (generalized Goertzel)
+    rds.py               # RDS/RBDS decoder (PS, RT, PTY)
     spectrum.py          # FFT spectrum analyser + peak detection
   scanner.py             # Frequency scanner
 accessibility/
@@ -43,7 +46,8 @@ config/
   bands.py               # Band definitions
 ui/
   main_window.py         # Primary window + keyboard shortcuts
-  spectrum_panel.py      # Visual spectrum display with cursor
+  spectrum_panel.py      # Line graph + waterfall spectrogram display
+  colormaps.py           # CVD-safe colormap LUTs (Viridis, Magma, Grayscale)
   dialogs/               # RF, audio, spectrum, scanner, bookmarks, help
 locale/                  # Translations (gettext .po/.mo)
 installer/               # NSIS installer script
@@ -53,9 +57,12 @@ installer/               # NSIS installer script
 
 ```
 RTL-SDR @ 2.4 MSPS
+  → noise blanker (impulse suppression)
   → decimate ×10 → 240 kSPS baseband
   → software mixer (VFO offset)
   → demodulate (stateful filters)
+      WFM: stereo blend + RDS decode
+      NFM: CTCSS tone detect
   → resample_poly → 48 kHz stereo
   → sounddevice WASAPI output
 ```

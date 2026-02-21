@@ -27,7 +27,9 @@ import numpy as np
 from abc import ABC, abstractmethod
 from scipy import signal as sp_signal
 
+from .ctcss import CTCSSDetector
 from .filters import make_lowpass_iir, make_bandpass_iir, deemphasis_filter
+from .rds import RDSDecoder
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +50,7 @@ class Demodulator(ABC):
 
     _CHANNEL_BW: float = 0  # 0 = no channel filter (subclass overrides)
 
-    def __init__(self, baseband_rate: int, audio_rate: int) -> None:
+    def __init__(self, baseband_rate: int, audio_rate: int, **kwargs) -> None:
         self.baseband_rate = baseband_rate
         self.audio_rate = audio_rate
         self._resample_up, self._resample_down = _resample_ratio(baseband_rate, audio_rate)
@@ -159,15 +161,26 @@ class WFMDemodulator(Demodulator):
     _BLEND_SNR_LOW  = 6.0
     _BLEND_SNR_HIGH = 20.0
 
-    def __init__(self, baseband_rate: int, audio_rate: int) -> None:
+    def __init__(self, baseband_rate: int, audio_rate: int, **kwargs) -> None:
         super().__init__(baseband_rate, audio_rate)
         rate = baseband_rate
+
+        # User-configurable options
+        self._stereo_mode: str = kwargs.get("stereo_mode", "auto")
+        self._hiblend_enabled: bool = kwargs.get("hiblend_enabled", True)
+        self._rds_enabled: bool = kwargs.get("rds_enabled", True)
 
         # FM discriminator normalization: convert rad/sample → ±1.0 at full deviation
         self._disc_gain = float(rate / (2.0 * np.pi * self._MAX_DEVIATION))
 
-        # De-emphasis — auto-detect region (50 µs Europe, 75 µs Americas)
-        tau = _detect_deemphasis_tau()
+        # De-emphasis — select tau from kwarg or auto-detect by region
+        deemph = kwargs.get("deemphasis", "auto")
+        if deemph == "50":
+            tau = 50e-6
+        elif deemph == "75":
+            tau = 75e-6
+        else:
+            tau = _detect_deemphasis_tau()
         logger.info("WFM de-emphasis: %.0f µs", tau * 1e6)
         self._deemph_b, self._deemph_a = deemphasis_filter(rate, tau=tau)
 
@@ -202,12 +215,30 @@ class WFMDemodulator(Demodulator):
         self._hicut_zi_l = sp_signal.sosfilt_zi(self._hicut_sos) * 0.0
         self._hicut_zi_r = sp_signal.sosfilt_zi(self._hicut_sos) * 0.0
 
+        # RDS decoder
+        self._rds = RDSDecoder(baseband_rate)
+
         self.stereo_detected: bool = False
         self._pilot_count: int = 0
         self._pilot_check_ctr: int = 0
         self._stereo_blend: float = 0.0   # 0 = mono, 1 = full stereo
         self._last_pilot_snr: float = 0.0
         self._hiblend: float = 0.0        # 0 = full BW, 1 = hi-cut active
+
+    @property
+    def rds_station(self) -> str:
+        return self._rds.station_name
+
+    @property
+    def rds_text(self) -> str:
+        return self._rds.radio_text
+
+    @property
+    def rds_program_type(self) -> str:
+        return self._rds.program_type
+
+    def set_rds_on_station_change(self, cb) -> None:
+        self._rds.set_on_station_change(cb)
 
     def process(self, iq: np.ndarray) -> np.ndarray:
         iq = self._channel_filter(iq)
@@ -230,6 +261,20 @@ class WFMDemodulator(Demodulator):
         # Extract 19 kHz pilot
         pilot, self._zi_pilot = sp_signal.sosfilt(
             self._pilot_sos, mpx, zi=self._zi_pilot)
+
+        # Feed RDS decoder with MPX and filtered pilot
+        if self._rds_enabled:
+            self._rds.process(mpx, pilot)
+
+        # Force mono / stereo modes bypass automatic pilot detection
+        if self._stereo_mode == "mono":
+            self.stereo_detected = False
+            return self._process_mono(lpr)
+        if self._stereo_mode == "stereo":
+            self.stereo_detected = True
+            self._stereo_blend = 1.0
+            self._hiblend = 0.0
+            return self._process_stereo(mpx, lpr, pilot)
 
         # Stereo detection — throttled to every Nth chunk to save CPU.
         self._pilot_check_ctr += 1
@@ -262,8 +307,11 @@ class WFMDemodulator(Demodulator):
 
             # Hi-blend: cut treble when pilot SNR is low (noisy signal).
             # SNR > 30 → full BW, SNR < 10 → hi-cut at 5 kHz.
-            hb_target = float(np.clip(1.0 - (snr - 10.0) / 20.0, 0.0, 1.0))
-            self._hiblend += alpha * (hb_target - self._hiblend)
+            if self._hiblend_enabled:
+                hb_target = float(np.clip(1.0 - (snr - 10.0) / 20.0, 0.0, 1.0))
+                self._hiblend += alpha * (hb_target - self._hiblend)
+            else:
+                self._hiblend = 0.0
 
         if self.stereo_detected or self._stereo_blend > 0.01:
             return self._process_stereo(mpx, lpr, pilot)
@@ -383,12 +431,19 @@ class NFMDemodulator(Demodulator):
     _CHANNEL_BW = 12_500  # standard 25 kHz NFM channel
     _MAX_DEVIATION = 5_000.0  # ±5 kHz standard NFM (PMR446 uses ±2.5 kHz)
 
-    def __init__(self, baseband_rate: int, audio_rate: int) -> None:
+    def __init__(self, baseband_rate: int, audio_rate: int, **kwargs) -> None:
         super().__init__(baseband_rate, audio_rate)
         # Discriminator normalization: convert rad/sample → ±1.0 at full deviation
         self._disc_gain = float(baseband_rate / (2.0 * np.pi * self._MAX_DEVIATION))
         self._lp_sos = make_lowpass_iir(8_000, baseband_rate, order=4)
         self._zi_lp = sp_signal.sosfilt_zi(self._lp_sos) * 0.0
+        # CTCSS tone detector (operates on resampled audio)
+        self._ctcss = CTCSSDetector(audio_rate)
+
+    @property
+    def ctcss_tone(self) -> float | None:
+        """Currently detected CTCSS tone frequency, or None."""
+        return self._ctcss.detected_tone
 
     def process(self, iq: np.ndarray) -> np.ndarray:
         iq = self._channel_filter(iq)
@@ -399,7 +454,9 @@ class NFMDemodulator(Demodulator):
         disc = _fm_discriminant(iq) * self._disc_gain
         audio, self._zi_lp = sp_signal.sosfilt(
             self._lp_sos, disc, zi=self._zi_lp)
-        return self._resample(audio)
+        resampled = self._resample(audio)
+        self._ctcss.process(resampled)
+        return resampled
 
 
 # ---------------------------------------------------------------------------
@@ -409,7 +466,7 @@ class NFMDemodulator(Demodulator):
 class AMDemodulator(Demodulator):
     _CHANNEL_BW = 5_000  # 10 kHz AM channel
 
-    def __init__(self, baseband_rate: int, audio_rate: int) -> None:
+    def __init__(self, baseband_rate: int, audio_rate: int, **kwargs) -> None:
         super().__init__(baseband_rate, audio_rate)
         self._lp_sos = make_lowpass_iir(5_000, baseband_rate, order=4)
         self._zi_lp = sp_signal.sosfilt_zi(self._lp_sos) * 0.0
@@ -435,7 +492,7 @@ class AMDemodulator(Demodulator):
 class SSBDemodulator(Demodulator):
     _CHANNEL_BW = 3_000  # 3 kHz SSB channel
 
-    def __init__(self, baseband_rate: int, audio_rate: int, upper: bool) -> None:
+    def __init__(self, baseband_rate: int, audio_rate: int, upper: bool = True, **kwargs) -> None:
         super().__init__(baseband_rate, audio_rate)
         self._upper = upper
 
@@ -454,7 +511,7 @@ class SSBDemodulator(Demodulator):
 class CWDemodulator(Demodulator):
     _CHANNEL_BW = 1_500  # must pass 600–1000 Hz beat note + margin
 
-    def __init__(self, baseband_rate: int, audio_rate: int) -> None:
+    def __init__(self, baseband_rate: int, audio_rate: int, **kwargs) -> None:
         super().__init__(baseband_rate, audio_rate)
         self._bp_sos = make_bandpass_iir(600, 1_000, baseband_rate, order=4)
         self._zi_bp = sp_signal.sosfilt_zi(self._bp_sos) * 0.0
@@ -481,7 +538,7 @@ class CWDemodulator(Demodulator):
 class DSBDemodulator(Demodulator):
     _CHANNEL_BW = 5_000  # 10 kHz DSB channel
 
-    def __init__(self, baseband_rate: int, audio_rate: int) -> None:
+    def __init__(self, baseband_rate: int, audio_rate: int, **kwargs) -> None:
         super().__init__(baseband_rate, audio_rate)
         self._lp_sos = make_lowpass_iir(5_000, baseband_rate, order=4)
         self._zi_lp = sp_signal.sosfilt_zi(self._lp_sos) * 0.0
@@ -502,19 +559,19 @@ _MODE_MAP = {
     "WFM": WFMDemodulator,
     "NFM": NFMDemodulator,
     "AM":  AMDemodulator,
-    "USB": lambda br, ar: SSBDemodulator(br, ar, upper=True),
-    "LSB": lambda br, ar: SSBDemodulator(br, ar, upper=False),
+    "USB": lambda br, ar, **kw: SSBDemodulator(br, ar, upper=True),
+    "LSB": lambda br, ar, **kw: SSBDemodulator(br, ar, upper=False),
     "CW":  CWDemodulator,
     "DSB": DSBDemodulator,
 }
 
 
-def make_demodulator(mode: str, baseband_rate: int, audio_rate: int = AUDIO_RATE) -> Demodulator:
+def make_demodulator(mode: str, baseband_rate: int, audio_rate: int = AUDIO_RATE, **kwargs) -> Demodulator:
     """Return a fresh stateful Demodulator for *mode*."""
     cls = _MODE_MAP.get(mode.upper())
     if cls is None:
         raise ValueError(f"Unknown mode: {mode!r}")
-    return cls(baseband_rate, audio_rate)
+    return cls(baseband_rate, audio_rate, **kwargs)
 
 
 # ---------------------------------------------------------------------------

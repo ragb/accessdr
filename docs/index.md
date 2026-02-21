@@ -12,7 +12,11 @@ Software-defined radio uses a small USB dongle to receive radio signals across a
 ## Key Features
 
 - **Screen reader support** — every control, status change, and signal reading is spoken through your screen reader (NVDA, JAWS, Narrator)
-- **7 demodulation modes** — WFM (with stereo detection), NFM, AM, USB, LSB, CW, DSB
+- **7 demodulation modes** — WFM (stereo, RDS, hi-blend), NFM (CTCSS detection), AM, USB, LSB, CW, DSB
+- **RDS decoding** — automatic station name, radio text, and program type for FM broadcast
+- **CTCSS tone detection** — identifies sub-audible access tones on NFM channels
+- **Noise blanker** — suppresses impulse noise from electrical interference
+- **Waterfall display** — real-time spectrogram with CVD-safe colour schemes (Viridis, Magma, Grayscale) for spotting intermittent signals and drift
 - **Spectrum sonification** — hear the RF spectrum as a sweeping tone that maps signal strength to volume and frequency position to pitch
 - **Frequency scanner** — automatically scan a range and stop on active signals
 - **Bookmarks** — save and recall your favourite frequencies

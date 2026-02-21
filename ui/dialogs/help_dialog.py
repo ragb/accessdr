@@ -68,6 +68,7 @@ SHORTCUTS = [
     (N_("Scanner"), "Ctrl+N"),
     (N_("Bookmarks"), "Ctrl+B"),
     (N_("Audio Settings"), "Ctrl+D"),
+    (N_("WFM Settings"), "Ctrl+W"),
     (N_("Help (this window)"), "F1"),
     ("", ""),
     (N_("--- Scanner (when open) ---"), ""),

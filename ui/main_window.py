@@ -28,6 +28,7 @@ from core.audio import AudioOutput
 from core.dsp.demodulator import make_demodulator, Demodulator
 from core.dsp.filters import decimate
 from core.dsp.mixer import Mixer
+from core.dsp.noise_blanker import NoiseBlanker
 from core.dsp.spectrum import SpectrumAnalyser
 from core.scanner import Scanner
 from core.sdr_device import SDRDevice
@@ -203,12 +204,17 @@ class MainWindow(wx.Frame):
         self._dsp_thread: Optional[threading.Thread] = None
         self._step_idx = STEPS.index(self._settings.step) if self._settings.step in STEPS else 3
         self._was_stereo: Optional[bool] = None   # tracks last announced stereo state
+        self._last_rds_station: str = ""          # tracks last announced RDS station name
         self._retune_pending: bool = False        # set by _tune(), cleared by DSP loop
         self._last_spectrum: Optional[np.ndarray] = None
         self._sweeping: bool = False               # continuous sweep running
         self._zoom_level: int = 0                  # 0–5: factor = 2^level
         self._mode_pending: bool = False           # waiting for mode letter after M
         self._above_threshold: bool = False        # auto-announce threshold state
+
+        # Noise blanker — always created so B key works before radio starts
+        self._noise_blanker = NoiseBlanker(self._settings.noise_blanker_threshold)
+        self._noise_blanker.enabled = self._settings.noise_blanker_enabled
 
         # Software VFO offset state
         self._demod_offset: float = 0.0           # Hz from LO
@@ -272,9 +278,11 @@ class MainWindow(wx.Frame):
         item_rf = options_menu.Append(wx.ID_ANY, _("&RF Settings…\tCtrl+R"))
         item_spectrum = options_menu.Append(wx.ID_ANY, _("&Spectrum Settings…\tCtrl+S"))
         item_audio = options_menu.Append(wx.ID_ANY, _("&Audio Settings…\tCtrl+D"))
+        item_wfm = options_menu.Append(wx.ID_ANY, _("&WFM Settings…\tCtrl+W"))
         self.Bind(wx.EVT_MENU, lambda e: self._open_rf_dialog(), item_rf)
         self.Bind(wx.EVT_MENU, lambda e: self._open_spectrum_dialog(), item_spectrum)
         self.Bind(wx.EVT_MENU, lambda e: self._open_audio_dialog(), item_audio)
+        self.Bind(wx.EVT_MENU, lambda e: self._open_wfm_dialog(), item_wfm)
         mb.Append(options_menu, _("&Options"))
 
         # Help
@@ -404,7 +412,7 @@ class MainWindow(wx.Frame):
         outer.Add(sweep_row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
 
         # --- Spectrum display ---
-        self._spectrum_panel = SpectrumPanel(panel, self._sonification)
+        self._spectrum_panel = SpectrumPanel(panel, self._sonification, self._settings)
         self._spectrum_panel.set_cursor_click_callback(self._on_spectrum_click)
         outer.Add(self._spectrum_panel, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
 
@@ -620,10 +628,13 @@ class MainWindow(wx.Frame):
                      self._settings.sample_rate // self._baseband_rate,
                      self._settings.sample_rate)
         # Create stateful demodulator — filters pre-computed, state preserved across chunks
+        kwargs = self._wfm_kwargs() if self._settings.mode == "WFM" else {}
         self._demodulator: Demodulator = make_demodulator(
-            self._settings.mode, self._baseband_rate, AUDIO_RATE
+            self._settings.mode, self._baseband_rate, AUDIO_RATE, **kwargs
         )
         self._mixer = Mixer(self._settings.sample_rate)
+        self._noise_blanker.threshold = self._settings.noise_blanker_threshold
+        self._noise_blanker.enabled = self._settings.noise_blanker_enabled
         self._demod_offset = 0.0
         # Spectrum update throttle: ~20 Hz (chunk_rate / spec_every ≈ 20)
         from core.sdr_device import CHUNK_SIZE
@@ -736,7 +747,8 @@ class MainWindow(wx.Frame):
             # Rebuild demodulator if mode changed (new filter state required)
             if self._settings.mode != current_mode:
                 current_mode = self._settings.mode
-                self._demodulator = make_demodulator(current_mode, self._baseband_rate, AUDIO_RATE)
+                kwargs = self._wfm_kwargs() if current_mode == "WFM" else {}
+                self._demodulator = make_demodulator(current_mode, self._baseband_rate, AUDIO_RATE, **kwargs)
                 dsp_stereo = None
                 stereo_delay = 0
 
@@ -746,9 +758,17 @@ class MainWindow(wx.Frame):
                 self._retune_pending = False
                 dsp_stereo = None
                 stereo_delay = 6   # ~6 chunks ≈ 300–400 ms at typical chunk sizes
+                self._last_rds_station = ""
+                # Reset RDS decoder state on retune
+                rds_reset = getattr(self._demodulator, "_rds", None)
+                if rds_reset is not None:
+                    rds_reset.reset()
 
             # Remove RTL-SDR DC offset spike (constant hardware bias at centre freq)
             iq = iq - np.mean(iq)
+
+            # Noise blanker — suppress impulse noise before any further processing
+            iq = self._noise_blanker.process(iq)
 
             # RF signal power from raw IQ (dBFS, 0 = full scale).
             # np.vdot(iq,iq) = Σ|iq[i]|² in one BLAS call — no complex128/abs.
@@ -789,6 +809,12 @@ class MainWindow(wx.Frame):
                             freq=_fmt_freq(listen), label=label
                         ),
                     )
+
+                # RDS auto-announce: speak station name on change
+                rds_name = getattr(self._demodulator, "rds_station", "")
+                if rds_name and rds_name != self._last_rds_station:
+                    self._last_rds_station = rds_name
+                    wx.CallAfter(speech.output, _("RDS: {name}").format(name=rds_name))
 
     def _on_spectrum_update(self, spectrum: np.ndarray) -> None:
         """Called on UI thread with updated spectrum data."""
@@ -877,6 +903,18 @@ class MainWindow(wx.Frame):
         self._sq_slider.SetValue(int(val))
         self._sq_lbl.SetLabel(f"{val:.0f} dBm")
         speech.output(_("Squelch {val:.0f} dBm").format(val=val))
+
+    # ==================================================================
+    # Noise blanker
+    # ==================================================================
+
+    def _toggle_noise_blanker(self) -> None:
+        self._noise_blanker.enabled = not self._noise_blanker.enabled
+        self._settings.noise_blanker_enabled = self._noise_blanker.enabled
+        speech.output(
+            _("Noise blanker on") if self._noise_blanker.enabled
+            else _("Noise blanker off")
+        )
 
     # ==================================================================
     # Sweep control
@@ -1231,6 +1269,13 @@ class MainWindow(wx.Frame):
                 if self._settings.mode == "WFM" and self._demodulator is not None:
                     stereo = getattr(self._demodulator, "stereo_detected", False)
                     parts.append(_("Stereo") if stereo else _("Mono"))
+                    rds_name = getattr(self._demodulator, "rds_station", "")
+                    if rds_name:
+                        parts.append(_("RDS: {name}").format(name=rds_name))
+                if self._settings.mode == "NFM" and self._demodulator is not None:
+                    ctcss = getattr(self._demodulator, "ctcss_tone", None)
+                    if ctcss is not None:
+                        parts.append(_("CTCSS {tone:.1f} Hz").format(tone=ctcss))
                 squelch_open = db >= self._audio.squelch
                 parts.append(
                     _("Squelch open") if squelch_open else _("Squelch closed")
@@ -1374,6 +1419,9 @@ class MainWindow(wx.Frame):
             if code == ord("D"):
                 self._open_audio_dialog()
                 return
+            if code == ord("W"):
+                self._open_wfm_dialog()
+                return
             if code == ord("H"):
                 self._on_open_user_guide(None)
                 return
@@ -1451,6 +1499,7 @@ class MainWindow(wx.Frame):
         dlg = SpectrumDialog(self, self._settings, self._sonification)
         if dlg.ShowModal() == wx.ID_OK:
             self._save_settings(self._settings)
+            self._spectrum_panel.update_waterfall_settings(self._settings)
         dlg.Destroy()
 
     def _open_scanner_dialog(self) -> None:
@@ -1469,6 +1518,13 @@ class MainWindow(wx.Frame):
         dlg = AudioDialog(self, self._settings, self._audio)
         if dlg.ShowModal() == wx.ID_OK:
             self._on_audio_settings_changed(self._settings)
+        dlg.Destroy()
+
+    def _open_wfm_dialog(self) -> None:
+        from ui.dialogs.wfm_dialog import WFMDialog
+        dlg = WFMDialog(self, self._settings)
+        if dlg.ShowModal() == wx.ID_OK:
+            self._on_wfm_settings_changed()
         dlg.Destroy()
 
     def _open_help_dialog(self) -> None:
@@ -1495,8 +1551,29 @@ class MainWindow(wx.Frame):
         self._tune(bm.frequency)
         self._set_mode(bm.mode)
 
+    def _wfm_kwargs(self) -> dict:
+        """Build kwargs dict for WFMDemodulator from current settings."""
+        return dict(
+            deemphasis=self._settings.wfm_deemphasis,
+            stereo_mode=self._settings.wfm_stereo_mode,
+            hiblend_enabled=self._settings.wfm_hiblend_enabled,
+            rds_enabled=self._settings.wfm_rds_enabled,
+        )
+
+    def _on_wfm_settings_changed(self) -> None:
+        """Apply WFM settings changes — rebuild demodulator if in WFM mode."""
+        if self._running and self._settings.mode == "WFM":
+            self._demodulator = make_demodulator(
+                "WFM", self._baseband_rate, AUDIO_RATE, **self._wfm_kwargs()
+            )
+
     def _on_rf_settings_changed(self, settings: Settings) -> None:
         self._settings = settings
+        # Sync noise blanker state
+        nb = getattr(self, "_noise_blanker", None)
+        if nb is not None:
+            nb.enabled = settings.noise_blanker_enabled
+            nb.threshold = settings.noise_blanker_threshold
         if self._running:
             self._sdr.set_gain(settings.gain)
             self._sdr.set_ppm(settings.ppm)
