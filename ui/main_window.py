@@ -2,15 +2,15 @@
 ui/main_window.py — AccessDR main application window.
 
 Hosts the primary radio controls (frequency, mode, bandwidth, start/stop,
-volume, squelch) and coordinates the SDR device, DSP thread, and audio
-output.  All cross-thread communication is via queue.Queue + wx.CallAfter.
+volume, squelch) and coordinates the SDR device, DSP processing, and audio
+output.  DSP runs inline in the SDR capture callback; cross-thread
+communication to the UI is via wx.CallAfter.
 """
 
 from __future__ import annotations
 
 import logging
 import os
-import queue
 import threading
 import time
 from typing import Optional
@@ -26,7 +26,7 @@ from config.bookmarks import Bookmark, BookmarkStore
 from config.settings import Settings
 from core.audio import AudioOutput
 from core.dsp.demodulator import make_demodulator, Demodulator
-from core.dsp.filters import decimate
+from core.dsp.filters import StatefulDecimator
 from core.dsp.mixer import Mixer
 from core.dsp.noise_blanker import NoiseBlanker
 from core.dsp.spectrum import SpectrumAnalyser
@@ -170,7 +170,7 @@ class MainWindow(wx.Frame):
         self._settings = Settings.load()
 
         # Core objects
-        self._sdr = SDRDevice()
+        self._sdr = SDRDevice(chunk_size=self._settings.sdr_buffer_size)
         self._sdr.on_error = self._on_sdr_error
         self._audio = AudioOutput(
             sample_rate=AUDIO_RATE,
@@ -201,7 +201,6 @@ class MainWindow(wx.Frame):
         # Runtime state
         self._running = False
         self._paused = False
-        self._dsp_thread: Optional[threading.Thread] = None
         self._step_idx = STEPS.index(self._settings.step) if self._settings.step in STEPS else 3
         self._was_stereo: Optional[bool] = None   # tracks last announced stereo state
         self._last_rds_station: str = ""          # tracks last announced RDS station name
@@ -621,6 +620,8 @@ class MainWindow(wx.Frame):
         if not self._sdr.open():
             speech.output(_("Could not open SDR device."))
             return
+        self._audio.audio_underruns = 0
+        self._audio.audio_overruns = 0
         # Compute baseband rate for the configured sample rate (must be integer factor)
         self._baseband_rate = _baseband_rate_for(self._settings.sample_rate)
         logger.info("Baseband rate %d Hz (decimate %dx from %d)",
@@ -632,15 +633,26 @@ class MainWindow(wx.Frame):
         self._demodulator: Demodulator = make_demodulator(
             self._settings.mode, self._baseband_rate, AUDIO_RATE, **kwargs
         )
+        self._decimator = StatefulDecimator(
+            factor=self._settings.sample_rate // self._baseband_rate,
+            input_rate=self._settings.sample_rate,
+        )
         self._mixer = Mixer(self._settings.sample_rate)
         self._noise_blanker.threshold = self._settings.noise_blanker_threshold
         self._noise_blanker.enabled = self._settings.noise_blanker_enabled
         self._demod_offset = 0.0
         # Spectrum update throttle: ~20 Hz (chunk_rate / spec_every ≈ 20)
-        from core.sdr_device import CHUNK_SIZE
-        chunk_rate = self._settings.sample_rate / CHUNK_SIZE
+        chunk_rate = self._settings.sample_rate / self._sdr.chunk_size
         self._spec_every = max(1, int(round(chunk_rate / 20)))
         self._spec_skip = 0
+        # DSP per-chunk state (used by _process_iq callback)
+        self._dsp_current_mode = self._settings.mode
+        self._dsp_stereo: Optional[bool] = None
+        self._stereo_delay: int = 0
+        self._health_t = time.monotonic()
+        self._health_chunks = 0
+        self._prev_au_ur = 0
+        self._prev_au_or = 0
         self._sdr.set_frequency(self._settings.frequency)
         self._sdr.set_sample_rate(self._settings.sample_rate)
         self._sdr.set_gain(self._settings.gain)
@@ -651,16 +663,12 @@ class MainWindow(wx.Frame):
             self._sdr.set_tuner_bandwidth(self._settings.tuner_bandwidth)
         else:
             self._sdr.set_tuner_bandwidth(self._hw_bandwidth_for_mode(self._settings.mode))
+        self._sdr.on_samples = self._process_iq
         self._sdr.start()
 
         self._audio.start()
 
         self._running = True
-        self._dsp_thread = threading.Thread(
-            target=self._dsp_loop, daemon=True, name="DSPThread"
-        )
-        self._dsp_thread.start()
-        _elevate_dsp_priority(self._dsp_thread)
 
         self._start_btn.SetLabel(_("\u25a0 Stop"))
         self._statusbar.SetStatusText(
@@ -672,11 +680,9 @@ class MainWindow(wx.Frame):
         self._running = False
         self._paused = False
         self._sdr.stop()
+        self._sdr.on_samples = None
         self._sdr.close()
         self._audio.stop()
-        if self._dsp_thread:
-            self._dsp_thread.join(timeout=2.0)
-            self._dsp_thread = None
         self._was_stereo = None
         self._signal_lbl.SetLabel(_("Signal: —"))
         self._start_btn.SetLabel(_("\u25b6 Start"))
@@ -693,10 +699,7 @@ class MainWindow(wx.Frame):
             # --- Pause ---
             self._paused = True
             self._sdr.pause()                    # stop IQ capture (keeps device open)
-            self._running = False                 # let DSP thread exit naturally
-            if self._dsp_thread:
-                self._dsp_thread.join(timeout=2.0)
-                self._dsp_thread = None
+            self._running = False
             self._audio.pause()                   # stop audio stream, drain queue
             listen = self._listening_freq()
             self._start_btn.SetLabel(_("▶ Resume"))
@@ -706,20 +709,9 @@ class MainWindow(wx.Frame):
             speech.output(_("Paused."))
         else:
             # --- Resume ---
-            # Drain stale IQ data
-            while not self._sdr.iq_queue.empty():
-                try:
-                    self._sdr.iq_queue.get_nowait()
-                except queue.Empty:
-                    break
             self._sdr.start()                     # restart IQ capture
             self._audio.resume()                  # restart audio stream
             self._running = True
-            self._dsp_thread = threading.Thread(
-                target=self._dsp_loop, daemon=True, name="DSPThread"
-            )
-            self._dsp_thread.start()
-            _elevate_dsp_priority(self._dsp_thread)
             self._paused = False
             listen = self._listening_freq()
             self._start_btn.SetLabel(_("■ Stop"))
@@ -729,92 +721,105 @@ class MainWindow(wx.Frame):
             speech.output(_("Resumed."))
 
     # ==================================================================
-    # DSP thread
+    # DSP callback (runs on SDRCapture thread)
     # ==================================================================
 
-    def _dsp_loop(self) -> None:
-        """Main DSP thread: demodulate IQ and feed audio + spectrum."""
-        current_mode = self._settings.mode
-        dsp_stereo: Optional[bool] = None   # tracks last announced stereo state (DSP thread)
-        stereo_delay: int = 0               # chunks to wait before announcing after retune
+    def _process_iq(self, iq: np.ndarray) -> None:
+        """Per-chunk DSP: demodulate IQ and feed audio + spectrum.
 
-        while self._running:
-            try:
-                iq = self._sdr.iq_queue.get(timeout=0.1)
-            except queue.Empty:
-                continue
+        Called from the SDR capture thread via ``sdr.on_samples``.
+        """
+        self._health_chunks += 1
+        now = time.monotonic()
+        if now - self._health_t >= 5.0:
+            elapsed = now - self._health_t
+            rate = self._health_chunks / elapsed
+            au_ur = self._audio.audio_underruns - self._prev_au_ur
+            au_or = self._audio.audio_overruns - self._prev_au_or
+            parts = [f"DSP {rate:.0f} chunks/s"]
+            if au_ur:
+                parts.append(f"audio underruns {au_ur}")
+            if au_or:
+                parts.append(f"audio overruns {au_or}")
+            logger.info(" | ".join(parts))
+            self._health_t = now
+            self._health_chunks = 0
+            self._prev_au_ur = self._audio.audio_underruns
+            self._prev_au_or = self._audio.audio_overruns
 
-            # Rebuild demodulator if mode changed (new filter state required)
-            if self._settings.mode != current_mode:
-                current_mode = self._settings.mode
-                kwargs = self._wfm_kwargs() if current_mode == "WFM" else {}
-                self._demodulator = make_demodulator(current_mode, self._baseband_rate, AUDIO_RATE, **kwargs)
-                dsp_stereo = None
-                stereo_delay = 0
+        # Rebuild demodulator if mode changed (new filter state required)
+        if self._settings.mode != self._dsp_current_mode:
+            self._dsp_current_mode = self._settings.mode
+            kwargs = self._wfm_kwargs() if self._dsp_current_mode == "WFM" else {}
+            self._demodulator = make_demodulator(self._dsp_current_mode, self._baseband_rate, AUDIO_RATE, **kwargs)
+            self._dsp_stereo = None
+            self._stereo_delay = 0
 
-            # Re-announce stereo status after a retune, but delay so the
-            # frequency speech finishes before the stereo announcement fires.
-            if self._retune_pending:
-                self._retune_pending = False
-                dsp_stereo = None
-                stereo_delay = 6   # ~6 chunks ≈ 300–400 ms at typical chunk sizes
-                self._last_rds_station = ""
-                # Reset RDS decoder state on retune
-                rds_reset = getattr(self._demodulator, "_rds", None)
-                if rds_reset is not None:
-                    rds_reset.reset()
+        # Re-announce stereo status after a retune, but delay so the
+        # frequency speech finishes before the stereo announcement fires.
+        if self._retune_pending:
+            self._retune_pending = False
+            self._dsp_stereo = None
+            # ~300 ms worth of chunks (scales with buffer size)
+            chunk_s = self._sdr.chunk_size / max(self._settings.sample_rate, 1)
+            self._stereo_delay = max(1, int(0.3 / chunk_s))
+            self._last_rds_station = ""
+            # Reset RDS decoder state on retune
+            rds_reset = getattr(self._demodulator, "_rds", None)
+            if rds_reset is not None:
+                rds_reset.reset()
 
-            # Remove RTL-SDR DC offset spike (constant hardware bias at centre freq)
-            iq = iq - np.mean(iq)
+        # Remove RTL-SDR DC offset spike (constant hardware bias at centre freq)
+        iq = iq - np.mean(iq)
 
-            # Noise blanker — suppress impulse noise before any further processing
-            iq = self._noise_blanker.process(iq)
+        # Noise blanker — suppress impulse noise before any further processing
+        iq = self._noise_blanker.process(iq)
 
-            # RF signal power from raw IQ (dBFS, 0 = full scale).
-            # np.vdot(iq,iq) = Σ|iq[i]|² in one BLAS call — no complex128/abs.
-            iq_power = float(np.vdot(iq, iq).real) / len(iq)
-            self._audio.signal_db = 10.0 * np.log10(max(iq_power, 1e-10))
+        # RF signal power from raw IQ (dBFS, 0 = full scale).
+        # np.vdot(iq,iq) = Σ|iq[i]|² in one BLAS call — no complex128/abs.
+        iq_power = float(np.vdot(iq, iq).real) / len(iq)
+        self._audio.signal_db = 10.0 * np.log10(max(iq_power, 1e-10))
 
-            # Spectrum analysis — throttle to ~20 Hz to save CPU
-            self._spec_skip = getattr(self, "_spec_skip", 0) + 1
-            if self._spec_skip >= self._spec_every:
-                self._spec_skip = 0
-                spec = self._spectrum.process(iq)
-                wx.CallAfter(self._on_spectrum_update, spec)
+        # Spectrum analysis — throttle to ~20 Hz to save CPU
+        self._spec_skip += 1
+        if self._spec_skip >= self._spec_every:
+            self._spec_skip = 0
+            spec = self._spectrum.process(iq)
+            wx.CallAfter(self._on_spectrum_update, spec)
 
-            # Shift desired signal to DC via software VFO offset (full 2.4 MHz range)
-            mixed = self._mixer.process(iq, self._demod_offset)
+        # Shift desired signal to DC via software VFO offset (full 2.4 MHz range)
+        mixed = self._mixer.process(iq, self._demod_offset)
 
-            # Decimate to baseband — anti-aliasing filter acts as channel filter
-            bb = decimate(mixed, self._settings.sample_rate, self._baseband_rate)
+        # Decimate to baseband — anti-aliasing filter acts as channel filter
+        bb = self._decimator.process(mixed)
 
-            # Demodulate using stateful demodulator (filter state carried between chunks)
-            audio = self._demodulator.process(bb)
-            self._audio.write(audio)
+        # Demodulate using stateful demodulator (filter state carried between chunks)
+        audio = self._demodulator.process(bb)
+        self._audio.write(audio)
 
-            # Track stereo/mono state; update status bar silently on change.
-            # The I key report includes stereo/mono so we don't speak it here.
-            if current_mode == "WFM":
-                stereo = getattr(self._demodulator, "stereo_detected", False)
-                if stereo_delay > 0:
-                    stereo_delay -= 1
-                    dsp_stereo = stereo
-                elif stereo != dsp_stereo:
-                    dsp_stereo = stereo
-                    label = _("Stereo") if stereo else _("Mono")
-                    listen = int(self._settings.frequency + self._demod_offset)
-                    wx.CallAfter(
-                        self._statusbar.SetStatusText,
-                        _("Receiving — {freq} [{label}]").format(
-                            freq=_fmt_freq(listen), label=label
-                        ),
-                    )
+        # Track stereo/mono state; update status bar silently on change.
+        # The I key report includes stereo/mono so we don't speak it here.
+        if self._dsp_current_mode == "WFM":
+            stereo = getattr(self._demodulator, "stereo_detected", False)
+            if self._stereo_delay > 0:
+                self._stereo_delay -= 1
+                self._dsp_stereo = stereo
+            elif stereo != self._dsp_stereo:
+                self._dsp_stereo = stereo
+                label = _("Stereo") if stereo else _("Mono")
+                listen = int(self._settings.frequency + self._demod_offset)
+                wx.CallAfter(
+                    self._statusbar.SetStatusText,
+                    _("Receiving — {freq} [{label}]").format(
+                        freq=_fmt_freq(listen), label=label
+                    ),
+                )
 
-                # RDS auto-announce: speak station name on change
-                rds_name = getattr(self._demodulator, "rds_station", "")
-                if rds_name and rds_name != self._last_rds_station:
-                    self._last_rds_station = rds_name
-                    wx.CallAfter(speech.output, _("RDS: {name}").format(name=rds_name))
+            # RDS auto-announce: speak station name on change
+            rds_name = getattr(self._demodulator, "rds_station", "")
+            if rds_name and rds_name != self._last_rds_station:
+                self._last_rds_station = rds_name
+                wx.CallAfter(speech.output, _("RDS: {name}").format(name=rds_name))
 
     def _on_spectrum_update(self, spectrum: np.ndarray) -> None:
         """Called on UI thread with updated spectrum data."""
@@ -1209,6 +1214,11 @@ class MainWindow(wx.Frame):
         code = event.GetKeyCode()
         modifiers = event.GetModifiers()
 
+        # Alt+F4: close window (must handle before Skip to avoid swallowing)
+        if code == wx.WXK_F4 and modifiers == wx.MOD_ALT:
+            self.Close()
+            return
+
         if in_text:
             event.Skip()
             return
@@ -1574,7 +1584,15 @@ class MainWindow(wx.Frame):
         if nb is not None:
             nb.enabled = settings.noise_blanker_enabled
             nb.threshold = settings.noise_blanker_threshold
-        if self._running:
+        # Buffer size change requires full restart
+        need_restart = (
+            self._running and self._sdr.chunk_size != settings.sdr_buffer_size
+        )
+        self._sdr.chunk_size = settings.sdr_buffer_size
+        if need_restart:
+            self._stop_radio()
+            self._start_radio()
+        elif self._running:
             self._sdr.set_gain(settings.gain)
             self._sdr.set_ppm(settings.ppm)
             self._sdr.set_sample_rate(settings.sample_rate)

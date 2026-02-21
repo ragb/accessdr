@@ -53,7 +53,7 @@ class Demodulator(ABC):
     def __init__(self, baseband_rate: int, audio_rate: int, **kwargs) -> None:
         self.baseband_rate = baseband_rate
         self.audio_rate = audio_rate
-        self._resample_up, self._resample_down = _resample_ratio(baseband_rate, audio_rate)
+        self._resampler = _Resampler(baseband_rate, audio_rate)
 
         # Pre-demodulation channel filter (IIR Butterworth lowpass, SOS)
         bw = self._CHANNEL_BW
@@ -80,10 +80,8 @@ class Demodulator(ABC):
         """Demodulate *iq* (complex64) → float32 audio at audio_rate."""
 
     def _resample(self, audio: np.ndarray) -> np.ndarray:
-        """Resample from baseband_rate to audio_rate (polyphase, integer ratio)."""
-        if self._resample_up == self._resample_down:
-            return audio.astype(np.float32)
-        return sp_signal.resample_poly(audio, self._resample_up, self._resample_down).astype(np.float32)
+        """Resample from baseband_rate to audio_rate (stateful, phase-continuous)."""
+        return self._resampler.process(audio)
 
 
 # ---------------------------------------------------------------------------
@@ -94,6 +92,42 @@ def _resample_ratio(in_rate: int, out_rate: int):
     from math import gcd
     g = gcd(in_rate, out_rate)
     return out_rate // g, in_rate // g
+
+
+class _Resampler:
+    """Stateful IIR anti-alias + integer downsample for one audio channel.
+
+    When the ratio is pure integer decimation (up == 1), uses a Butterworth
+    IIR lowpass with state carried across calls plus correct downsample-phase
+    tracking.  Falls back to stateless ``resample_poly`` for fractional ratios.
+    """
+
+    def __init__(self, in_rate: int, out_rate: int, order: int = 8) -> None:
+        from math import gcd
+        g = gcd(in_rate, out_rate)
+        self._up = out_rate // g
+        self._down = in_rate // g
+        if self._up == 1 and self._down > 1:
+            cutoff = out_rate * 0.45  # 90% of output Nyquist
+            self._sos = make_lowpass_iir(cutoff, in_rate, order=order)
+            self._zi = sp_signal.sosfilt_zi(self._sos) * 0.0
+            self._offset = 0
+            self._stateful = True
+        else:
+            self._stateful = False
+
+    def process(self, audio: np.ndarray) -> np.ndarray:
+        if self._up == self._down:
+            return audio.astype(np.float32)
+        if self._stateful:
+            filtered, self._zi = sp_signal.sosfilt(
+                self._sos, audio, zi=self._zi)
+            out = filtered[self._offset :: self._down].astype(np.float32)
+            self._offset = (self._offset + len(out) * self._down) - len(audio)
+            return out
+        return sp_signal.resample_poly(
+            audio, self._up, self._down,
+        ).astype(np.float32)
 
 
 def _fm_discriminant(iq: np.ndarray) -> np.ndarray:
@@ -164,6 +198,9 @@ class WFMDemodulator(Demodulator):
     def __init__(self, baseband_rate: int, audio_rate: int, **kwargs) -> None:
         super().__init__(baseband_rate, audio_rate)
         rate = baseband_rate
+
+        # Second resampler for R channel (L uses base-class _resampler)
+        self._resampler_r = _Resampler(baseband_rate, audio_rate)
 
         # User-configurable options
         self._stereo_mode: str = kwargs.get("stereo_mode", "auto")
@@ -385,8 +422,11 @@ class WFMDemodulator(Demodulator):
         right, self._zi_deemph_r = sp_signal.lfilter(
             self._deemph_b, self._deemph_a, right, zi=self._zi_deemph_r)
 
+        # Sync R resampler phase to L (mono-only chunks advance L but not R)
+        if self._resampler_r._stateful:
+            self._resampler_r._offset = self._resampler._offset
         left_out  = self._resample(left)
-        right_out = self._resample(right)
+        right_out = self._resampler_r.process(right)
 
         # Final audio LPF: remove discriminator noise above 15 kHz
         left_out,  self._zi_audio_l = sp_signal.sosfilt(

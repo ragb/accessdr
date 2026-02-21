@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AccessDR 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-21 21:15+0000\n"
+"POT-Creation-Date: 2026-02-21 21:25+0000\n"
 "PO-Revision-Date: 2026-02-19 11:40+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: pt_PT\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: main.py:45
+#: main.py:54
 #, python-brace-format
 msgid "AccessDR — Accessible SDR Radio v{version}"
 msgstr "AccessDR — Rádio SDR Acessível v{version}"
@@ -882,6 +882,10 @@ msgstr "Limiar NB:"
 #: ui/dialogs/rf_dialog.py:158
 msgid "IF Bandwidth:"
 msgstr "Largura de Banda IF:"
+
+#: ui/dialogs/rf_dialog.py:170
+msgid "IQ Buffer Size:"
+msgstr "Tamanho do Buffer IQ:"
 
 #: ui/dialogs/scanner_dialog.py:33
 msgid "Frequency Scanner"

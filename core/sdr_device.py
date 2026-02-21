@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import ctypes
 import logging
-import queue
 import threading
 from typing import Callable, List, Optional
 
@@ -46,7 +45,7 @@ try:
 except ImportError:
     _SOAPY_AVAILABLE = False
 
-CHUNK_SIZE = 32_768
+CHUNK_SIZE = 65_536          # default; overridden by Settings.sdr_buffer_size
 
 
 # ---------------------------------------------------------------------------
@@ -80,13 +79,14 @@ def enumerate_devices() -> List[dict]:
 class SDRDevice:
     """RTL-SDR receiver using pyrtlsdr (preferred) or SoapySDR."""
 
-    def __init__(self) -> None:
+    def __init__(self, chunk_size: int = CHUNK_SIZE) -> None:
         self._rtl: Optional[_RtlSdrBase] = None
         self._dev_handle = None          # raw C void* from librtlsdr
         self._soapy = None
         self._thread: Optional[threading.Thread] = None
         self._running = False
-        self.iq_queue: queue.Queue = queue.Queue(maxsize=64)
+        self._capture_alive = False      # True while stream loop is executing
+        self.chunk_size: int = chunk_size
 
         self.centre_freq: int = 98_100_000
         self.sample_rate: int = 2_400_000
@@ -97,6 +97,7 @@ class SDRDevice:
         self.tuner_bandwidth: int = 0   # Hz, 0 = auto
         self._valid_gains: List[float] = []
 
+        self.on_samples: Optional[Callable[[np.ndarray], None]] = None
         self.on_error: Optional[Callable[[str], None]] = None
 
     # ------------------------------------------------------------------
@@ -174,6 +175,14 @@ class SDRDevice:
 
     def close(self) -> None:
         self.stop()
+        if self._capture_alive:
+            # Capture thread did not exit — closing the device while async
+            # USB transfers are in flight crashes the USB driver (BSOD).
+            # Leak the handle intentionally; it will be freed at process exit.
+            logger.error("Capture thread still alive — leaking device handle to avoid USB driver crash")
+            self._rtl = None
+            self._dev_handle = None
+            return
         if self._rtl is not None:
             try:
                 self._rtl.close()
@@ -303,6 +312,12 @@ class SDRDevice:
                 lib.rtlsdr_reset_buffer.restype = ctypes.c_int
         except Exception:   # noqa: BLE001
             pass
+        try:
+            if not hasattr(lib.rtlsdr_cancel_async, "argtypes"):
+                lib.rtlsdr_cancel_async.argtypes = [ctypes.c_void_p]
+                lib.rtlsdr_cancel_async.restype = ctypes.c_int
+        except Exception:   # noqa: BLE001
+            pass
 
     def _fetch_valid_gains(self) -> List[float]:
         """Query the tuner for its list of valid gain steps."""
@@ -339,48 +354,75 @@ class SDRDevice:
         )
         self._thread.start()
 
+    def _cancel_async(self) -> None:
+        """Signal the async read loop to stop via the raw C function.
+
+        We bypass pyrtlsdr's cancel_read_async() wrapper because it calls
+        close() on error — which crashes if the async thread is still
+        unwinding.  The raw C call just sets a flag and returns.
+        """
+        if self._dev_handle is not None:
+            try:
+                _librtlsdr.rtlsdr_cancel_async(self._dev_handle)
+            except Exception:          # noqa: BLE001
+                pass
+
     def stop(self) -> None:
         self._running = False
-        # Only cancel_read_async when a capture thread is actually running;
-        # calling it with no active read corrupts device state on Windows.
         if self._thread is not None:
-            if self._rtl is not None:
-                try:
-                    self._rtl.cancel_read_async()
-                except Exception:      # noqa: BLE001
-                    pass
-            self._thread.join(timeout=3.0)
+            self._cancel_async()
+            self._thread.join(timeout=5.0)
+            if self._thread.is_alive():
+                logger.error("SDR capture thread did not exit within 5 s")
             self._thread = None
 
     def pause(self) -> None:
-        """Stop the capture thread gently — no cancel_read_async.
+        """Stop the capture thread gently.
 
-        Safe for later resume via start(). The sync read_samples call
-        returns within ~7 ms so the thread exits almost immediately.
-        Unlike stop(), this preserves the device handle for reuse.
+        Safe for later resume via start(). Signals the async read to
+        finish; the thread exits and can be restarted.
         """
         self._running = False
         if self._thread is not None:
-            self._thread.join(timeout=3.0)
+            self._cancel_async()
+            self._thread.join(timeout=5.0)
+            if self._thread.is_alive():
+                logger.error("SDR capture thread did not exit within 5 s (pause)")
             self._thread = None
 
     def _stream_loop(self) -> None:
-        if self._rtl is not None:
-            self._pyrtlsdr_loop()
-        elif self._soapy is not None:
-            self._soapy_loop()
-        else:
-            self._dummy_loop()
+        self._capture_alive = True
+        try:
+            if self._rtl is not None:
+                self._pyrtlsdr_loop()
+            elif self._soapy is not None:
+                self._soapy_loop()
+            else:
+                self._dummy_loop()
+        finally:
+            self._capture_alive = False
 
     def _pyrtlsdr_loop(self) -> None:
+        """Async read loop — librtlsdr manages 15 USB ring buffers internally.
+
+        Unlike read_sync (which has gaps between calls where USB data is
+        lost), read_async uses isochronous transfers that fill the next
+        buffer while the callback processes the current one.  This
+        eliminates the main source of sample drops and audio crackling.
+        """
+        def _on_samples(samples, rtlsdr_obj):
+            if not self._running:
+                # CRITICAL: use the raw C cancel — pyrtlsdr's Python wrapper
+                # calls self.close() on error, which tears down the USB handle
+                # while we're still inside the async callback → BSOD.
+                self._cancel_async()
+                return
+            chunk = np.asarray(samples, dtype=np.complex64)
+            if self.on_samples is not None:
+                self.on_samples(chunk)
+
         try:
-            while self._running:
-                samples = self._rtl.read_samples(CHUNK_SIZE)
-                chunk = np.asarray(samples, dtype=np.complex64)
-                try:
-                    self.iq_queue.put_nowait(chunk)
-                except queue.Full:
-                    pass
+            self._rtl.read_samples_async(_on_samples, num_samples=self.chunk_size)
         except Exception as exc:       # noqa: BLE001
             if self._running:
                 logger.error("pyrtlsdr stream error: %s", exc)
@@ -391,14 +433,11 @@ class SDRDevice:
         try:
             stream = self._soapy.setupStream(_SOAPY_SDR_RX, _SOAPY_SDR_CF32)
             self._soapy.activateStream(stream)
-            buf = np.zeros(CHUNK_SIZE, dtype=np.complex64)
+            buf = np.zeros(self.chunk_size, dtype=np.complex64)
             while self._running:
-                sr = self._soapy.readStream(stream, [buf], CHUNK_SIZE, timeoutUs=100_000)
-                if sr.ret > 0:
-                    try:
-                        self.iq_queue.put_nowait(buf[: sr.ret].copy())
-                    except queue.Full:
-                        pass
+                sr = self._soapy.readStream(stream, [buf], self.chunk_size, timeoutUs=100_000)
+                if sr.ret > 0 and self.on_samples is not None:
+                    self.on_samples(buf[: sr.ret].copy())
             self._soapy.deactivateStream(stream)
             self._soapy.closeStream(stream)
         except Exception as exc:       # noqa: BLE001
@@ -410,14 +449,12 @@ class SDRDevice:
     def _dummy_loop(self) -> None:
         import time
         rng = np.random.default_rng()
-        chunk_dur = CHUNK_SIZE / max(self.sample_rate, 1)
+        chunk_dur = self.chunk_size / max(self.sample_rate, 1)
         while self._running:
             chunk = (
-                rng.standard_normal(CHUNK_SIZE).astype(np.float32)
-                + 1j * rng.standard_normal(CHUNK_SIZE).astype(np.float32)
+                rng.standard_normal(self.chunk_size).astype(np.float32)
+                + 1j * rng.standard_normal(self.chunk_size).astype(np.float32)
             ).astype(np.complex64) * 0.01
-            try:
-                self.iq_queue.put_nowait(chunk)
-            except queue.Full:
-                pass
+            if self.on_samples is not None:
+                self.on_samples(chunk)
             time.sleep(chunk_dur)

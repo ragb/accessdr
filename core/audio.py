@@ -96,10 +96,13 @@ class AudioOutput:
         self._duck_level: float = 1.0    # current level (ramped in callback)
 
         self._audio_queue: queue.Queue = queue.Queue(maxsize=128)
+        self._leftover = np.zeros((0, CHANNELS), dtype=np.float32)
         self._stream: Optional["sd.OutputStream"] = None
         self._recording: bool = False
         self._wav_file: Optional[wave.Wave_write] = None
         self._lock = threading.Lock()
+        self.audio_underruns: int = 0    # callback couldn't fill buffer
+        self.audio_overruns: int = 0     # write() dropped (queue full)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -135,6 +138,7 @@ class AudioOutput:
             except Exception:      # noqa: BLE001
                 pass
             self._stream = None
+        self._leftover = np.zeros((0, CHANNELS), dtype=np.float32)
 
     def pause(self) -> None:
         """Pause audio output. Stops and closes the stream, drains the queue.
@@ -147,6 +151,7 @@ class AudioOutput:
                 pass
             self._stream = None
         # Drain stale audio so resume doesn't burst old samples
+        self._leftover = np.zeros((0, CHANNELS), dtype=np.float32)
         while not self._audio_queue.empty():
             try:
                 self._audio_queue.get_nowait()
@@ -185,7 +190,7 @@ class AudioOutput:
         try:
             self._audio_queue.put_nowait(stereo)
         except queue.Full:
-            pass  # drop — latency is more important than completeness
+            self.audio_overruns += 1
 
     # ------------------------------------------------------------------
     # Recording
@@ -233,26 +238,32 @@ class AudioOutput:
         status,                    # noqa: ANN001
     ) -> None:
         """Fill *outdata* (frames, 2) with demodulated audio."""
-        combined = np.zeros((frames, 2), dtype=np.float32)
-        samples_needed = frames
-        offset = 0
+        # Accumulate leftover + queue chunks until we have enough
+        parts = []
+        collected = len(self._leftover)
+        if collected > 0:
+            parts.append(self._leftover)
 
-        while samples_needed > 0:
+        while collected < frames:
             try:
                 chunk = self._audio_queue.get_nowait()   # shape (N, 2)
             except queue.Empty:
                 break
-            take = min(len(chunk), samples_needed)
-            combined[offset : offset + take] = chunk[:take]
-            offset += take
-            samples_needed -= take
+            parts.append(chunk)
+            collected += len(chunk)
 
-            if take < len(chunk):
-                # Put remainder back (best-effort)
-                try:
-                    self._audio_queue.put_nowait(chunk[take:])
-                except queue.Full:
-                    pass
+        if parts:
+            buf = np.concatenate(parts) if len(parts) > 1 else parts[0]
+        else:
+            buf = self._leftover  # empty array
+
+        take = min(len(buf), frames)
+        combined = np.zeros((frames, 2), dtype=np.float32)
+        combined[:take] = buf[:take]
+        self._leftover = buf[take:] if take < len(buf) else np.zeros((0, CHANNELS), dtype=np.float32)
+
+        if take < frames:
+            self.audio_underruns += 1
 
         # Squelch
         if self.signal_db < self.squelch:

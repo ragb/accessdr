@@ -18,6 +18,9 @@ from core.sdr_device import enumerate_devices
 SAMPLE_RATES = [250_000, 1_024_000, 1_536_000, 1_792_000, 2_048_000,
                 2_400_000, 2_560_000, 2_880_000, 3_200_000]
 
+BUFFER_SIZES = [16_384, 32_768, 65_536, 131_072, 262_144]
+BUFFER_LABELS = ["16K", "32K", "64K", "128K", "256K"]
+
 IF_BW_OPTIONS = [
     (0, N_("Auto")),
     (250_000, "250 kHz"),
@@ -58,7 +61,7 @@ class RFDialog(wx.Dialog):
         grid = wx.FlexGridSizer(cols=2, vgap=8, hgap=8)
         grid.AddGrowableCol(1, 1)
 
-        # Device selector
+        # --- Device ---
         devices = enumerate_devices()
         device_labels = [d.get("label", str(d)) for d in devices] or [_("Default / Auto")]
         grid.Add(wx.StaticText(panel, label=_("SDR Device:")), 0, wx.ALIGN_CENTER_VERTICAL)
@@ -67,18 +70,7 @@ class RFDialog(wx.Dialog):
         self._device_choice.SetSelection(idx)
         grid.Add(self._device_choice, 1, wx.EXPAND)
 
-        # Sample rate
-        rate_labels = [f"{r // 1000} kHz" for r in SAMPLE_RATES]
-        grid.Add(wx.StaticText(panel, label=_("Sample Rate:")), 0, wx.ALIGN_CENTER_VERTICAL)
-        self._rate_choice = wx.Choice(panel, choices=rate_labels, name="Sample Rate")
-        try:
-            rate_idx = SAMPLE_RATES.index(self._settings.sample_rate)
-        except ValueError:
-            rate_idx = 5           # default 2.4 MSPS
-        self._rate_choice.SetSelection(rate_idx)
-        grid.Add(self._rate_choice, 1, wx.EXPAND)
-
-        # Gain — use valid gain values from hardware if available
+        # --- Gain / AGC ---
         grid.Add(wx.StaticText(panel, label=_("RF Gain (dB):")), 0, wx.ALIGN_CENTER_VERTICAL)
         if self._valid_gains:
             gain_labels = [f"{g:.1f} dB" for g in self._valid_gains]
@@ -106,16 +98,7 @@ class RFDialog(wx.Dialog):
             grid.Add(gain_panel, 1, wx.EXPAND)
             self._gain_choice = None
 
-        # PPM correction
-        grid.Add(wx.StaticText(panel, label=_("PPM Correction:")), 0, wx.ALIGN_CENTER_VERTICAL)
-        self._ppm_spin = wx.SpinCtrl(
-            panel, value=str(self._settings.ppm),
-            min=-150, max=150, name="PPM Correction"
-        )
-        grid.Add(self._ppm_spin, 1, wx.EXPAND)
-
-        # AGC checkbox
-        grid.Add(wx.StaticText(panel, label=""), 0)  # empty label cell
+        grid.Add(wx.StaticText(panel, label=""), 0)
         self._agc_cb = wx.CheckBox(panel, label=_("RTL AGC"), name="RTL AGC")
         self._agc_cb.SetValue(self._settings.agc_mode)
         self._agc_cb.Bind(wx.EVT_CHECKBOX, self._on_agc_toggle)
@@ -124,7 +107,45 @@ class RFDialog(wx.Dialog):
         if self._settings.agc_mode:
             self._set_gain_enabled(False)
 
-        # Offset tuning checkbox
+        # --- Sampling ---
+        rate_labels = [f"{r // 1000} kHz" for r in SAMPLE_RATES]
+        grid.Add(wx.StaticText(panel, label=_("Sample Rate:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._rate_choice = wx.Choice(panel, choices=rate_labels, name="Sample Rate")
+        try:
+            rate_idx = SAMPLE_RATES.index(self._settings.sample_rate)
+        except ValueError:
+            rate_idx = 5           # default 2.4 MSPS
+        self._rate_choice.SetSelection(rate_idx)
+        grid.Add(self._rate_choice, 1, wx.EXPAND)
+
+        grid.Add(wx.StaticText(panel, label=_("IQ Buffer Size:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._buf_choice = wx.Choice(panel, choices=BUFFER_LABELS, name="IQ Buffer Size")
+        try:
+            buf_idx = BUFFER_SIZES.index(self._settings.sdr_buffer_size)
+        except ValueError:
+            buf_idx = 2  # default 64K
+        self._buf_choice.SetSelection(buf_idx)
+        grid.Add(self._buf_choice, 1, wx.EXPAND)
+
+        bw_labels = [_(lbl) if lbl == N_("Auto") else lbl for _bw, lbl in IF_BW_OPTIONS]
+        grid.Add(wx.StaticText(panel, label=_("IF Bandwidth:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._ifbw_choice = wx.Choice(panel, choices=bw_labels, name="IF Bandwidth")
+        bw_idx = 0
+        for i, (bw, _lbl) in enumerate(IF_BW_OPTIONS):
+            if bw == self._settings.tuner_bandwidth:
+                bw_idx = i
+                break
+        self._ifbw_choice.SetSelection(bw_idx)
+        grid.Add(self._ifbw_choice, 1, wx.EXPAND)
+
+        # --- Calibration ---
+        grid.Add(wx.StaticText(panel, label=_("PPM Correction:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._ppm_spin = wx.SpinCtrl(
+            panel, value=str(self._settings.ppm),
+            min=-150, max=150, name="PPM Correction"
+        )
+        grid.Add(self._ppm_spin, 1, wx.EXPAND)
+
         grid.Add(wx.StaticText(panel, label=""), 0)
         self._offset_cb = wx.CheckBox(
             panel, label=_("Offset Tuning (remove DC spike)"),
@@ -133,7 +154,7 @@ class RFDialog(wx.Dialog):
         self._offset_cb.SetValue(self._settings.offset_tuning)
         grid.Add(self._offset_cb, 1, wx.EXPAND)
 
-        # Noise blanker
+        # --- Processing ---
         grid.Add(wx.StaticText(panel, label=""), 0)
         self._nb_cb = wx.CheckBox(
             panel, label=_("Noise Blanker"), name="Noise Blanker",
@@ -152,18 +173,6 @@ class RFDialog(wx.Dialog):
         )
         self._nb_thresh.SetDigits(1)
         grid.Add(self._nb_thresh, 1, wx.EXPAND)
-
-        # IF Bandwidth
-        bw_labels = [_(lbl) if lbl == N_("Auto") else lbl for _bw, lbl in IF_BW_OPTIONS]
-        grid.Add(wx.StaticText(panel, label=_("IF Bandwidth:")), 0, wx.ALIGN_CENTER_VERTICAL)
-        self._ifbw_choice = wx.Choice(panel, choices=bw_labels, name="IF Bandwidth")
-        bw_idx = 0
-        for i, (bw, _lbl) in enumerate(IF_BW_OPTIONS):
-            if bw == self._settings.tuner_bandwidth:
-                bw_idx = i
-                break
-        self._ifbw_choice.SetSelection(bw_idx)
-        grid.Add(self._ifbw_choice, 1, wx.EXPAND)
 
         sizer.Add(grid, 1, wx.EXPAND | wx.ALL, 12)
         panel.SetSizer(sizer)
@@ -220,6 +229,10 @@ class RFDialog(wx.Dialog):
 
         self._settings.noise_blanker_enabled = self._nb_cb.GetValue()
         self._settings.noise_blanker_threshold = self._nb_thresh.GetValue()
+
+        buf_idx = self._buf_choice.GetSelection()
+        if 0 <= buf_idx < len(BUFFER_SIZES):
+            self._settings.sdr_buffer_size = BUFFER_SIZES[buf_idx]
 
         self._settings.save()
         self.EndModal(wx.ID_OK)

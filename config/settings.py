@@ -69,6 +69,9 @@ class Settings:
     # VFO
     demod_follows_cursor: bool = False
 
+    # SDR buffer
+    sdr_buffer_size: int = 65_536   # IQ samples per read (power of 2)
+
     # Step
     step: int = 1_000               # Hz
 

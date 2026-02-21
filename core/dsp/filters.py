@@ -86,6 +86,31 @@ def decimate(
     return (i_dec + 1j * q_dec).astype(np.complex64)
 
 
+class StatefulDecimator:
+    """IIR anti-alias + integer downsample with state carried across calls.
+
+    Eliminates the chunk-boundary transients and downsample-phase jumps
+    that stateless ``resample_poly`` causes (audible as periodic clicks).
+    """
+
+    def __init__(self, factor: int, input_rate: int, order: int = 8) -> None:
+        self._factor = factor
+        cutoff = input_rate / factor * 0.45  # 90% of output Nyquist
+        self._sos = signal.butter(order, cutoff, btype="low", fs=input_rate, output="sos")
+        self._zi_i = signal.sosfilt_zi(self._sos) * 0.0
+        self._zi_q = signal.sosfilt_zi(self._sos) * 0.0
+        self._offset = 0  # downsample phase tracking
+
+    def process(self, iq: np.ndarray) -> np.ndarray:
+        """Decimate complex IQ by the configured factor."""
+        i_f, self._zi_i = signal.sosfilt(self._sos, iq.real, zi=self._zi_i)
+        q_f, self._zi_q = signal.sosfilt(self._sos, iq.imag, zi=self._zi_q)
+        i_out = i_f[self._offset :: self._factor].astype(np.float32)
+        q_out = q_f[self._offset :: self._factor].astype(np.float32)
+        self._offset = (self._offset + len(i_out) * self._factor) - len(iq)
+        return (i_out + 1j * q_out).astype(np.complex64)
+
+
 def deemphasis_filter(
     sample_rate: float, tau: float = 75e-6
 ) -> tuple[np.ndarray, np.ndarray]:
