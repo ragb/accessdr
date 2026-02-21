@@ -94,6 +94,9 @@ class Sonification:
         self._amp_smooth = 0.0                 # smoothed amplitude carried between blocks
         self._freq_smooth = 0.0                # smoothed pitch carried between blocks
 
+        self._device = None                    # output device (name or index)
+        self._on_finish_cb = None              # called (from audio thread) when sweep ends
+
         # Probe mode (spectrum cursor)
         self._probe_active = False
         self._probe_pos    = 0.5               # 0.0–1.0 position
@@ -102,6 +105,14 @@ class Sonification:
     # ------------------------------------------------------------------
     # Public interface
     # ------------------------------------------------------------------
+
+    def set_device(self, device) -> None:
+        """Set the output device (name, index, or None for default)."""
+        self._device = device
+
+    def set_on_finish(self, callback) -> None:
+        """Register a callback invoked when a sweep/snapshot finishes."""
+        self._on_finish_cb = callback
 
     def set_spectrum(self, bins_db: np.ndarray) -> None:
         """Update the current spectrum (dB array, length = FFT size).
@@ -215,7 +226,7 @@ class Sonification:
         if not _SD_AVAILABLE:
             return
         try:
-            self._stream = sd.OutputStream(
+            kwargs: dict = dict(
                 samplerate=SAMPLE_RATE,
                 channels=2,
                 dtype="float32",
@@ -223,6 +234,9 @@ class Sonification:
                 callback=self._audio_callback,
                 finished_callback=self._stream_finished,
             )
+            if self._device is not None:
+                kwargs["device"] = self._device
+            self._stream = sd.OutputStream(**kwargs)
             self._stream.start()
         except Exception as exc:   # noqa: BLE001
             logger.error("Could not open sonification stream: %s", exc)
@@ -307,7 +321,16 @@ class Sonification:
             (amp_db - noise_floor) / _DYNAMIC_RANGE_DB, 0.0, 1.0,
         )
         log_ratio = math.log(max(self.max_pitch, self.min_pitch + 1) / self.min_pitch)
-        freq = self.min_pitch * np.exp(log_ratio * power_norm)
+        freq_raw = self.min_pitch * np.exp(log_ratio * power_norm)
+
+        # Pitch smoothing IIR (same as probe mode)
+        _pitch_tc = max(0.001, self.pitch_smoothing_ms / 1000.0)
+        _PITCH_ALPHA = 1.0 - math.exp(-1.0 / (SAMPLE_RATE * _pitch_tc))
+        freq = np.empty_like(freq_raw)
+        freq[0] = self._freq_smooth + _PITCH_ALPHA * (freq_raw[0] - self._freq_smooth)
+        for i in range(1, n):
+            freq[i] = freq[i - 1] + _PITCH_ALPHA * (freq_raw[i] - freq[i - 1])
+        self._freq_smooth = float(freq[-1]) if n > 0 else self._freq_smooth
 
         # --- Pan: equal-power L/R from sweep position ---
         gain_l = np.cos(pos_norm * (np.pi / 2.0))
@@ -405,3 +428,9 @@ class Sonification:
 
     def _stream_finished(self) -> None:
         self._stream = None
+        cb = self._on_finish_cb
+        if cb is not None:
+            try:
+                cb()
+            except Exception:  # noqa: BLE001
+                pass

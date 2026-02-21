@@ -23,6 +23,7 @@ a = Analysis(
     ],
     datas=[
         (os.path.join(PROJ, "locale"), "locale"),
+        (os.path.join(PROJ, "build", "help"), "help"),
     ],
     hiddenimports=[
         # accessible_output2 — handled by hook, but list explicitly too

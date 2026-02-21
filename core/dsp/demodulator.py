@@ -3,8 +3,16 @@ core/dsp/demodulator.py — Stateful demodulators for common radio modes.
 
 Each mode is encapsulated in a Demodulator subclass that:
   - pre-computes all filter coefficients once at construction
-  - carries lfilter zi (initial conditions) between calls so there are no
-    transient discontinuities at chunk boundaries (the main cause of crackle)
+  - carries filter state (zi) between calls so there are no transient
+    discontinuities at chunk boundaries (the main cause of crackle)
+
+All bandpass / lowpass filters use IIR Butterworth in SOS form
+(``scipy.signal.sosfilt``).  Compared to the previous FIR ``lfilter``
+approach this is ~10–50× cheaper per sample:
+
+  - 1023-tap FIR pilot BPF  → 4th-order IIR (4 biquads, 20 MACs/sample)
+  - 511-tap  FIR L−R BPF    → 4th-order IIR (4 biquads, 20 MACs/sample)
+  - 127-tap  FIR lowpass     → 4th-order IIR (2 biquads, 10 MACs/sample)
 
 Public API
 ----------
@@ -19,7 +27,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from scipy import signal as sp_signal
 
-from .filters import make_lowpass, make_bandpass, deemphasis_filter
+from .filters import make_lowpass_iir, make_bandpass_iir, deemphasis_filter
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +39,39 @@ AUDIO_RATE = 48_000
 # ---------------------------------------------------------------------------
 
 class Demodulator(ABC):
-    """Abstract base — subclasses implement process()."""
+    """Abstract base — subclasses implement process().
+
+    Subclasses set ``_CHANNEL_BW`` (Hz, one-sided) to enable a
+    pre-demodulation lowpass that isolates the desired signal after the
+    mixer shifts it to DC.
+    """
+
+    _CHANNEL_BW: float = 0  # 0 = no channel filter (subclass overrides)
 
     def __init__(self, baseband_rate: int, audio_rate: int) -> None:
         self.baseband_rate = baseband_rate
         self.audio_rate = audio_rate
         self._resample_up, self._resample_down = _resample_ratio(baseband_rate, audio_rate)
+
+        # Pre-demodulation channel filter (IIR Butterworth lowpass, SOS)
+        bw = self._CHANNEL_BW
+        if bw > 0 and bw < baseband_rate / 2:
+            self._ch_sos = make_lowpass_iir(bw, baseband_rate, order=5)
+            self._ch_zi_i = sp_signal.sosfilt_zi(self._ch_sos) * 0.0
+            self._ch_zi_q = sp_signal.sosfilt_zi(self._ch_sos) * 0.0
+            self._has_ch_filter = True
+        else:
+            self._has_ch_filter = False
+
+    def _channel_filter(self, iq: np.ndarray) -> np.ndarray:
+        """Apply pre-demodulation channel filter (IIR lowpass on I and Q)."""
+        if not self._has_ch_filter:
+            return iq
+        i_f, self._ch_zi_i = sp_signal.sosfilt(
+            self._ch_sos, iq.real, zi=self._ch_zi_i)
+        q_f, self._ch_zi_q = sp_signal.sosfilt(
+            self._ch_sos, iq.imag, zi=self._ch_zi_q)
+        return (i_f + 1j * q_f).astype(np.complex64)
 
     @abstractmethod
     def process(self, iq: np.ndarray) -> np.ndarray:
@@ -61,20 +96,37 @@ def _resample_ratio(in_rate: int, out_rate: int):
 
 def _fm_discriminant(iq: np.ndarray) -> np.ndarray:
     """Instantaneous frequency via conjugate-product polar discriminant."""
-    delayed = np.empty_like(iq)
-    delayed[0] = iq[0]
-    delayed[1:] = iq[:-1]
-    return np.angle(iq * np.conj(delayed))
-
-
-def _make_zi(b, a, n: int) -> np.ndarray:
-    """Initial filter state (zi) for lfilter — length max(len(a),len(b))-1."""
-    return sp_signal.lfilter_zi(b, a) * 0.0
+    product = iq[1:] * np.conj(iq[:-1])
+    out = np.empty(len(iq), dtype=np.float64)
+    out[0] = 0.0
+    out[1:] = np.angle(product)
+    return out
 
 
 # ---------------------------------------------------------------------------
 # WFM
 # ---------------------------------------------------------------------------
+
+def _detect_deemphasis_tau() -> float:
+    """Return the correct de-emphasis time constant for the user's region.
+
+    50 µs — Europe, UK, Australia, most of the world.
+    75 µs — Americas, Japan, South Korea.
+    """
+    import locale
+    try:
+        loc = locale.getdefaultlocale()[0] or ""
+    except Exception:  # noqa: BLE001
+        loc = ""
+    loc = loc.lower().replace("-", "_")
+    # 75 µs regions (prefix match)
+    if any(loc.startswith(p) for p in (
+        "en_us", "en_ca", "fr_ca", "es_mx", "es_ar", "es_cl", "es_co",
+        "es_ve", "es_pe", "es_ec", "pt_br", "ja", "ko",
+    )):
+        return 75e-6
+    return 50e-6
+
 
 class WFMDemodulator(Demodulator):
     """Wide-band FM demodulator with automatic MPX stereo decoding.
@@ -84,118 +136,154 @@ class WFMDemodulator(Demodulator):
     When stereo, process() returns a (N, 2) float32 array with left in column 0
     and right in column 1.  When mono, it returns (N,).
 
+    Includes stereo blend: smoothly reduces stereo separation when the pilot
+    SNR is marginal, avoiding the ~20 dB noise penalty of full stereo on weak
+    signals.
+
     MPX signal structure (IEC 60268-3 / NRSC-4):
       0–15 kHz   — L+R (mono sum)
       19 kHz     — stereo pilot (always present on stereo stations)
       23–53 kHz  — (L-R) DSB-SC centred at 38 kHz
     """
 
-    # FFT-based pilot detection: coherent 19 kHz tone concentrates energy in
-    # one bin → SNR vs neighbouring noise floor is ~16× for a real pilot.
-    # Noise alone produces SNR ≈ 1 (flat spectrum).  Threshold of 4.0 gives
-    # a comfortable margin between the two cases.
-    _PILOT_SNR_THRESHOLD = 4.0
+    _CHANNEL_BW = 100_000  # ±75 kHz deviation + stereo subcarrier + guard
+    _MAX_DEVIATION = 75_000.0  # Hz, standard FM broadcast
 
-    # Hysteresis counters to prevent mono↔stereo flicker between chunks.
-    # At 240 kHz / 16384 samples per chunk each chunk ≈ 68 ms.
-    # Enter stereo after _PILOT_ON consecutive detections  (~0.5 s).
-    # Drop to mono  after _PILOT_OFF consecutive non-detections (~0.5 s).
+    _PILOT_SNR_THRESHOLD = 4.0
     _PILOT_ON  = 8
     _PILOT_OFF = 8
+    _PILOT_CHECK_INTERVAL = 4  # only run FFT-based detection every Nth chunk
+
+    # Stereo blend: smoothly transition between mono and full stereo based on
+    # pilot SNR.  Below _BLEND_SNR_LOW → mono, above _BLEND_SNR_HIGH → stereo.
+    _BLEND_SNR_LOW  = 6.0
+    _BLEND_SNR_HIGH = 20.0
 
     def __init__(self, baseband_rate: int, audio_rate: int) -> None:
         super().__init__(baseband_rate, audio_rate)
         rate = baseband_rate
 
-        # Shared de-emphasis filter (75 µs, standard for WFM)
-        self._deemph_b, self._deemph_a = deemphasis_filter(rate, tau=75e-6)
+        # FM discriminator normalization: convert rad/sample → ±1.0 at full deviation
+        self._disc_gain = float(rate / (2.0 * np.pi * self._MAX_DEVIATION))
 
-        # L+R extraction: LPF 0–15 kHz
-        self._lpr_b = make_lowpass(15_000, rate, num_taps=127)
-        self._lpr_a = np.array([1.0])
+        # De-emphasis — auto-detect region (50 µs Europe, 75 µs Americas)
+        tau = _detect_deemphasis_tau()
+        logger.info("WFM de-emphasis: %.0f µs", tau * 1e6)
+        self._deemph_b, self._deemph_a = deemphasis_filter(rate, tau=tau)
 
-        # 19 kHz pilot BPF — narrow bandwidth needs many taps for selectivity
-        # 1023 taps at 240 kHz → transition BW ≈ 1.9 kHz (clears 15 kHz mono
-        # content and 23 kHz L-R subcarrier)
-        self._pilot_b = make_bandpass(18_000, 20_000, rate, num_taps=1023)
-        self._pilot_a = np.array([1.0])
+        # L+R extraction: IIR lowpass 0–15 kHz
+        self._lpr_sos = make_lowpass_iir(15_000, rate, order=4)
+
+        # 19 kHz pilot BPF — IIR bandpass (4th order per edge = 8 poles total)
+        self._pilot_sos = make_bandpass_iir(18_000, 20_000, rate, order=4)
 
         # L-R DSB-SC subcarrier BPF (23–53 kHz)
-        self._lmr_b = make_bandpass(23_000, 53_000, rate, num_taps=511)
-        self._lmr_a = np.array([1.0])
+        self._lmr_sos = make_bandpass_iir(23_000, 53_000, rate, order=4)
 
         # Post-demodulation LPF: removes 76 kHz image after product detection
-        self._lmr_lp_b = make_lowpass(15_000, rate, num_taps=127)
-        self._lmr_lp_a = np.array([1.0])
+        self._lmr_lp_sos = make_lowpass_iir(15_000, rate, order=4)
 
-        # Final audio LPF at 15 kHz (applied after resampling to audio_rate).
-        # FM broadcast audio is band-limited to 15 kHz by the broadcaster;
-        # content above that in the demodulated audio is FM discriminator noise.
-        self._audio_lp_b = make_lowpass(15_000, audio_rate, num_taps=127)
-        self._audio_lp_a = np.array([1.0])
+        # Final audio LPF at 15 kHz (after resampling to audio_rate)
+        self._audio_lp_sos = make_lowpass_iir(15_000, audio_rate, order=4)
 
         # Filter states — zero-initialised, carried between chunks
-        self._zi_lpr      = sp_signal.lfilter_zi(self._lpr_b,      self._lpr_a)     * 0.0
-        self._zi_pilot    = sp_signal.lfilter_zi(self._pilot_b,    self._pilot_a)   * 0.0
-        self._zi_lmr      = sp_signal.lfilter_zi(self._lmr_b,      self._lmr_a)     * 0.0
-        self._zi_lmr_lp   = sp_signal.lfilter_zi(self._lmr_lp_b,  self._lmr_lp_a)  * 0.0
-        self._zi_deemph_l = sp_signal.lfilter_zi(self._deemph_b,   self._deemph_a)  * 0.0
-        self._zi_deemph_r = sp_signal.lfilter_zi(self._deemph_b,   self._deemph_a)  * 0.0
-        self._zi_audio_l  = sp_signal.lfilter_zi(self._audio_lp_b, self._audio_lp_a)* 0.0
-        self._zi_audio_r  = sp_signal.lfilter_zi(self._audio_lp_b, self._audio_lp_a)* 0.0
+        self._zi_lpr      = sp_signal.sosfilt_zi(self._lpr_sos)      * 0.0
+        self._zi_pilot    = sp_signal.sosfilt_zi(self._pilot_sos)    * 0.0
+        self._zi_lmr      = sp_signal.sosfilt_zi(self._lmr_sos)      * 0.0
+        self._zi_lmr_lp   = sp_signal.sosfilt_zi(self._lmr_lp_sos)  * 0.0
+        self._zi_deemph_l = sp_signal.lfilter_zi(self._deemph_b, self._deemph_a) * 0.0
+        self._zi_deemph_r = sp_signal.lfilter_zi(self._deemph_b, self._deemph_a) * 0.0
+        self._zi_audio_l  = sp_signal.sosfilt_zi(self._audio_lp_sos) * 0.0
+        self._zi_audio_r  = sp_signal.sosfilt_zi(self._audio_lp_sos) * 0.0
+
+        # Hi-blend: adaptive treble cut driven by pilot SNR.
+        # Pre-compute a lowpass at 5 kHz — when blended in, removes FM hiss.
+        self._hicut_sos = make_lowpass_iir(5_000, audio_rate, order=3)
+        self._hicut_zi_l = sp_signal.sosfilt_zi(self._hicut_sos) * 0.0
+        self._hicut_zi_r = sp_signal.sosfilt_zi(self._hicut_sos) * 0.0
 
         self.stereo_detected: bool = False
-        self._pilot_count: int = 0   # hysteresis counter
+        self._pilot_count: int = 0
+        self._pilot_check_ctr: int = 0
+        self._stereo_blend: float = 0.0   # 0 = mono, 1 = full stereo
+        self._last_pilot_snr: float = 0.0
+        self._hiblend: float = 0.0        # 0 = full BW, 1 = hi-cut active
 
     def process(self, iq: np.ndarray) -> np.ndarray:
-        # FM discriminant → MPX baseband (rad/sample)
-        mpx = _fm_discriminant(iq)
+        iq = self._channel_filter(iq)
+
+        # Signal-gated limiter: normalize to unit magnitude when a signal
+        # is present.  FM carries info in phase only so limiting removes
+        # AM noise (AGC, quantization, multipath).  When no signal is
+        # present, skip limiting to avoid amplifying random noise.
+        mag = np.abs(iq)
+        if float(np.sqrt(np.mean(np.square(mag)))) > 0.03:
+            iq = iq / np.maximum(mag, np.float32(1e-10))
+
+        # FM discriminant → normalized MPX baseband (±1.0 at full deviation)
+        mpx = _fm_discriminant(iq) * self._disc_gain
 
         # Extract L+R (mono sum, 0–15 kHz)
-        lpr, self._zi_lpr = sp_signal.lfilter(
-            self._lpr_b, self._lpr_a, mpx, zi=self._zi_lpr)
+        lpr, self._zi_lpr = sp_signal.sosfilt(
+            self._lpr_sos, mpx, zi=self._zi_lpr)
 
-        # Extract 19 kHz pilot (still needed for coherent 38 kHz reference)
-        pilot, self._zi_pilot = sp_signal.lfilter(
-            self._pilot_b, self._pilot_a, mpx, zi=self._zi_pilot)
+        # Extract 19 kHz pilot
+        pilot, self._zi_pilot = sp_signal.sosfilt(
+            self._pilot_sos, mpx, zi=self._zi_pilot)
 
-        # Stereo detection with hysteresis to prevent per-chunk flicker.
-        # _pilot_count increments when the FFT sees a pilot, decrements when not.
-        # State only changes at the floor (→ mono) or ceiling (→ stereo).
-        if self._detect_pilot(mpx):
-            self._pilot_count = min(self._pilot_count + 1, self._PILOT_ON)
-            if self._pilot_count >= self._PILOT_ON:
-                self.stereo_detected = True
-        else:
-            self._pilot_count = max(self._pilot_count - 1, 0)
-            if self._pilot_count <= 0:
-                self.stereo_detected = False
+        # Stereo detection — throttled to every Nth chunk to save CPU.
+        self._pilot_check_ctr += 1
+        if self._pilot_check_ctr >= self._PILOT_CHECK_INTERVAL:
+            self._pilot_check_ctr = 0
+            snr = self._measure_pilot_snr(mpx)
+            self._last_pilot_snr = snr
+            detected = snr > self._PILOT_SNR_THRESHOLD
+            if detected:
+                self._pilot_count = min(self._pilot_count + 1, self._PILOT_ON)
+                if self._pilot_count >= self._PILOT_ON:
+                    self.stereo_detected = True
+            else:
+                self._pilot_count = max(self._pilot_count - 1, 0)
+                if self._pilot_count <= 0:
+                    self.stereo_detected = False
 
-        if self.stereo_detected:
+            # Update stereo blend from SNR (smooth transition)
+            if self.stereo_detected:
+                target = np.clip(
+                    (snr - self._BLEND_SNR_LOW)
+                    / (self._BLEND_SNR_HIGH - self._BLEND_SNR_LOW),
+                    0.0, 1.0,
+                )
+            else:
+                target = 0.0
+            # Exponential smoothing (~200 ms time constant)
+            alpha = 0.15
+            self._stereo_blend += alpha * (target - self._stereo_blend)
+
+            # Hi-blend: cut treble when pilot SNR is low (noisy signal).
+            # SNR > 30 → full BW, SNR < 10 → hi-cut at 5 kHz.
+            hb_target = float(np.clip(1.0 - (snr - 10.0) / 20.0, 0.0, 1.0))
+            self._hiblend += alpha * (hb_target - self._hiblend)
+
+        if self.stereo_detected or self._stereo_blend > 0.01:
             return self._process_stereo(mpx, lpr, pilot)
         else:
             return self._process_mono(lpr)
 
     # ------------------------------------------------------------------
 
-    def _detect_pilot(self, mpx: np.ndarray) -> bool:
-        """Return True when a coherent 19 kHz pilot tone is present in *mpx*.
-
-        Uses FFT-based SNR: compares the power in the pilot bin to the median
-        power of adjacent noise bins (15–18 kHz and 20–25 kHz bands).  A real
-        pilot tone concentrates into a single bin and produces SNR >> 1; noise
-        is spectrally flat and produces SNR ≈ 1.
-        """
+    def _measure_pilot_snr(self, mpx: np.ndarray) -> float:
+        """Measure the 19 kHz pilot SNR (ratio, not dB).  Returns 0 on failure."""
         N = len(mpx)
         if N < 256:
-            return False
+            return 0.0
         window = np.hanning(N)
         spectrum = np.abs(np.fft.rfft(mpx * window)) ** 2
         freq_res = self.baseband_rate / N
 
         pilot_idx = int(round(19_000.0 / freq_res))
         if pilot_idx >= len(spectrum):
-            return False
+            return 0.0
 
         pilot_power = float(spectrum[pilot_idx])
 
@@ -205,40 +293,43 @@ class WFMDemodulator(Demodulator):
         hi2 = int(round(25_000.0 / freq_res))
         noise_bins = np.concatenate([spectrum[lo1:hi1], spectrum[lo2:hi2]])
         if len(noise_bins) == 0:
-            return False
+            return 0.0
         noise_floor = float(np.median(noise_bins))
         if noise_floor < 1e-30:
-            return False
+            return 0.0
 
-        return (pilot_power / noise_floor) > self._PILOT_SNR_THRESHOLD
+        return pilot_power / noise_floor
 
     # ------------------------------------------------------------------
 
     def _process_stereo(
         self, mpx: np.ndarray, lpr: np.ndarray, pilot: np.ndarray
     ) -> np.ndarray:
-        # Generate a unit-amplitude 38 kHz reference by squaring the analytic
-        # pilot signal.  pilot_analytic = A·e^(j·2π·19k·t + φ), so squaring
-        # gives A²·e^(j·2π·38k·t + 2φ) which, after normalisation, is the
-        # coherent carrier needed for DSB-SC demodulation.
-        pilot_analytic = sp_signal.hilbert(pilot)
-        ref = pilot_analytic ** 2
-        ref_norm_real = (ref / (np.abs(ref) + 1e-10)).real   # cos(2π·38k·t)
+        # Generate 38 kHz coherent reference by frequency-doubling the pilot.
+        # cos(2x) = 2·cos²(x) − 1  — no FFT-based hilbert() needed.
+        pilot_peak = np.max(np.abs(pilot))
+        if pilot_peak > 1e-10:
+            pilot_norm = pilot / pilot_peak
+        else:
+            pilot_norm = pilot
+        ref = 2.0 * pilot_norm * pilot_norm - 1.0
 
         # Extract L-R DSB-SC subcarrier (23–53 kHz)
-        lmr_band, self._zi_lmr = sp_signal.lfilter(
-            self._lmr_b, self._lmr_a, mpx, zi=self._zi_lmr)
+        lmr_band, self._zi_lmr = sp_signal.sosfilt(
+            self._lmr_sos, mpx, zi=self._zi_lmr)
 
         # Product demodulation → baseband L-R + 76 kHz image
-        lmr_product = lmr_band * ref_norm_real * 2.0
+        lmr_product = lmr_band * ref * 2.0
 
         # LPF to remove the 76 kHz image
-        lmr, self._zi_lmr_lp = sp_signal.lfilter(
-            self._lmr_lp_b, self._lmr_lp_a, lmr_product, zi=self._zi_lmr_lp)
+        lmr, self._zi_lmr_lp = sp_signal.sosfilt(
+            self._lmr_lp_sos, lmr_product, zi=self._zi_lmr_lp)
 
-        # Stereo matrix: L = (L+R) + (L-R),  R = (L+R) - (L-R)
-        left  = lpr + lmr
-        right = lpr - lmr
+        # Stereo blend: scale L-R by blend factor (0 = mono, 1 = full stereo).
+        # Reduces the ~20 dB noise penalty of stereo on weak signals.
+        blend = self._stereo_blend
+        left  = lpr + blend * lmr
+        right = lpr - blend * lmr
 
         # De-emphasis on each channel independently
         left,  self._zi_deemph_l = sp_signal.lfilter(
@@ -250,10 +341,20 @@ class WFMDemodulator(Demodulator):
         right_out = self._resample(right)
 
         # Final audio LPF: remove discriminator noise above 15 kHz
-        left_out,  self._zi_audio_l = sp_signal.lfilter(
-            self._audio_lp_b, self._audio_lp_a, left_out,  zi=self._zi_audio_l)
-        right_out, self._zi_audio_r = sp_signal.lfilter(
-            self._audio_lp_b, self._audio_lp_a, right_out, zi=self._zi_audio_r)
+        left_out,  self._zi_audio_l = sp_signal.sosfilt(
+            self._audio_lp_sos, left_out, zi=self._zi_audio_l)
+        right_out, self._zi_audio_r = sp_signal.sosfilt(
+            self._audio_lp_sos, right_out, zi=self._zi_audio_r)
+
+        # Hi-blend: crossfade with hi-cut version to reduce HF noise
+        if self._hiblend > 0.01:
+            left_hc, self._hicut_zi_l = sp_signal.sosfilt(
+                self._hicut_sos, left_out, zi=self._hicut_zi_l)
+            right_hc, self._hicut_zi_r = sp_signal.sosfilt(
+                self._hicut_sos, right_out, zi=self._hicut_zi_r)
+            b = np.float32(self._hiblend)
+            left_out  = left_out  * (1.0 - b) + left_hc  * b
+            right_out = right_out * (1.0 - b) + right_hc * b
 
         return np.stack([left_out, right_out], axis=1).astype(np.float32)
 
@@ -261,9 +362,16 @@ class WFMDemodulator(Demodulator):
         audio, self._zi_deemph_l = sp_signal.lfilter(
             self._deemph_b, self._deemph_a, lpr, zi=self._zi_deemph_l)
         audio = self._resample(audio)
-        # Final audio LPF: remove discriminator noise above 15 kHz
-        audio, self._zi_audio_l = sp_signal.lfilter(
-            self._audio_lp_b, self._audio_lp_a, audio, zi=self._zi_audio_l)
+        audio, self._zi_audio_l = sp_signal.sosfilt(
+            self._audio_lp_sos, audio, zi=self._zi_audio_l)
+
+        # Hi-blend: crossfade with hi-cut version to reduce HF noise
+        if self._hiblend > 0.01:
+            hicut, self._hicut_zi_l = sp_signal.sosfilt(
+                self._hicut_sos, audio, zi=self._hicut_zi_l)
+            b = np.float32(self._hiblend)
+            audio = audio * (1.0 - b) + hicut * b
+
         return audio.astype(np.float32)
 
 
@@ -272,16 +380,25 @@ class WFMDemodulator(Demodulator):
 # ---------------------------------------------------------------------------
 
 class NFMDemodulator(Demodulator):
+    _CHANNEL_BW = 12_500  # standard 25 kHz NFM channel
+    _MAX_DEVIATION = 5_000.0  # ±5 kHz standard NFM (PMR446 uses ±2.5 kHz)
+
     def __init__(self, baseband_rate: int, audio_rate: int) -> None:
         super().__init__(baseband_rate, audio_rate)
-        self._lp_b = make_lowpass(8_000, baseband_rate)
-        self._lp_a = np.array([1.0])
-        self._zi_lp = sp_signal.lfilter_zi(self._lp_b, self._lp_a) * 0.0
+        # Discriminator normalization: convert rad/sample → ±1.0 at full deviation
+        self._disc_gain = float(baseband_rate / (2.0 * np.pi * self._MAX_DEVIATION))
+        self._lp_sos = make_lowpass_iir(8_000, baseband_rate, order=4)
+        self._zi_lp = sp_signal.sosfilt_zi(self._lp_sos) * 0.0
 
     def process(self, iq: np.ndarray) -> np.ndarray:
-        disc = _fm_discriminant(iq)
-        audio, self._zi_lp = sp_signal.lfilter(
-            self._lp_b, self._lp_a, disc, zi=self._zi_lp)
+        iq = self._channel_filter(iq)
+        # Signal-gated limiter: only limit when real signal is present
+        mag = np.abs(iq)
+        if float(np.sqrt(np.mean(np.square(mag)))) > 0.03:
+            iq = iq / np.maximum(mag, np.float32(1e-10))
+        disc = _fm_discriminant(iq) * self._disc_gain
+        audio, self._zi_lp = sp_signal.sosfilt(
+            self._lp_sos, disc, zi=self._zi_lp)
         return self._resample(audio)
 
 
@@ -290,21 +407,24 @@ class NFMDemodulator(Demodulator):
 # ---------------------------------------------------------------------------
 
 class AMDemodulator(Demodulator):
+    _CHANNEL_BW = 5_000  # 10 kHz AM channel
+
     def __init__(self, baseband_rate: int, audio_rate: int) -> None:
         super().__init__(baseband_rate, audio_rate)
-        self._lp_b = make_lowpass(5_000, baseband_rate)
-        self._lp_a = np.array([1.0])
-        self._zi_lp = sp_signal.lfilter_zi(self._lp_b, self._lp_a) * 0.0
-        self._dc_b = np.array([1.0, -1.0])   # simple DC block
+        self._lp_sos = make_lowpass_iir(5_000, baseband_rate, order=4)
+        self._zi_lp = sp_signal.sosfilt_zi(self._lp_sos) * 0.0
+        # DC block (1st-order IIR — trivial cost, keep as b/a)
+        self._dc_b = np.array([1.0, -1.0])
         self._dc_a = np.array([1.0, -0.9995])
         self._zi_dc = sp_signal.lfilter_zi(self._dc_b, self._dc_a) * 0.0
 
     def process(self, iq: np.ndarray) -> np.ndarray:
+        iq = self._channel_filter(iq)
         envelope = np.abs(iq).astype(np.float64)
         audio, self._zi_dc = sp_signal.lfilter(
             self._dc_b, self._dc_a, envelope, zi=self._zi_dc)
-        audio, self._zi_lp = sp_signal.lfilter(
-            self._lp_b, self._lp_a, audio, zi=self._zi_lp)
+        audio, self._zi_lp = sp_signal.sosfilt(
+            self._lp_sos, audio, zi=self._zi_lp)
         return self._resample(audio)
 
 
@@ -313,11 +433,14 @@ class AMDemodulator(Demodulator):
 # ---------------------------------------------------------------------------
 
 class SSBDemodulator(Demodulator):
+    _CHANNEL_BW = 3_000  # 3 kHz SSB channel
+
     def __init__(self, baseband_rate: int, audio_rate: int, upper: bool) -> None:
         super().__init__(baseband_rate, audio_rate)
         self._upper = upper
 
     def process(self, iq: np.ndarray) -> np.ndarray:
+        iq = self._channel_filter(iq)
         i = iq.real.astype(np.float64)
         q_h = sp_signal.hilbert(i).imag
         audio = (i - q_h) if self._upper else (i + q_h)
@@ -329,17 +452,19 @@ class SSBDemodulator(Demodulator):
 # ---------------------------------------------------------------------------
 
 class CWDemodulator(Demodulator):
+    _CHANNEL_BW = 1_500  # must pass 600–1000 Hz beat note + margin
+
     def __init__(self, baseband_rate: int, audio_rate: int) -> None:
         super().__init__(baseband_rate, audio_rate)
-        self._bp_b = make_bandpass(600, 1_000, baseband_rate)
-        self._bp_a = np.array([1.0])
-        self._zi_bp = sp_signal.lfilter_zi(self._bp_b, self._bp_a) * 0.0
+        self._bp_sos = make_bandpass_iir(600, 1_000, baseband_rate, order=4)
+        self._zi_bp = sp_signal.sosfilt_zi(self._bp_sos) * 0.0
         self._phase = 0.0
 
     def process(self, iq: np.ndarray) -> np.ndarray:
+        iq = self._channel_filter(iq)
         real = iq.real.astype(np.float64)
-        filtered, self._zi_bp = sp_signal.lfilter(
-            self._bp_b, self._bp_a, real, zi=self._zi_bp)
+        filtered, self._zi_bp = sp_signal.sosfilt(
+            self._bp_sos, real, zi=self._zi_bp)
         envelope = np.abs(sp_signal.hilbert(filtered))
         t = np.arange(len(envelope)) / self.baseband_rate
         # Stateful phase to avoid discontinuity between chunks
@@ -354,16 +479,18 @@ class CWDemodulator(Demodulator):
 # ---------------------------------------------------------------------------
 
 class DSBDemodulator(Demodulator):
+    _CHANNEL_BW = 5_000  # 10 kHz DSB channel
+
     def __init__(self, baseband_rate: int, audio_rate: int) -> None:
         super().__init__(baseband_rate, audio_rate)
-        self._lp_b = make_lowpass(5_000, baseband_rate)
-        self._lp_a = np.array([1.0])
-        self._zi_lp = sp_signal.lfilter_zi(self._lp_b, self._lp_a) * 0.0
+        self._lp_sos = make_lowpass_iir(5_000, baseband_rate, order=4)
+        self._zi_lp = sp_signal.sosfilt_zi(self._lp_sos) * 0.0
 
     def process(self, iq: np.ndarray) -> np.ndarray:
+        iq = self._channel_filter(iq)
         audio = iq.real.astype(np.float64)
-        audio, self._zi_lp = sp_signal.lfilter(
-            self._lp_b, self._lp_a, audio, zi=self._zi_lp)
+        audio, self._zi_lp = sp_signal.sosfilt(
+            self._lp_sos, audio, zi=self._zi_lp)
         return self._resample(audio)
 
 
@@ -400,10 +527,6 @@ def demodulate(
     baseband_rate: int,
     audio_rate: int = AUDIO_RATE,
 ) -> np.ndarray:
-    """Stateless convenience wrapper — creates a fresh demodulator each call.
-
-    For real-time use, prefer make_demodulator() + dem.process() to preserve
-    filter state across chunks.
-    """
+    """Stateless convenience wrapper — creates a fresh demodulator each call."""
     dem = make_demodulator(mode, baseband_rate, audio_rate)
     return dem.process(iq)

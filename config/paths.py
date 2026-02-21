@@ -28,6 +28,20 @@ def bundle_dir() -> str:
     return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
+def help_dir() -> str:
+    """Return the directory containing bundled HTML help files.
+
+    Frozen: ``<exe_dir>/help/``  (PyInstaller datas target).
+    Dev:    ``<project_root>/build/help/``.
+    """
+    if is_frozen():
+        return os.path.join(os.path.dirname(sys.executable), "help")
+    return os.path.join(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+        "build", "help",
+    )
+
+
 def app_data_dir() -> str:
     """Return the directory for user-writable data (settings, bookmarks).
 

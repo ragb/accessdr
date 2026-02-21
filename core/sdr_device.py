@@ -46,7 +46,7 @@ try:
 except ImportError:
     _SOAPY_AVAILABLE = False
 
-CHUNK_SIZE = 16_384
+CHUNK_SIZE = 32_768
 
 
 # ---------------------------------------------------------------------------

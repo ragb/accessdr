@@ -9,6 +9,7 @@ output.  All cross-thread communication is via queue.Queue + wx.CallAfter.
 from __future__ import annotations
 
 import logging
+import os
 import queue
 import threading
 import time
@@ -41,7 +42,65 @@ STEP_LABELS = [
     N_("10 kHz"), N_("100 kHz"), N_("1 MHz"),
 ]
 AUDIO_RATE = 48_000
-BASEBAND_RATE = 240_000   # decimate 2.4 MSPS → 240 kSPS → demodulate → 48 kHz
+BASEBAND_RATE = 240_000   # default; overridden per-session by _baseband_rate_for()
+
+
+def _baseband_rate_for(sample_rate: int) -> int:
+    """Pick a baseband rate with an exact integer decimation factor.
+
+    Returns sample_rate / factor where factor yields a rate in 200–400 kHz
+    that is closest to 240 kHz (the ideal baseband width for WFM).
+    """
+    best = None
+    for factor in range(2, 21):
+        if sample_rate % factor == 0:
+            bb = sample_rate // factor
+            if 200_000 <= bb <= 400_000:
+                if best is None or abs(bb - 240_000) < abs(best - 240_000):
+                    best = bb
+    if best is not None:
+        return best
+    # Fallback: closest integer factor to 240 kHz target
+    factor = max(1, round(sample_rate / 240_000))
+    if sample_rate % factor == 0:
+        return sample_rate // factor
+    return sample_rate  # no decimation
+
+
+# ---------------------------------------------------------------------------
+# Process / thread priority (Windows) — reduces audio underruns
+# ---------------------------------------------------------------------------
+
+def _elevate_process_priority() -> None:
+    """Set process priority to Above Normal on Windows."""
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        ABOVE_NORMAL_PRIORITY_CLASS = 0x00008000
+        kernel32.SetPriorityClass(kernel32.GetCurrentProcess(),
+                                  ABOVE_NORMAL_PRIORITY_CLASS)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _elevate_dsp_priority(thread: threading.Thread) -> None:
+    """Raise the DSP thread to THREAD_PRIORITY_HIGHEST on Windows."""
+    try:
+        import ctypes
+        import ctypes.wintypes as wt
+        THREAD_SET_INFORMATION = 0x0020
+        THREAD_PRIORITY_HIGHEST = 2
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        handle = kernel32.OpenThread(THREAD_SET_INFORMATION, False,
+                                     thread.native_id)
+        if handle:
+            kernel32.SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST)
+            kernel32.CloseHandle(handle)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+_elevate_process_priority()
 
 BW_OPTIONS = {
     "WFM":  [(200_000, "200 kHz"), (180_000, "180 kHz"), (150_000, "150 kHz")],
@@ -128,6 +187,8 @@ class MainWindow(wx.Frame):
             spectrum_averaging_ms=self._settings.spectrum_averaging_ms,
             pitch_smoothing_ms=self._settings.pitch_smoothing_ms,
         )
+        self._sonification.set_on_finish(self._on_sweep_finished)
+        self._sync_sonification_device()
         self._scanner = Scanner(
             set_frequency_cb=self._tune,
             get_signal_db_cb=lambda: self._audio.signal_db,
@@ -152,6 +213,7 @@ class MainWindow(wx.Frame):
         # Software VFO offset state
         self._demod_offset: float = 0.0           # Hz from LO
         self._mixer: Optional[Mixer] = None       # created in _start_radio
+        self._baseband_rate: int = BASEBAND_RATE   # overwritten in _start_radio
 
         # Spectrum cursor state
         self._cursor_pos: float = 0.5            # 0.0–1.0 within zoomed range
@@ -217,7 +279,9 @@ class MainWindow(wx.Frame):
 
         # Help
         help_menu = wx.Menu()
+        item_guide = help_menu.Append(wx.ID_ANY, _("&User Guide…\tCtrl+H"))
         help_menu.Append(wx.ID_HELP, _("&Keyboard Shortcuts…\tF1"))
+        self.Bind(wx.EVT_MENU, self._on_open_user_guide, item_guide)
         mb.Append(help_menu, _("&Help"))
 
         self.SetMenuBar(mb)
@@ -549,12 +613,23 @@ class MainWindow(wx.Frame):
         if not self._sdr.open():
             speech.output(_("Could not open SDR device."))
             return
+        # Compute baseband rate for the configured sample rate (must be integer factor)
+        self._baseband_rate = _baseband_rate_for(self._settings.sample_rate)
+        logger.info("Baseband rate %d Hz (decimate %dx from %d)",
+                     self._baseband_rate,
+                     self._settings.sample_rate // self._baseband_rate,
+                     self._settings.sample_rate)
         # Create stateful demodulator — filters pre-computed, state preserved across chunks
         self._demodulator: Demodulator = make_demodulator(
-            self._settings.mode, BASEBAND_RATE, AUDIO_RATE
+            self._settings.mode, self._baseband_rate, AUDIO_RATE
         )
-        self._mixer = Mixer(BASEBAND_RATE)
+        self._mixer = Mixer(self._settings.sample_rate)
         self._demod_offset = 0.0
+        # Spectrum update throttle: ~20 Hz (chunk_rate / spec_every ≈ 20)
+        from core.sdr_device import CHUNK_SIZE
+        chunk_rate = self._settings.sample_rate / CHUNK_SIZE
+        self._spec_every = max(1, int(round(chunk_rate / 20)))
+        self._spec_skip = 0
         self._sdr.set_frequency(self._settings.frequency)
         self._sdr.set_sample_rate(self._settings.sample_rate)
         self._sdr.set_gain(self._settings.gain)
@@ -574,6 +649,7 @@ class MainWindow(wx.Frame):
             target=self._dsp_loop, daemon=True, name="DSPThread"
         )
         self._dsp_thread.start()
+        _elevate_dsp_priority(self._dsp_thread)
 
         self._start_btn.SetLabel(_("\u25a0 Stop"))
         self._statusbar.SetStatusText(
@@ -632,6 +708,7 @@ class MainWindow(wx.Frame):
                 target=self._dsp_loop, daemon=True, name="DSPThread"
             )
             self._dsp_thread.start()
+            _elevate_dsp_priority(self._dsp_thread)
             self._paused = False
             listen = self._listening_freq()
             self._start_btn.SetLabel(_("■ Stop"))
@@ -659,7 +736,7 @@ class MainWindow(wx.Frame):
             # Rebuild demodulator if mode changed (new filter state required)
             if self._settings.mode != current_mode:
                 current_mode = self._settings.mode
-                self._demodulator = make_demodulator(current_mode, BASEBAND_RATE, AUDIO_RATE)
+                self._demodulator = make_demodulator(current_mode, self._baseband_rate, AUDIO_RATE)
                 dsp_stereo = None
                 stereo_delay = 0
 
@@ -670,23 +747,29 @@ class MainWindow(wx.Frame):
                 dsp_stereo = None
                 stereo_delay = 6   # ~6 chunks ≈ 300–400 ms at typical chunk sizes
 
+            # Remove RTL-SDR DC offset spike (constant hardware bias at centre freq)
+            iq = iq - np.mean(iq)
+
             # RF signal power from raw IQ (dBFS, 0 = full scale).
-            # Measuring here — before any DSP — correctly tracks gain changes.
-            iq_power = float(np.mean(np.abs(iq.astype(np.complex128)) ** 2))
+            # np.vdot(iq,iq) = Σ|iq[i]|² in one BLAS call — no complex128/abs.
+            iq_power = float(np.vdot(iq, iq).real) / len(iq)
             self._audio.signal_db = 10.0 * np.log10(max(iq_power, 1e-10))
 
-            # Decimate to baseband
-            bb = decimate(iq, self._settings.sample_rate, BASEBAND_RATE)
+            # Spectrum analysis — throttle to ~20 Hz to save CPU
+            self._spec_skip = getattr(self, "_spec_skip", 0) + 1
+            if self._spec_skip >= self._spec_every:
+                self._spec_skip = 0
+                spec = self._spectrum.process(iq)
+                wx.CallAfter(self._on_spectrum_update, spec)
 
-            # Spectrum analysis (full baseband for display)
-            spec = self._spectrum.process(bb)
-            wx.CallAfter(self._on_spectrum_update, spec)
+            # Shift desired signal to DC via software VFO offset (full 2.4 MHz range)
+            mixed = self._mixer.process(iq, self._demod_offset)
 
-            # Shift desired signal to DC via software VFO offset
-            mixed = self._mixer.process(bb, self._demod_offset)
+            # Decimate to baseband — anti-aliasing filter acts as channel filter
+            bb = decimate(mixed, self._settings.sample_rate, self._baseband_rate)
 
             # Demodulate using stateful demodulator (filter state carried between chunks)
-            audio = self._demodulator.process(mixed)
+            audio = self._demodulator.process(bb)
             self._audio.write(audio)
 
             # Track stereo/mono state; update status bar silently on change.
@@ -805,17 +888,23 @@ class MainWindow(wx.Frame):
     def _toggle_sweep(self) -> None:
         if self._sweeping:
             self._sonification.stop()
+            self._audio.duck(1.0)
             self._sweeping = False
             self._sweep_btn.SetValue(False)
             self._sweep_btn.SetLabel(_("Start Sweep (Ctrl+F5)"))
             speech.output(_("Continuous sweep stopped."))
         else:
             self._settings.sonification_enabled = True
+            self._audio.duck(0.1)
             self._sonification.start_sweep()
             self._sweeping = True
             self._sweep_btn.SetValue(True)
             self._sweep_btn.SetLabel(_("Stop Sweep (Ctrl+F5)"))
             speech.output(_("Continuous sweep started."))
+
+    def _on_sweep_finished(self) -> None:
+        """Called from the audio thread when a sweep/snapshot stream ends."""
+        wx.CallAfter(self._audio.duck, 1.0)
 
     # ==================================================================
     # Spectrum zoom
@@ -1027,8 +1116,8 @@ class MainWindow(wx.Frame):
         return int(self._settings.frequency + self._demod_offset)
 
     def _set_demod_offset(self, hz: float) -> None:
-        """Set the demod offset, clamping to ±half baseband."""
-        max_offset = BASEBAND_RATE / 2.0   # ±120 kHz
+        """Set the demod offset, clamping to ±half capture bandwidth."""
+        max_offset = self._settings.sample_rate / 2.0   # ±1.2 MHz
         self._demod_offset = max(-max_offset, min(max_offset, hz))
         self._update_demod_marker()
         listen = self._listening_freq()
@@ -1043,7 +1132,7 @@ class MainWindow(wx.Frame):
         self._freq_ctrl.SetValue(_fmt_freq(self._settings.frequency))
 
     def _update_offset_from_cursor(self) -> None:
-        """Convert cursor position to demod offset Hz."""
+        """Convert cursor position to demod offset Hz (clamped to baseband)."""
         start_hz, end_hz = self._spectrum_range()
         span = end_hz - start_hz
         cursor_hz = start_hz + self._cursor_pos * span
@@ -1161,6 +1250,7 @@ class MainWindow(wx.Frame):
         if code == wx.WXK_F5 and modifiers == 0:
             if self._last_spectrum is not None:
                 self._settings.sonification_enabled = True
+                self._audio.duck(0.1)
                 self._sonification.snapshot()
                 speech.output(_("Sonification snapshot."))
             return
@@ -1284,6 +1374,9 @@ class MainWindow(wx.Frame):
             if code == ord("D"):
                 self._open_audio_dialog()
                 return
+            if code == ord("H"):
+                self._on_open_user_guide(None)
+                return
 
         event.Skip()
 
@@ -1348,23 +1441,17 @@ class MainWindow(wx.Frame):
     def _open_rf_dialog(self) -> None:
         from ui.dialogs.rf_dialog import RFDialog
         valid_gains = self._sdr.get_valid_gains() if self._running else []
-        self._open_or_raise(
-            "rf",
-            lambda: RFDialog(
-                self, self._settings,
-                on_change=self._on_rf_settings_changed,
-                valid_gains=valid_gains,
-            ),
-        )
+        dlg = RFDialog(self, self._settings, valid_gains=valid_gains)
+        if dlg.ShowModal() == wx.ID_OK:
+            self._on_rf_settings_changed(self._settings)
+        dlg.Destroy()
 
     def _open_spectrum_dialog(self) -> None:
         from ui.dialogs.spectrum_dialog import SpectrumDialog
-        self._open_or_raise(
-            "spectrum",
-            lambda: SpectrumDialog(
-                self, self._settings, self._sonification, on_change=self._save_settings
-            ),
-        )
+        dlg = SpectrumDialog(self, self._settings, self._sonification)
+        if dlg.ShowModal() == wx.ID_OK:
+            self._save_settings(self._settings)
+        dlg.Destroy()
 
     def _open_scanner_dialog(self) -> None:
         from ui.dialogs.scanner_dialog import ScannerDialog
@@ -1379,16 +1466,23 @@ class MainWindow(wx.Frame):
 
     def _open_audio_dialog(self) -> None:
         from ui.dialogs.audio_dialog import AudioDialog
-        self._open_or_raise(
-            "audio",
-            lambda: AudioDialog(
-                self, self._settings, self._audio, on_change=self._save_settings
-            ),
-        )
+        dlg = AudioDialog(self, self._settings, self._audio)
+        if dlg.ShowModal() == wx.ID_OK:
+            self._on_audio_settings_changed(self._settings)
+        dlg.Destroy()
 
     def _open_help_dialog(self) -> None:
         from ui.dialogs.help_dialog import HelpDialog
         self._open_or_raise("help", lambda: HelpDialog(self))
+
+    def _on_open_user_guide(self, _event) -> None:
+        import webbrowser
+        from config.paths import help_dir
+        path = os.path.join(help_dir(), "user-guide.html")
+        if os.path.isfile(path):
+            webbrowser.open(path)
+        else:
+            speech.output(_("User guide not found. Run 'invoke build-help' first."))
 
     def _on_open_help(self, _event) -> None:
         self._open_help_dialog()
@@ -1410,6 +1504,27 @@ class MainWindow(wx.Frame):
             self._sdr.set_agc_mode(settings.agc_mode)
             self._sdr.set_offset_tuning(settings.offset_tuning)
             self._sdr.set_tuner_bandwidth(settings.tuner_bandwidth)
+
+    def _on_audio_settings_changed(self, settings: Settings) -> None:
+        self._settings = settings
+        settings.save()
+        # Restart audio stream with new device / buffer size
+        from core.audio import _resolve_wasapi_device
+        self._audio.stop()
+        self._audio.device = settings.audio_device
+        self._audio.blocksize = settings.audio_buffer_size
+        if self._running or self._paused:
+            self._audio.start()
+        self._sync_sonification_device()
+
+    def _sync_sonification_device(self) -> None:
+        """Ensure sonification uses the same output device as radio audio."""
+        from core.audio import _resolve_wasapi_device
+        name = self._settings.audio_device
+        if name:
+            self._sonification.set_device(_resolve_wasapi_device(name))
+        else:
+            self._sonification.set_device(None)
 
     def _save_settings(self, settings: Settings) -> None:
         self._settings = settings

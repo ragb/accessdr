@@ -2,13 +2,13 @@
 ui/dialogs/rf_dialog.py — RF Settings dialog.
 
 Allows the user to select SDR device, set gain, sample rate, PPM correction,
-AGC, offset tuning, and IF bandwidth.  Changes are applied immediately and
+AGC, offset tuning, and IF bandwidth.  Changes are applied on OK and
 persisted to settings.
 """
 
 from __future__ import annotations
 
-from typing import Callable, List, Optional
+from typing import List, Optional
 
 import wx
 from accessibility import speech
@@ -28,29 +28,27 @@ IF_BW_OPTIONS = [
 ]
 
 
-class RFDialog(wx.Frame):
-    """Modeless RF settings frame."""
+class RFDialog(wx.Dialog):
+    """Modal RF settings dialog with standard OK / Cancel."""
 
     def __init__(
         self,
         parent: wx.Window,
         settings: Settings,
-        on_change: Optional[Callable[[Settings], None]] = None,
         valid_gains: Optional[List[float]] = None,
     ) -> None:
         super().__init__(
             parent,
             title=_("RF Settings"),
-            style=wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
         )
-        self.SetName("RF Settings dialog")
+        self.SetName("RF Settings")
         self._settings = settings
-        self._on_change = on_change
         self._valid_gains = valid_gains or []
         self._build_ui()
-        self.SetSize(400, 480)
+        self.Fit()
+        self.SetMinSize(self.GetSize())
         self.Centre()
-        speech.output(_("RF Settings dialog opened."))
 
     # ------------------------------------------------------------------
 
@@ -85,11 +83,9 @@ class RFDialog(wx.Frame):
         if self._valid_gains:
             gain_labels = [f"{g:.1f} dB" for g in self._valid_gains]
             self._gain_choice = wx.Choice(panel, choices=gain_labels, name="RF Gain")
-            # Select closest valid gain
             best = min(range(len(self._valid_gains)),
                        key=lambda i: abs(self._valid_gains[i] - self._settings.gain))
             self._gain_choice.SetSelection(best)
-            self._gain_choice.Bind(wx.EVT_CHOICE, self._on_gain_choice)
             grid.Add(self._gain_choice, 1, wx.EXPAND)
             self._gain_slider = None
             self._gain_label = None
@@ -125,7 +121,6 @@ class RFDialog(wx.Frame):
         self._agc_cb.Bind(wx.EVT_CHECKBOX, self._on_agc_toggle)
         grid.Add(self._agc_cb, 1, wx.EXPAND)
 
-        # Disable gain control when AGC is active (gain is automatic)
         if self._settings.agc_mode:
             self._set_gain_enabled(False)
 
@@ -136,76 +131,53 @@ class RFDialog(wx.Frame):
             name="Offset Tuning",
         )
         self._offset_cb.SetValue(self._settings.offset_tuning)
-        self._offset_cb.Bind(wx.EVT_CHECKBOX, self._on_offset_toggle)
         grid.Add(self._offset_cb, 1, wx.EXPAND)
 
         # IF Bandwidth
         bw_labels = [_(lbl) if lbl == N_("Auto") else lbl for _bw, lbl in IF_BW_OPTIONS]
         grid.Add(wx.StaticText(panel, label=_("IF Bandwidth:")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._ifbw_choice = wx.Choice(panel, choices=bw_labels, name="IF Bandwidth")
-        # Select current value
         bw_idx = 0
         for i, (bw, _lbl) in enumerate(IF_BW_OPTIONS):
             if bw == self._settings.tuner_bandwidth:
                 bw_idx = i
                 break
         self._ifbw_choice.SetSelection(bw_idx)
-        self._ifbw_choice.Bind(wx.EVT_CHOICE, self._on_ifbw_change)
         grid.Add(self._ifbw_choice, 1, wx.EXPAND)
 
         sizer.Add(grid, 1, wx.EXPAND | wx.ALL, 12)
-
-        btn_row = wx.BoxSizer(wx.HORIZONTAL)
-        apply_btn = wx.Button(panel, label=_("Apply"), name="Apply RF settings")
-        close_btn = wx.Button(panel, wx.ID_CLOSE, label=_("Close"))
-        btn_row.Add(apply_btn, 0, wx.RIGHT, 8)
-        btn_row.Add(close_btn, 0)
-        sizer.Add(btn_row, 0, wx.ALIGN_RIGHT | wx.ALL, 12)
-
         panel.SetSizer(sizer)
 
-        # Bindings
-        apply_btn.Bind(wx.EVT_BUTTON, self._on_apply)
-        close_btn.Bind(wx.EVT_BUTTON, lambda e: self.Close())
-        self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+        # Dialog-level sizer: panel + standard OK/Cancel buttons
+        dlg_sizer = wx.BoxSizer(wx.VERTICAL)
+        dlg_sizer.Add(panel, 1, wx.EXPAND)
 
-    def _on_gain_choice(self, event: wx.CommandEvent) -> None:
-        idx = event.GetSelection()
-        if 0 <= idx < len(self._valid_gains):
-            val = self._valid_gains[idx]
-            speech.output(_("Gain {val} dB").format(val=f"{val:.1f}"))
+        btn_sizer = wx.StdDialogButtonSizer()
+        ok_btn = wx.Button(self, wx.ID_OK)
+        ok_btn.SetDefault()
+        btn_sizer.AddButton(ok_btn)
+        btn_sizer.AddButton(wx.Button(self, wx.ID_CANCEL))
+        btn_sizer.Realize()
+        dlg_sizer.Add(btn_sizer, 0, wx.EXPAND | wx.ALL, 8)
+
+        self.SetSizer(dlg_sizer)
+        self.Bind(wx.EVT_BUTTON, self._on_ok, id=wx.ID_OK)
 
     def _on_gain_slide(self, event: wx.CommandEvent) -> None:
         val = self._gain_slider.GetValue()
         self._gain_label.SetLabel(f"{val} dB")
-        speech.output(_("Gain {val} dB").format(val=val))
 
     def _on_agc_toggle(self, event: wx.CommandEvent) -> None:
         on = self._agc_cb.GetValue()
         self._set_gain_enabled(not on)
-        msg = _("RTL AGC enabled") if on else _("RTL AGC disabled")
-        speech.output(msg)
 
     def _set_gain_enabled(self, enabled: bool) -> None:
-        """Enable or disable the gain control (dropdown or slider)."""
         if self._gain_choice is not None:
             self._gain_choice.Enable(enabled)
         if self._gain_slider is not None:
             self._gain_slider.Enable(enabled)
 
-    def _on_offset_toggle(self, event: wx.CommandEvent) -> None:
-        on = self._offset_cb.GetValue()
-        msg = _("Offset tuning enabled") if on else _("Offset tuning disabled")
-        speech.output(msg)
-
-    def _on_ifbw_change(self, event: wx.CommandEvent) -> None:
-        idx = event.GetSelection()
-        if 0 <= idx < len(IF_BW_OPTIONS):
-            bw_val, label = IF_BW_OPTIONS[idx]
-            display = _(label) if label == N_("Auto") else label
-            speech.output(_("IF Bandwidth {bw}").format(bw=display))
-
-    def _on_apply(self, _event: wx.CommandEvent) -> None:
+    def _on_ok(self, _event: wx.CommandEvent) -> None:
         self._settings.device_index = self._device_choice.GetSelection()
         rate_idx = self._rate_choice.GetSelection()
         if 0 <= rate_idx < len(SAMPLE_RATES):
@@ -227,21 +199,4 @@ class RFDialog(wx.Frame):
             self._settings.tuner_bandwidth = IF_BW_OPTIONS[ifbw_idx][0]
 
         self._settings.save()
-
-        if self._on_change:
-            self._on_change(self._settings)
-
-        speech.output(
-            _("RF settings applied. Gain {gain:.0f} dB, "
-              "Sample rate {rate} kHz, PPM {ppm}.").format(
-                gain=self._settings.gain,
-                rate=self._settings.sample_rate // 1000,
-                ppm=self._settings.ppm,
-            )
-        )
-
-    def _on_key(self, event: wx.KeyEvent) -> None:
-        if event.GetKeyCode() == wx.WXK_ESCAPE:
-            self.Close()
-        else:
-            event.Skip()
+        self.EndModal(wx.ID_OK)

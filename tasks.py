@@ -5,7 +5,8 @@ Usage:
     invoke --list          # show all tasks
     invoke fetch-dlls      # download RTL-SDR DLLs for build
     invoke i18n-build      # extract + update + compile translations
-    invoke build           # fetch-dlls + i18n + PyInstaller freeze
+    invoke build-help      # convert docs/ markdown to HTML in build/help/
+    invoke build           # fetch-dlls + i18n + help + PyInstaller freeze
     invoke installer       # fetch-dlls + i18n + freeze + NSIS installer
     invoke clean           # remove build artifacts
     invoke run             # launch app from source
@@ -46,6 +47,9 @@ RTLSDR_DLL_URL = (
     "https://github.com/librtlsdr/librtlsdr/releases/download/"
     "v0.9.0/rtlsdr-bin-w64_static.zip"
 )
+
+HELP_SRC_DIR = os.path.join(PROJECT_ROOT, "docs")
+HELP_OUT_DIR = os.path.join(PROJECT_ROOT, "build", "help")
 
 LOCALE_DIR = os.path.join(PROJECT_ROOT, "locale")
 POT_FILE = os.path.join(LOCALE_DIR, "accessdr.pot")
@@ -176,9 +180,104 @@ def i18n_build(c: Context) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Help build
+# ---------------------------------------------------------------------------
+_HTML_TEMPLATE = """\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
+<style>
+  :root {{ color-scheme: light dark; }}
+  body {{
+    font-family: system-ui, -apple-system, sans-serif;
+    max-width: 52em; margin: 2em auto; padding: 0 1em;
+    line-height: 1.6;
+  }}
+  table {{ border-collapse: collapse; width: 100%; }}
+  th, td {{ border: 1px solid #888; padding: .4em .6em; text-align: left; }}
+  th {{ background: #eee; }}
+  @media (prefers-color-scheme: dark) {{
+    th {{ background: #333; }}
+  }}
+  kbd {{
+    display: inline-block; padding: .1em .4em;
+    border: 1px solid #888; border-radius: 3px;
+    font-family: inherit; font-size: .9em;
+    background: #f4f4f4;
+  }}
+  @media (prefers-color-scheme: dark) {{
+    kbd {{ background: #333; }}
+  }}
+  code {{ padding: .1em .3em; border-radius: 3px; background: #f4f4f4; }}
+  @media (prefers-color-scheme: dark) {{
+    code {{ background: #333; }}
+  }}
+</style>
+</head>
+<body>
+{body}
+</body>
+</html>
+"""
+
+
+def _keys_to_kbd(text: str) -> str:
+    """Replace ``++key++`` markers with ``<kbd>Key</kbd>`` HTML.
+
+    Handles combos like ``++ctrl+q++`` → ``<kbd>Ctrl</kbd>+<kbd>Q</kbd>``.
+    """
+    import re
+
+    def _repl(m: re.Match) -> str:
+        raw = m.group(1)
+        parts = raw.split("+")
+        rendered = []
+        for p in parts:
+            p = p.strip()
+            nice = {
+                "ctrl": "Ctrl", "shift": "Shift", "alt": "Alt",
+                "enter": "Enter", "escape": "Escape", "space": "Space",
+                "backspace": "Backspace", "page-up": "Page Up",
+                "page-down": "Page Down", "up": "Up", "down": "Down",
+                "left": "Left", "right": "Right", "plus": "+",
+            }.get(p.lower(), p.upper() if len(p) == 1 else p.capitalize())
+            rendered.append(f"<kbd>{nice}</kbd>")
+        return "+".join(rendered)
+
+    return re.sub(r"\+\+(.+?)\+\+", _repl, text)
+
+
+@task
+def build_help(c: Context) -> None:
+    """Convert docs/user-guide.md to standalone HTML in build/help/."""
+    import markdown as md
+
+    src = os.path.join(HELP_SRC_DIR, "user-guide.md")
+    if not os.path.isfile(src):
+        print(f"[build-help] ERROR: {src} not found")
+        sys.exit(1)
+
+    os.makedirs(HELP_OUT_DIR, exist_ok=True)
+
+    text = open(src, encoding="utf-8").read()
+    text = _keys_to_kbd(text)
+    body = md.markdown(text, extensions=["tables"])
+    html = _HTML_TEMPLATE.format(title="AccessDR User Guide", body=body)
+
+    out = os.path.join(HELP_OUT_DIR, "user-guide.html")
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"[build-help] {out}")
+    print("[build-help] Done.")
+
+
+# ---------------------------------------------------------------------------
 # Build tasks
 # ---------------------------------------------------------------------------
-@task(pre=[fetch_dlls, i18n_build])
+@task(pre=[fetch_dlls, i18n_build, build_help])
 def build(c: Context) -> None:
     """Freeze app with PyInstaller (fetches DLLs + runs i18n first)."""
     c.run(f'{_q(PYINSTALLER)} --noconfirm {_q(SPEC_FILE)}', echo=True)

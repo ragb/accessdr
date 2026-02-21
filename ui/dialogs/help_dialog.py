@@ -7,8 +7,12 @@ The full shortcut list is also spoken aloud when the dialog opens.
 
 from __future__ import annotations
 
+import os
+import webbrowser
+
 import wx
 from accessibility import speech
+from config.paths import help_dir
 
 SHORTCUTS = [
     (N_("--- Main Window ---"), ""),
@@ -120,10 +124,18 @@ class HelpDialog(wx.Frame):
 
         sizer.Add(self._list, 1, wx.EXPAND | wx.ALL, 8)
 
+        btn_row = wx.BoxSizer(wx.HORIZONTAL)
+        guide_btn = wx.Button(panel, label=_("Open User Guide"))
+        guide_btn.SetName("Open User Guide in browser")
+        guide_btn.Bind(wx.EVT_BUTTON, self._on_open_guide)
+        btn_row.Add(guide_btn, 0, wx.RIGHT, 8)
+
         close_btn = wx.Button(panel, wx.ID_CLOSE, label=_("Close"))
         close_btn.SetName("Close help dialog")
         close_btn.Bind(wx.EVT_BUTTON, lambda e: self.Close())
-        sizer.Add(close_btn, 0, wx.ALIGN_RIGHT | wx.ALL, 8)
+        btn_row.Add(close_btn, 0)
+
+        sizer.Add(btn_row, 0, wx.ALIGN_RIGHT | wx.ALL, 8)
 
         panel.SetSizer(sizer)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
@@ -133,6 +145,13 @@ class HelpDialog(wx.Frame):
             self.Close()
         else:
             event.Skip()
+
+    def _on_open_guide(self, _event: wx.CommandEvent) -> None:
+        path = os.path.join(help_dir(), "user-guide.html")
+        if os.path.isfile(path):
+            webbrowser.open(path)
+        else:
+            speech.output(_("User guide not found. Run 'invoke build-help' first."))
 
     def _announce(self) -> None:
         lines = [_("Keyboard Shortcuts for AccessDR.")]

@@ -6,37 +6,34 @@ Controls FFT settings, sonification parameters, and speech readout options.
 
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Optional
 
 import wx
-from accessibility import speech
 from accessibility.sonification import Sonification
 from config.settings import Settings
 
 
-class SpectrumDialog(wx.Frame):
-    """Modeless spectrum and sonification settings frame."""
+class SpectrumDialog(wx.Dialog):
+    """Modal spectrum and sonification settings dialog."""
 
     def __init__(
         self,
         parent: wx.Window,
         settings: Settings,
         sonification: Sonification,
-        on_change: Optional[Callable[[Settings], None]] = None,
     ) -> None:
         super().__init__(
             parent,
             title=_("Spectrum Settings"),
-            style=wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
         )
-        self.SetName("Spectrum Settings dialog")
+        self.SetName("Spectrum Settings")
         self._settings = settings
         self._son = sonification
-        self._on_change = on_change
         self._build_ui()
-        self.SetSize(440, 420)
+        self.Fit()
+        self.SetMinSize(self.GetSize())
         self.Centre()
-        speech.output(_("Spectrum Settings dialog opened."))
 
     # ------------------------------------------------------------------
 
@@ -140,22 +137,26 @@ class SpectrumDialog(wx.Frame):
         sp_sizer.Add(sp_grid, 0, wx.EXPAND | wx.ALL, 6)
         main_sizer.Add(sp_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
-        # Buttons
-        btn_row = wx.BoxSizer(wx.HORIZONTAL)
-        apply_btn = wx.Button(panel, label=_("Apply"), name="Apply spectrum settings")
-        close_btn = wx.Button(panel, wx.ID_CLOSE, label=_("Close"))
-        apply_btn.Bind(wx.EVT_BUTTON, self._on_apply)
-        close_btn.Bind(wx.EVT_BUTTON, lambda e: self.Close())
-        btn_row.Add(apply_btn, 0, wx.RIGHT, 8)
-        btn_row.Add(close_btn)
-        main_sizer.Add(btn_row, 0, wx.ALIGN_RIGHT | wx.ALL, 8)
-
         panel.SetSizer(main_sizer)
-        self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+
+        # Dialog-level sizer: panel + standard OK/Cancel buttons
+        dlg_sizer = wx.BoxSizer(wx.VERTICAL)
+        dlg_sizer.Add(panel, 1, wx.EXPAND)
+
+        btn_sizer = wx.StdDialogButtonSizer()
+        ok_btn = wx.Button(self, wx.ID_OK)
+        ok_btn.SetDefault()
+        btn_sizer.AddButton(ok_btn)
+        btn_sizer.AddButton(wx.Button(self, wx.ID_CANCEL))
+        btn_sizer.Realize()
+        dlg_sizer.Add(btn_sizer, 0, wx.EXPAND | wx.ALL, 8)
+
+        self.SetSizer(dlg_sizer)
+        self.Bind(wx.EVT_BUTTON, self._on_ok, id=wx.ID_OK)
 
     # ------------------------------------------------------------------
 
-    def _on_apply(self, _event: wx.CommandEvent) -> None:
+    def _on_ok(self, _event: wx.CommandEvent) -> None:
         fft_sizes = [256, 512, 1024, 2048, 4096]
         idx = self._fft_choice.GetSelection()
         if 0 <= idx < len(fft_sizes):
@@ -178,13 +179,4 @@ class SpectrumDialog(wx.Frame):
             pitch_smoothing_ms=self._settings.pitch_smoothing_ms,
         )
 
-        if self._on_change:
-            self._on_change(self._settings)
-
-        speech.output(_("Spectrum settings applied."))
-
-    def _on_key(self, event: wx.KeyEvent) -> None:
-        if event.GetKeyCode() == wx.WXK_ESCAPE:
-            self.Close()
-        else:
-            event.Skip()
+        self.EndModal(wx.ID_OK)

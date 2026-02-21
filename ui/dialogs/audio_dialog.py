@@ -7,7 +7,8 @@ the recording path.  Also provides a record toggle button.
 
 from __future__ import annotations
 
-from typing import Callable, Optional
+import os
+from typing import Optional
 
 import wx
 from accessibility import speech
@@ -15,30 +16,28 @@ from config.settings import Settings
 from core.audio import AudioOutput
 
 
-class AudioDialog(wx.Frame):
-    """Modeless audio settings and recording control frame."""
+class AudioDialog(wx.Dialog):
+    """Modal audio settings and recording control dialog."""
 
     def __init__(
         self,
         parent: wx.Window,
         settings: Settings,
         audio: AudioOutput,
-        on_change: Optional[Callable[[Settings], None]] = None,
     ) -> None:
         super().__init__(
             parent,
             title=_("Audio Settings"),
-            style=wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
         )
-        self.SetName("Audio Settings dialog")
+        self.SetName("Audio Settings")
         self._settings = settings
         self._audio = audio
-        self._on_change = on_change
         self._recording_path: str = ""
         self._build_ui()
-        self.SetSize(440, 320)
+        self.Fit()
+        self.SetMinSize(self.GetSize())
         self.Centre()
-        speech.output(_("Audio Settings dialog opened."))
 
     # ------------------------------------------------------------------
 
@@ -79,7 +78,7 @@ class AudioDialog(wx.Frame):
         self._path_ctrl = wx.TextCtrl(
             panel, value=self._settings.recording_path, name="Recording folder path"
         )
-        browse_btn = wx.Button(panel, label=_("Browse…"), name="Browse recording folder")
+        browse_btn = wx.Button(panel, label=_("Browse..."), name="Browse recording folder")
         browse_btn.Bind(wx.EVT_BUTTON, self._on_browse)
         path_row.Add(self._path_ctrl, 1, wx.EXPAND | wx.RIGHT, 4)
         path_row.Add(browse_btn, 0)
@@ -92,24 +91,30 @@ class AudioDialog(wx.Frame):
             panel, label=_("Start Recording (R)"), name="Record toggle"
         )
         self._record_btn.Bind(wx.EVT_TOGGLEBUTTON, self._on_record_toggle)
-        sizer.Add(self._record_btn, 0, wx.ALL, 12)
+        sizer.Add(self._record_btn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
 
         # Recording status
         self._rec_status = wx.StaticText(
             panel, label=_("Not recording."), name="Recording status"
         )
-        sizer.Add(self._rec_status, 0, wx.ALL, 4)
-
-        btn_row = wx.BoxSizer(wx.HORIZONTAL)
-        apply_btn = wx.Button(panel, label=_("Apply"), name="Apply audio settings")
-        close_btn = wx.Button(panel, wx.ID_CLOSE, label=_("Close"))
-        apply_btn.Bind(wx.EVT_BUTTON, self._on_apply)
-        close_btn.Bind(wx.EVT_BUTTON, lambda e: self.Close())
-        btn_row.Add(apply_btn, 0, wx.RIGHT, 8)
-        btn_row.Add(close_btn)
-        sizer.Add(btn_row, 0, wx.ALIGN_RIGHT | wx.ALL, 12)
+        sizer.Add(self._rec_status, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
 
         panel.SetSizer(sizer)
+
+        # Dialog-level sizer: panel + standard OK/Cancel buttons
+        dlg_sizer = wx.BoxSizer(wx.VERTICAL)
+        dlg_sizer.Add(panel, 1, wx.EXPAND)
+
+        btn_sizer = wx.StdDialogButtonSizer()
+        ok_btn = wx.Button(self, wx.ID_OK)
+        ok_btn.SetDefault()
+        btn_sizer.AddButton(ok_btn)
+        btn_sizer.AddButton(wx.Button(self, wx.ID_CANCEL))
+        btn_sizer.Realize()
+        dlg_sizer.Add(btn_sizer, 0, wx.EXPAND | wx.ALL, 8)
+
+        self.SetSizer(dlg_sizer)
+        self.Bind(wx.EVT_BUTTON, self._on_ok, id=wx.ID_OK)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
 
     # ------------------------------------------------------------------
@@ -122,8 +127,6 @@ class AudioDialog(wx.Frame):
 
     def _on_record_toggle(self, event: wx.CommandEvent) -> None:
         if self._record_btn.GetValue():
-            import os
-            folder = self._path_ctrl.GetValue().strip() or ""
             path = self._audio.start_recording(path="")
             if path:
                 self._recording_path = path
@@ -143,7 +146,7 @@ class AudioDialog(wx.Frame):
             self._rec_status.SetLabel(_("Not recording."))
             speech.output(_("Recording stopped."))
 
-    def _on_apply(self, _event: wx.CommandEvent) -> None:
+    def _on_ok(self, _event: wx.CommandEvent) -> None:
         sel = self._device_choice.GetStringSelection()
         self._settings.audio_device = None if sel == _("Default") else sel
         self._settings.recording_path = self._path_ctrl.GetValue().strip()
@@ -151,22 +154,11 @@ class AudioDialog(wx.Frame):
         if 0 <= idx < len(self._buf_sizes):
             self._settings.audio_buffer_size = self._buf_sizes[idx]
         self._settings.save()
-        if self._on_change:
-            self._on_change(self._settings)
-        speech.output(
-            _("Audio settings applied. Buffer {size} samples. "
-              "Restart radio for buffer change to take effect.").format(
-                size=self._settings.audio_buffer_size
-            )
-        )
+        self.EndModal(wx.ID_OK)
 
     def _on_key(self, event: wx.KeyEvent) -> None:
         code = event.GetKeyCode()
-        if code == wx.WXK_ESCAPE:
-            self.Close()
-        elif code == ord("R") and not isinstance(
-            self.FindFocus(), wx.TextCtrl
-        ):
+        if code == ord("R") and not isinstance(self.FindFocus(), wx.TextCtrl):
             self._record_btn.SetValue(not self._record_btn.GetValue())
             self._on_record_toggle(event)
         else:

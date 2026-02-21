@@ -39,6 +39,36 @@ except Exception:                  # noqa: BLE001
     _SD_AVAILABLE = False
     logger.warning("sounddevice not available — audio output disabled")
 
+def _resolve_wasapi_device(name: str):
+    """Resolve a device *name* to its WASAPI device index.
+
+    sounddevice raises an error when a name matches multiple host APIs
+    (e.g. DirectSound *and* WASAPI).  This finds the WASAPI index explicitly.
+    Uses substring matching to handle truncated or suffixed device names.
+    Falls back to the default device if no WASAPI match is found.
+    """
+    if not _SD_AVAILABLE:
+        return name
+    try:
+        wasapi_ids: set = set()
+        for api in sd.query_hostapis():
+            if "WASAPI" in api.get("name", ""):
+                wasapi_ids = set(api["devices"])
+                break
+        for idx, dev in enumerate(sd.query_devices()):
+            dev_name = dev.get("name", "")
+            if idx in wasapi_ids and (dev_name == name
+                                      or name in dev_name
+                                      or dev_name in name):
+                return idx
+    except Exception:  # noqa: BLE001
+        pass
+    # Name didn't match any WASAPI device — return None so sounddevice
+    # uses the default output instead of crashing on an ambiguous name.
+    logger.warning("WASAPI device %r not found, using default output", name)
+    return None
+
+
 AUDIO_RATE = 48_000
 CHANNELS = 2          # always stereo output; mono sources are upmixed in write()
 DEFAULT_BLOCKSIZE = 4096
@@ -87,7 +117,9 @@ class AudioOutput:
                 callback=self._callback,
             )
             if self.device:
-                kwargs["device"] = self.device
+                resolved = _resolve_wasapi_device(self.device)
+                if resolved is not None:
+                    kwargs["device"] = resolved
             self._stream = sd.OutputStream(**kwargs)
             self._stream.start()
             logger.info("Audio output started at %d Hz", self.sample_rate)
