@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: accessdr 0.2.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-21 19:11+0000\n"
+"POT-Creation-Date: 2026-02-21 21:15+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -470,16 +470,16 @@ msgstr ""
 msgid "Band: {name}, {freq}, mode {mode}"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:155 ui/main_window.py:1540
+#: ui/dialogs/help_dialog.py:155 ui/main_window.py:1541
 msgid "User guide not found. Run 'invoke build-help' first."
 msgstr ""
 
-#: ui/main_window.py:1610
+#: ui/main_window.py:1611
 #, python-brace-format
 msgid "SDR error: {msg}"
 msgstr ""
 
-#: ui/main_window.py:1613
+#: ui/main_window.py:1614
 #, python-brace-format
 msgid "Error: {msg}"
 msgstr ""
@@ -1002,31 +1002,31 @@ msgstr ""
 msgid "Pitch smoothing (ms):"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:113
+#: ui/dialogs/spectrum_dialog.py:115
 msgid "Waterfall Display"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:120
+#: ui/dialogs/spectrum_dialog.py:121
 msgid "Colour Scheme:"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:131
+#: ui/dialogs/spectrum_dialog.py:130
 msgid "dB Floor (brightness):"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:138
+#: ui/dialogs/spectrum_dialog.py:137
 msgid "dB Ceiling (contrast):"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:147
+#: ui/dialogs/spectrum_dialog.py:148
 msgid "Speech Readout"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:120
+#: ui/dialogs/spectrum_dialog.py:153
 msgid "Peak count (F key):"
 msgstr ""
 
-#: ui/dialogs/spectrum_dialog.py:128
+#: ui/dialogs/spectrum_dialog.py:161
 msgid "Auto-announce threshold (dBm):"
 msgstr ""
 
