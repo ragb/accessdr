@@ -5,10 +5,19 @@ Initialises the wx.App and opens the main window.
 """
 
 import builtins
-import faulthandler
+import io
 import logging
+import os
 import sys
 
+# PyInstaller windowed mode sets sys.stderr/stdout to None — redirect to
+# devnull so that logging, print(), and faulthandler don't crash.
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+
+import faulthandler
 faulthandler.enable()
 
 # Install a no-op _() so that all module-level _("...") calls resolve
