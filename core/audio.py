@@ -39,7 +39,7 @@ except Exception:                  # noqa: BLE001
     _SD_AVAILABLE = False
     logger.warning("sounddevice not available — audio output disabled")
 
-def _resolve_wasapi_device(name: str):
+def resolve_wasapi_device(name: str):
     """Resolve a device *name* to its WASAPI device index.
 
     sounddevice raises an error when a name matches multiple host APIs
@@ -74,6 +74,58 @@ CHANNELS = 2          # always stereo output; mono sources are upmixed in write(
 DEFAULT_BLOCKSIZE = 4096
 
 
+class AudioRecorder:
+    """WAV file recorder — captures audio written through the callback."""
+
+    def __init__(self) -> None:
+        self._recording: bool = False
+        self._wav_file: Optional[wave.Wave_write] = None
+
+    @property
+    def recording(self) -> bool:
+        return self._recording
+
+    def start(self, sample_rate: int, channels: int = CHANNELS, path: str = "") -> str:
+        """Begin writing audio to a WAV file. Returns the file path."""
+        if self._recording:
+            return ""
+        if not path:
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            path = str(Path.home() / f"accessdr_{ts}.wav")
+        try:
+            self._wav_file = wave.open(path, "wb")
+            self._wav_file.setnchannels(channels)
+            self._wav_file.setsampwidth(2)           # 16-bit
+            self._wav_file.setframerate(sample_rate)
+            self._recording = True
+            logger.info("Recording started: %s", path)
+            return path
+        except Exception as exc:   # noqa: BLE001
+            logger.error("Could not start recording: %s", exc)
+            return ""
+
+    def stop(self) -> None:
+        """Stop recording and close the WAV file."""
+        self._recording = False
+        if self._wav_file is not None:
+            try:
+                self._wav_file.close()
+            except Exception:      # noqa: BLE001
+                pass
+            self._wav_file = None
+            logger.info("Recording stopped")
+
+    def write_frames(self, audio: np.ndarray) -> None:
+        """Write float32 audio frames to WAV (convert to int16)."""
+        if not self._recording or self._wav_file is None:
+            return
+        try:
+            pcm = (audio * 32767.0).astype(np.int16)
+            self._wav_file.writeframes(pcm.tobytes())
+        except Exception:      # noqa: BLE001
+            pass
+
+
 class AudioOutput:
     """Manages the audio output stream for demodulated radio audio."""
 
@@ -98,8 +150,7 @@ class AudioOutput:
         self._audio_queue: queue.Queue = queue.Queue(maxsize=128)
         self._leftover = np.zeros((0, CHANNELS), dtype=np.float32)
         self._stream: Optional["sd.OutputStream"] = None
-        self._recording: bool = False
-        self._wav_file: Optional[wave.Wave_write] = None
+        self._recorder = AudioRecorder()
         self._lock = threading.Lock()
         self.audio_underruns: int = 0    # callback couldn't fill buffer
         self.audio_overruns: int = 0     # write() dropped (queue full)
@@ -120,7 +171,7 @@ class AudioOutput:
                 callback=self._callback,
             )
             if self.device:
-                resolved = _resolve_wasapi_device(self.device)
+                resolved = resolve_wasapi_device(self.device)
                 if resolved is not None:
                     kwargs["device"] = resolved
             self._stream = sd.OutputStream(**kwargs)
@@ -193,38 +244,20 @@ class AudioOutput:
             self.audio_overruns += 1
 
     # ------------------------------------------------------------------
-    # Recording
+    # Recording (delegated to AudioRecorder)
     # ------------------------------------------------------------------
+
+    @property
+    def recorder(self) -> AudioRecorder:
+        return self._recorder
 
     def start_recording(self, path: str = "") -> str:
         """Begin writing audio to a WAV file. Returns the file path."""
-        if self._recording:
-            return ""
-        if not path:
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            path = str(Path.home() / f"accessdr_{ts}.wav")
-        try:
-            self._wav_file = wave.open(path, "wb")
-            self._wav_file.setnchannels(CHANNELS)
-            self._wav_file.setsampwidth(2)           # 16-bit
-            self._wav_file.setframerate(self.sample_rate)
-            self._recording = True
-            logger.info("Recording started: %s", path)
-            return path
-        except Exception as exc:   # noqa: BLE001
-            logger.error("Could not start recording: %s", exc)
-            return ""
+        return self._recorder.start(self.sample_rate, CHANNELS, path)
 
     def stop_recording(self) -> None:
         """Stop recording and close the WAV file."""
-        self._recording = False
-        if self._wav_file is not None:
-            try:
-                self._wav_file.close()
-            except Exception:      # noqa: BLE001
-                pass
-            self._wav_file = None
-            logger.info("Recording stopped")
+        self._recorder.stop()
 
     # ------------------------------------------------------------------
     # sounddevice callback (audio thread)
@@ -289,13 +322,8 @@ class AudioOutput:
 
         outdata[:] = combined
 
-        # Record (convert float → int16, interleaved stereo)
-        if self._recording and self._wav_file is not None:
-            try:
-                pcm = (combined * 32767.0).astype(np.int16)  # (frames, 2)
-                self._wav_file.writeframes(pcm.tobytes())
-            except Exception:      # noqa: BLE001
-                pass
+        # Record
+        self._recorder.write_frames(combined)
 
     # ------------------------------------------------------------------
     # Helpers

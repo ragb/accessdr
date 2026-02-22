@@ -111,6 +111,42 @@ class StatefulDecimator:
         return (i_out + 1j * q_out).astype(np.complex64)
 
 
+class Resampler:
+    """Stateful IIR anti-alias + integer downsample for one audio channel.
+
+    When the ratio is pure integer decimation (up == 1), uses a Butterworth
+    IIR lowpass with state carried across calls plus correct downsample-phase
+    tracking.  Falls back to stateless ``resample_poly`` for fractional ratios.
+    """
+
+    def __init__(self, in_rate: int, out_rate: int, order: int = 8) -> None:
+        from math import gcd
+        g = gcd(in_rate, out_rate)
+        self._up = out_rate // g
+        self._down = in_rate // g
+        if self._up == 1 and self._down > 1:
+            cutoff = out_rate * 0.45  # 90% of output Nyquist
+            self._sos = make_lowpass_iir(cutoff, in_rate, order=order)
+            self._zi = signal.sosfilt_zi(self._sos) * 0.0
+            self._offset = 0
+            self._stateful = True
+        else:
+            self._stateful = False
+
+    def process(self, audio: np.ndarray) -> np.ndarray:
+        if self._up == self._down:
+            return audio.astype(np.float32)
+        if self._stateful:
+            filtered, self._zi = signal.sosfilt(
+                self._sos, audio, zi=self._zi)
+            out = filtered[self._offset :: self._down].astype(np.float32)
+            self._offset = (self._offset + len(out) * self._down) - len(audio)
+            return out
+        return signal.resample_poly(
+            audio, self._up, self._down,
+        ).astype(np.float32)
+
+
 def deemphasis_filter(
     sample_rate: float, tau: float = 75e-6
 ) -> tuple[np.ndarray, np.ndarray]:

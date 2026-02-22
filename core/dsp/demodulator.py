@@ -27,8 +27,9 @@ import numpy as np
 from abc import ABC, abstractmethod
 from scipy import signal as sp_signal
 
+from config.locale_utils import detect_deemphasis_tau
 from .ctcss import CTCSSDetector
-from .filters import make_lowpass_iir, make_bandpass_iir, deemphasis_filter
+from .filters import Resampler, make_lowpass_iir, make_bandpass_iir, deemphasis_filter
 from .rds import RDSDecoder
 
 logger = logging.getLogger(__name__)
@@ -53,7 +54,7 @@ class Demodulator(ABC):
     def __init__(self, baseband_rate: int, audio_rate: int, **kwargs) -> None:
         self.baseband_rate = baseband_rate
         self.audio_rate = audio_rate
-        self._resampler = _Resampler(baseband_rate, audio_rate)
+        self._resampler = Resampler(baseband_rate, audio_rate)
 
         # Pre-demodulation channel filter (IIR Butterworth lowpass, SOS)
         bw = self._CHANNEL_BW
@@ -88,48 +89,6 @@ class Demodulator(ABC):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _resample_ratio(in_rate: int, out_rate: int):
-    from math import gcd
-    g = gcd(in_rate, out_rate)
-    return out_rate // g, in_rate // g
-
-
-class _Resampler:
-    """Stateful IIR anti-alias + integer downsample for one audio channel.
-
-    When the ratio is pure integer decimation (up == 1), uses a Butterworth
-    IIR lowpass with state carried across calls plus correct downsample-phase
-    tracking.  Falls back to stateless ``resample_poly`` for fractional ratios.
-    """
-
-    def __init__(self, in_rate: int, out_rate: int, order: int = 8) -> None:
-        from math import gcd
-        g = gcd(in_rate, out_rate)
-        self._up = out_rate // g
-        self._down = in_rate // g
-        if self._up == 1 and self._down > 1:
-            cutoff = out_rate * 0.45  # 90% of output Nyquist
-            self._sos = make_lowpass_iir(cutoff, in_rate, order=order)
-            self._zi = sp_signal.sosfilt_zi(self._sos) * 0.0
-            self._offset = 0
-            self._stateful = True
-        else:
-            self._stateful = False
-
-    def process(self, audio: np.ndarray) -> np.ndarray:
-        if self._up == self._down:
-            return audio.astype(np.float32)
-        if self._stateful:
-            filtered, self._zi = sp_signal.sosfilt(
-                self._sos, audio, zi=self._zi)
-            out = filtered[self._offset :: self._down].astype(np.float32)
-            self._offset = (self._offset + len(out) * self._down) - len(audio)
-            return out
-        return sp_signal.resample_poly(
-            audio, self._up, self._down,
-        ).astype(np.float32)
-
-
 def _fm_discriminant(iq: np.ndarray) -> np.ndarray:
     """Instantaneous frequency via conjugate-product polar discriminant."""
     product = iq[1:] * np.conj(iq[:-1])
@@ -142,27 +101,6 @@ def _fm_discriminant(iq: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # WFM
 # ---------------------------------------------------------------------------
-
-def _detect_deemphasis_tau() -> float:
-    """Return the correct de-emphasis time constant for the user's region.
-
-    50 µs — Europe, UK, Australia, most of the world.
-    75 µs — Americas, Japan, South Korea.
-    """
-    import locale
-    try:
-        loc = locale.getdefaultlocale()[0] or ""
-    except Exception:  # noqa: BLE001
-        loc = ""
-    loc = loc.lower().replace("-", "_")
-    # 75 µs regions (prefix match)
-    if any(loc.startswith(p) for p in (
-        "en_us", "en_ca", "fr_ca", "es_mx", "es_ar", "es_cl", "es_co",
-        "es_ve", "es_pe", "es_ec", "pt_br", "ja", "ko",
-    )):
-        return 75e-6
-    return 50e-6
-
 
 class WFMDemodulator(Demodulator):
     """Wide-band FM demodulator with automatic MPX stereo decoding.
@@ -200,7 +138,7 @@ class WFMDemodulator(Demodulator):
         rate = baseband_rate
 
         # Second resampler for R channel (L uses base-class _resampler)
-        self._resampler_r = _Resampler(baseband_rate, audio_rate)
+        self._resampler_r = Resampler(baseband_rate, audio_rate)
 
         # User-configurable options
         self._stereo_mode: str = kwargs.get("stereo_mode", "auto")
@@ -217,7 +155,7 @@ class WFMDemodulator(Demodulator):
         elif deemph == "75":
             tau = 75e-6
         else:
-            tau = _detect_deemphasis_tau()
+            tau = detect_deemphasis_tau()
         logger.info("WFM de-emphasis: %.0f µs", tau * 1e6)
         self._deemph_b, self._deemph_a = deemphasis_filter(rate, tau=tau)
 

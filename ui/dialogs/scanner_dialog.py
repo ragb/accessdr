@@ -13,11 +13,7 @@ from typing import Callable, List, Optional
 import wx
 from accessibility import speech
 from core.scanner import Scanner, ScanResult
-
-
-def _fmt_freq(hz: int) -> str:
-    """Format frequency in MHz to 3 decimal places."""
-    return f"{hz / 1e6:.3f} MHz"
+from ui.formatting import fmt_freq
 
 
 class ScannerDialog(wx.Frame):
@@ -132,8 +128,8 @@ class ScannerDialog(wx.Frame):
         self._scanner.start(start_hz, stop_hz, step_hz, squelch)
         speech.output(
             _("Scan started from {start} to {stop}, step {step} kHz.").format(
-                start=_fmt_freq(start_hz),
-                stop=_fmt_freq(stop_hz),
+                start=fmt_freq(start_hz),
+                stop=fmt_freq(stop_hz),
                 step=step_hz // 1000,
             )
         )
@@ -149,12 +145,12 @@ class ScannerDialog(wx.Frame):
     def _on_signal_found(self, result: ScanResult) -> None:
         """Called (via wx.CallAfter) when scanner finds a signal."""
         idx = self._results_list.InsertItem(
-            self._results_list.GetItemCount(), _fmt_freq(result.freq_hz)
+            self._results_list.GetItemCount(), fmt_freq(result.freq_hz)
         )
         self._results_list.SetItem(idx, 1, f"{result.strength_db:.1f}")
         speech.output(
             _("Signal found at {freq}, {db:.0f} dBm.").format(
-                freq=_fmt_freq(result.freq_hz), db=result.strength_db
+                freq=fmt_freq(result.freq_hz), db=result.strength_db
             )
         )
 
