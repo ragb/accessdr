@@ -77,6 +77,7 @@ class SDRBackend(ABC):
     def set_agc_mode(self, on: bool, gain_db: float) -> None: ...
     def set_offset_tuning(self, on: bool) -> None: ...
     def set_tuner_bandwidth(self, bw_hz: int) -> None: ...
+    def set_bias_tee(self, on: bool) -> None: ...
     def cancel_async(self) -> None:
         """Signal an async capture loop to stop (no-op for most backends)."""
 
@@ -133,6 +134,7 @@ class PyRtlSdrBackend(SDRBackend):
         self.set_agc_mode(config.get("agc_mode", False), config.get("gain", 30.0))
         self.set_offset_tuning(config.get("offset_tuning", False))
         self.set_tuner_bandwidth(config.get("tuner_bandwidth", 0))
+        self.set_bias_tee(config.get("bias_tee", False))
 
         logger.info("Opened RTL-SDR device %d", device_index)
         return True
@@ -249,6 +251,13 @@ class PyRtlSdrBackend(SDRBackend):
             except Exception as exc:   # noqa: BLE001
                 logger.warning("set_tuner_bandwidth failed: %s", exc)
 
+    def set_bias_tee(self, on: bool) -> None:
+        if self._dev_handle is not None:
+            try:
+                _librtlsdr.rtlsdr_set_bias_tee(self._dev_handle, int(on))
+            except Exception as exc:   # noqa: BLE001
+                logger.warning("set_bias_tee failed: %s", exc)
+
     def get_valid_gains(self) -> List[float]:
         if self._rtl is not None:
             try:
@@ -283,6 +292,12 @@ class PyRtlSdrBackend(SDRBackend):
             if not hasattr(lib.rtlsdr_cancel_async, "argtypes"):
                 lib.rtlsdr_cancel_async.argtypes = [ctypes.c_void_p]
                 lib.rtlsdr_cancel_async.restype = ctypes.c_int
+        except Exception:   # noqa: BLE001
+            pass
+        try:
+            if not hasattr(lib.rtlsdr_set_bias_tee, "argtypes"):
+                lib.rtlsdr_set_bias_tee.argtypes = [ctypes.c_void_p, ctypes.c_int]
+                lib.rtlsdr_set_bias_tee.restype = ctypes.c_int
         except Exception:   # noqa: BLE001
             pass
 

@@ -26,6 +26,7 @@ class Settings:
     ppm: int = 0
     agc_mode: bool = False
     offset_tuning: bool = False
+    bias_tee: bool = False
     tuner_bandwidth: int = 0         # Hz, 0 = auto
 
     # Audio

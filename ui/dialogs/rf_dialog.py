@@ -154,6 +154,15 @@ class RFDialog(wx.Dialog):
         self._offset_cb.SetValue(self._settings.offset_tuning)
         grid.Add(self._offset_cb, 1, wx.EXPAND)
 
+        grid.Add(wx.StaticText(panel, label=""), 0)
+        self._bias_tee_cb = wx.CheckBox(
+            panel, label=_("Bias Tee (powers antenna via coax)"),
+            name="Bias Tee",
+        )
+        self._bias_tee_cb.SetValue(self._settings.bias_tee)
+        self._bias_tee_cb.Bind(wx.EVT_CHECKBOX, self._on_bias_tee_toggle)
+        grid.Add(self._bias_tee_cb, 1, wx.EXPAND)
+
         # --- Processing ---
         grid.Add(wx.StaticText(panel, label=""), 0)
         self._nb_cb = wx.CheckBox(
@@ -200,6 +209,26 @@ class RFDialog(wx.Dialog):
         on = self._agc_cb.GetValue()
         self._set_gain_enabled(not on)
 
+    def _on_bias_tee_toggle(self, event: wx.CommandEvent) -> None:
+        if not self._bias_tee_cb.GetValue():
+            return  # unchecking — no confirmation needed
+        dlg = wx.MessageDialog(
+            self,
+            _(
+                "Bias Tee supplies 4.5 V DC through the antenna connector.\n\n"
+                "WARNING: This can damage devices or antennas that are not\n"
+                "designed for bias-T power. Only enable this if you are using\n"
+                "an RTL-SDR V3 (or compatible) with a powered LNA, active\n"
+                "antenna, or bias-T powered filter.\n\n"
+                "Enable Bias Tee?"
+            ),
+            _("Bias Tee — Danger"),
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
+        )
+        if dlg.ShowModal() != wx.ID_YES:
+            self._bias_tee_cb.SetValue(False)
+        dlg.Destroy()
+
     def _set_gain_enabled(self, enabled: bool) -> None:
         if self._gain_choice is not None:
             self._gain_choice.Enable(enabled)
@@ -222,6 +251,7 @@ class RFDialog(wx.Dialog):
         self._settings.ppm = self._ppm_spin.GetValue()
         self._settings.agc_mode = self._agc_cb.GetValue()
         self._settings.offset_tuning = self._offset_cb.GetValue()
+        self._settings.bias_tee = self._bias_tee_cb.GetValue()
 
         ifbw_idx = self._ifbw_choice.GetSelection()
         if 0 <= ifbw_idx < len(IF_BW_OPTIONS):

@@ -9,9 +9,17 @@ Output:  dist\\AccessDR\\AccessDR.exe  (one-directory mode, no console)
 """
 
 import os
+import re
 
 block_cipher = None
 PROJ = os.path.abspath(".")
+
+# Read version from accessdr_version.py
+_ver_text = open(os.path.join(PROJ, "accessdr_version.py")).read()
+_ver_match = re.search(r'__version__\s*=\s*"([^"]+)"', _ver_text)
+_version = _ver_match.group(1) if _ver_match else "0.0.0"
+_ver_parts = (_version + ".0.0.0").split(".")[:4]
+_ver_tuple = tuple(int(x) for x in _ver_parts)
 
 a = Analysis(
     ["main.py"],
@@ -75,12 +83,33 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
+# Windows version resource embedded in AccessDR.exe
+from PyInstaller.utils.win32.versioninfo import (
+    VSVersionInfo, FixedFileInfo, StringFileInfo, StringTable,
+    StringStruct, VarFileInfo, VarStruct,
+)
+_vinfo = VSVersionInfo(
+    ffi=FixedFileInfo(filevers=_ver_tuple, prodvers=_ver_tuple),
+    kids=[
+        StringFileInfo([StringTable("040904B0", [
+            StringStruct("CompanyName", "AccessDR Contributors"),
+            StringStruct("FileDescription", "AccessDR — Accessible SDR Radio"),
+            StringStruct("FileVersion", _version),
+            StringStruct("ProductName", "AccessDR"),
+            StringStruct("ProductVersion", _version),
+            StringStruct("LegalCopyright", "MIT License"),
+        ])]),
+        VarFileInfo([VarStruct("Translation", [0x0409, 0x04B0])]),
+    ],
+)
+
 exe = EXE(
     pyz,
     a.scripts,
     [],
     exclude_binaries=True,
     name="AccessDR",
+    version=_vinfo,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

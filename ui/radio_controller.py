@@ -112,6 +112,7 @@ class RadioController:
             self._sdr.set_tuner_bandwidth(self._settings.tuner_bandwidth)
         else:
             self._sdr.set_tuner_bandwidth(0)  # auto
+        self._sdr.set_bias_tee(self._settings.bias_tee)
 
         self._sdr.on_samples = self._pipeline.process
         self._sdr.start()
@@ -188,6 +189,7 @@ class RadioController:
             self._sdr.set_agc_mode(s.agc_mode)
             self._sdr.set_offset_tuning(s.offset_tuning)
             self._sdr.set_tuner_bandwidth(s.tuner_bandwidth)
+            self._sdr.set_bias_tee(s.bias_tee)
         return need_restart
 
     def rebuild_wfm(self) -> None:

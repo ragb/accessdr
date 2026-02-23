@@ -112,6 +112,10 @@ class SDRDevice:
         if self._backend is not None:
             self._backend.set_tuner_bandwidth(bw_hz)
 
+    def set_bias_tee(self, on: bool) -> None:
+        if self._backend is not None:
+            self._backend.set_bias_tee(on)
+
     def get_valid_gains(self) -> List[float]:
         """Return cached list of valid tuner gain values in dB."""
         if self._backend is not None:

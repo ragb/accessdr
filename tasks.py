@@ -297,7 +297,7 @@ def installer(c: Context) -> None:
         print("[installer] Install with: winget install NSIS.NSIS")
         sys.exit(1)
     os.makedirs(os.path.join(PROJECT_ROOT, "dist", "installer"), exist_ok=True)
-    c.run(f'{_q(MAKENSIS)} {_q(NSI_FILE)}', echo=True)
+    c.run(f'{_q(MAKENSIS)} /DVERSION={VERSION} {_q(NSI_FILE)}', echo=True)
     setup = os.path.join(
         PROJECT_ROOT, "dist", "installer", f"AccessDR-{VERSION}-setup.exe"
     )
@@ -325,6 +325,13 @@ def clean(c: Context) -> None:
                 os.remove(os.path.join(root, f))
                 print(f"[clean] Removed {os.path.relpath(os.path.join(root, f), PROJECT_ROOT)}")
     print("[clean] Done.")
+
+
+@task
+def test(c: Context) -> None:
+    """Run the test suite with pytest."""
+    pytest = _find_tool("pytest.exe")
+    c.run(f'{_q(pytest)} -v', echo=True)
 
 
 @task

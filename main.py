@@ -51,9 +51,7 @@ class AccessDRApp(wx.App):
         from i18n import install
         install(self)
 
-        title = _("AccessDR — Accessible SDR Radio v{version}").format(
-            version=__version__
-        )
+        title = _("AccessDR v{version}").format(version=__version__)
         frame = MainWindow(None, title=title)
         self.SetTopWindow(frame)
         frame.Show()

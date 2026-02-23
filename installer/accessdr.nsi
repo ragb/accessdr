@@ -1,18 +1,22 @@
 ; accessdr.nsi — NSIS installer script for AccessDR
 ;
 ; Build with:
-;   "C:\Program Files (x86)\NSIS\makensis.exe" installer\accessdr.nsi
+;   "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=x.y.z installer\accessdr.nsi
 ;
 ; Expects the PyInstaller output at dist\AccessDR\
-; Produces: dist\installer\AccessDR-0.3.0-setup.exe
+; Produces: dist\installer\AccessDR-<VERSION>-setup.exe
 
 !include "MUI2.nsh"
 
 ; ---------------------------------------------------------------------------
 ; General
 ; ---------------------------------------------------------------------------
+!ifndef VERSION
+    !define VERSION "0.0.0"
+!endif
+
 Name "AccessDR"
-OutFile "..\dist\installer\AccessDR-0.3.0-setup.exe"
+OutFile "..\dist\installer\AccessDR-${VERSION}-setup.exe"
 InstallDir "$LOCALAPPDATA\AccessDR"
 InstallDirRegKey HKCU "Software\AccessDR" "InstallDir"
 RequestExecutionLevel user
@@ -53,7 +57,7 @@ Section "AccessDR" SecMain
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AccessDR" \
         "DisplayName" "AccessDR"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AccessDR" \
-        "DisplayVersion" "0.3.0"
+        "DisplayVersion" "${VERSION}"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AccessDR" \
         "Publisher" "AccessDR Contributors"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AccessDR" \

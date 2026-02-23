@@ -807,6 +807,12 @@ class MainWindow(wx.Frame):
             rds_name = getattr(demod, "rds_station", "")
             if rds_name:
                 parts.append(_("RDS: {name}").format(name=rds_name))
+            rds_pty = getattr(demod, "rds_program_type", "")
+            if rds_pty:
+                parts.append(rds_pty)
+            rds_rt = getattr(demod, "rds_text", "")
+            if rds_rt:
+                parts.append(rds_rt)
         if self._settings.mode == "NFM" and demod is not None:
             ctcss = getattr(demod, "ctcss_tone", None)
             if ctcss is not None:

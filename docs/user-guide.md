@@ -183,6 +183,22 @@ The noise blanker suppresses short impulse noise (electrical interference, ignit
 - **Threshold** controls sensitivity — a lower value blanks more aggressively. The default of 5.0 means any sample exceeding 5x the median signal magnitude is treated as an impulse. Raise the threshold if the blanker clips normal signal peaks; lower it if impulse noise persists.
 - Blanked samples are replaced by linear interpolation from neighbouring clean samples, avoiding the clicks that hard zeroing would produce.
 
+### Bias Tee
+
+The Bias Tee option supplies **4.5 V DC power** through the coaxial antenna connector. This is used to power external low-noise amplifiers (LNAs), active antennas, or bias-T powered filters directly from the SDR dongle — no separate power supply needed.
+
+**Supported devices:** RTL-SDR Blog V3 and other dongles with built-in bias-T circuitry. The NESDR SMArt V5 also supports bias-T.
+
+**WARNING:** Enabling Bias Tee on a device or antenna that does not support it can cause **permanent hardware damage**. A passive antenna may be shorted by the DC voltage. Only enable this if you know your entire signal chain (dongle, cables, antenna/LNA) is designed for bias-T power.
+
+**When to use:**
+
+- Powering an LNA mounted at the antenna (e.g. LNA4ALL, Nooelec SAWbird)
+- Powering an active GPS, ADS-B, or L-band antenna
+- Powering a bias-T fed bandpass filter
+
+A confirmation dialog will appear each time you enable this setting to prevent accidental activation.
+
 ## WFM Settings
 
 Open the WFM Settings dialog with ++ctrl+w++ to configure broadcast FM-specific parameters. Changes take effect immediately if you are currently receiving in WFM mode.

@@ -33,6 +33,7 @@ dev = [
     "babel>=2.14",
     "invoke>=2.0",
     "zensical>=0.0.23",
+    "pytest>=8.0",
 ]
 
 [project.scripts]
@@ -40,6 +41,9 @@ accessdr = "main:main"
 
 [tool.setuptools.dynamic]
 version = { attr = "accessdr_version.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 include = ["accessdr*", "ui*", "config*", "core*", "accessibility*"]

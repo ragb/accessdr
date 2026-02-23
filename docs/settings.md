@@ -52,6 +52,7 @@ Also accessible via **Options > RF Settings** (++ctrl+r++).
 |---|---|---|
 | `noise_blanker_enabled` | false | Enable impulse noise blanker on raw IQ |
 | `noise_blanker_threshold` | 5.0 | Blanker threshold (multiplier above median magnitude) |
+| `bias_tee` | false | Enable Bias Tee DC power on antenna connector. WARNING: can damage incompatible devices. |
 
 ## Waterfall Display
 
