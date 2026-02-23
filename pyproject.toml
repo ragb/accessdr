@@ -9,7 +9,7 @@ description = "Accessible SDR radio application for blind and visually impaired 
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
-authors = [{ name = "AccessDR Contributors" }]
+authors = [{ name = "Rui Batista" }]
 keywords = ["sdr", "radio", "accessibility", "blind", "rtl-sdr"]
 classifiers = [
     "Development Status :: 3 - Alpha",

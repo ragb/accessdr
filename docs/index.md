@@ -36,3 +36,7 @@ See the [Getting Started](getting-started.md) guide for detailed setup instructi
 
 - [GitHub Repository](https://github.com/ragb/accessdr)
 - [Latest Release](https://github.com/ragb/accessdr/releases/latest)
+
+## About
+
+AccessDR is created by [Rui Batista](https://github.com/ragb) and released under the [MIT License](https://github.com/ragb/accessdr/blob/master/LICENSE).

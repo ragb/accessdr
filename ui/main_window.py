@@ -161,6 +161,8 @@ class MainWindow(wx.Frame):
         help_menu = wx.Menu()
         item_guide = help_menu.Append(wx.ID_ANY, _("&User Guide…\tCtrl+H"))
         help_menu.Append(wx.ID_HELP, _("&Keyboard Shortcuts…\tF1"))
+        help_menu.AppendSeparator()
+        help_menu.Append(wx.ID_ABOUT, _("&About AccessDR"))
         self.Bind(wx.EVT_MENU, self._on_open_user_guide, item_guide)
         mb.Append(help_menu, _("&Help"))
 
@@ -169,6 +171,7 @@ class MainWindow(wx.Frame):
         # Bind standard IDs
         self.Bind(wx.EVT_MENU, self._on_exit, id=wx.ID_EXIT)
         self.Bind(wx.EVT_MENU, self._on_open_help, id=wx.ID_HELP)
+        self.Bind(wx.EVT_MENU, self._on_open_about, id=wx.ID_ABOUT)
 
     def _build_ui(self) -> None:
         panel = wx.Panel(self)
@@ -939,6 +942,15 @@ class MainWindow(wx.Frame):
 
     def _on_open_help(self, _event) -> None:
         self._open_help_dialog()
+
+    def _on_open_about(self, _event) -> None:
+        self._open_about_dialog()
+
+    def _open_about_dialog(self) -> None:
+        from ui.dialogs.about_dialog import AboutDialog
+        dlg = AboutDialog(self)
+        dlg.ShowModal()
+        dlg.Destroy()
 
     # ==================================================================
     # Callbacks

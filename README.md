@@ -90,6 +90,14 @@ invoke extract-messages   # update locale/accessdr.pot
 invoke compile-messages   # build .mo files
 ```
 
+## About
+
+AccessDR is an accessible software-defined radio application built for blind and visually impaired users. It provides full keyboard navigation, screen reader support, and spectrum sonification, making the world of radio monitoring accessible to everyone.
+
+## Author
+
+Created by [Rui Batista](https://github.com/ragb).
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.
