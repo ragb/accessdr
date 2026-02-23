@@ -83,11 +83,13 @@ class RadioController:
         self._noise_blanker.threshold = self._settings.noise_blanker_threshold
         self._noise_blanker.enabled = self._settings.noise_blanker_enabled
 
-        wfm_kw = self.wfm_kwargs() if self._settings.mode == "WFM" else {}
+        mode = self._settings.mode
+        wfm_kw = self.wfm_kwargs() if mode == "WFM" else {}
+        nfm_kw = self.nfm_kwargs() if mode == "NFM" else {}
         self._pipeline = DSPPipeline(
             sample_rate=self._settings.sample_rate,
             chunk_size=self._sdr.chunk_size,
-            mode=self._settings.mode,
+            mode=mode,
             noise_blanker=self._noise_blanker,
             audio_write=self._audio.write,
             signal_db_setter=lambda db: setattr(self._audio, "signal_db", db),
@@ -95,6 +97,7 @@ class RadioController:
             audio_overruns_getter=lambda: self._audio.audio_overruns,
             fft_size=self._settings.fft_size,
             wfm_kwargs=wfm_kw,
+            nfm_kwargs=nfm_kw,
             callbacks=callbacks,
         )
 
@@ -158,10 +161,15 @@ class RadioController:
         if self._pipeline is not None:
             self._pipeline.notify_retune()
 
-    def set_mode(self, mode: str, wfm_kwargs: Optional[dict] = None) -> None:
+    def set_mode(
+        self,
+        mode: str,
+        wfm_kwargs: Optional[dict] = None,
+        nfm_kwargs: Optional[dict] = None,
+    ) -> None:
         """Change demod mode on pipeline and set tuner BW to auto."""
         if self._pipeline is not None:
-            self._pipeline.set_mode(mode, wfm_kwargs or {})
+            self._pipeline.set_mode(mode, wfm_kwargs or {}, nfm_kwargs or {})
         if self._running:
             self._sdr.set_tuner_bandwidth(0)
 
@@ -187,6 +195,11 @@ class RadioController:
         if self._running and self._settings.mode == "WFM" and self._pipeline:
             self._pipeline.rebuild_demodulator(wfm_kwargs=self.wfm_kwargs())
 
+    def rebuild_nfm(self) -> None:
+        """Rebuild NFM demodulator from current settings."""
+        if self._running and self._settings.mode == "NFM" and self._pipeline:
+            self._pipeline.rebuild_demodulator(nfm_kwargs=self.nfm_kwargs())
+
     def wfm_kwargs(self) -> dict:
         """Build WFM demodulator kwargs from current settings."""
         return dict(
@@ -194,4 +207,11 @@ class RadioController:
             stereo_mode=self._settings.wfm_stereo_mode,
             hiblend_enabled=self._settings.wfm_hiblend_enabled,
             rds_enabled=self._settings.wfm_rds_enabled,
+        )
+
+    def nfm_kwargs(self) -> dict:
+        """Build NFM demodulator kwargs from current settings."""
+        return dict(
+            deviation=self._settings.nfm_deviation,
+            ctcss_notch=self._settings.nfm_ctcss_notch,
         )

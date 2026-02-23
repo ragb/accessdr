@@ -412,11 +412,18 @@ class NFMDemodulator(Demodulator):
     def __init__(self, baseband_rate: int, audio_rate: int, **kwargs) -> None:
         super().__init__(baseband_rate, audio_rate)
         # Discriminator normalization: convert rad/sample → ±1.0 at full deviation
-        self._disc_gain = float(baseband_rate / (2.0 * np.pi * self._MAX_DEVIATION))
+        deviation = float(kwargs.get("deviation", self._MAX_DEVIATION))
+        self._disc_gain = float(baseband_rate / (2.0 * np.pi * deviation))
         self._lp_sos = make_lowpass_iir(8_000, baseband_rate, order=4)
         self._zi_lp = sp_signal.sosfilt_zi(self._lp_sos) * 0.0
         # CTCSS tone detector (operates on resampled audio)
         self._ctcss = CTCSSDetector(audio_rate)
+        # CTCSS notch filter state
+        self._ctcss_notch_enabled: bool = kwargs.get("ctcss_notch", True)
+        self._notch_tone: float | None = None
+        self._notch_b: np.ndarray | None = None
+        self._notch_a: np.ndarray | None = None
+        self._notch_zi: np.ndarray | None = None
 
     @property
     def ctcss_tone(self) -> float | None:
@@ -434,6 +441,21 @@ class NFMDemodulator(Demodulator):
             self._lp_sos, disc, zi=self._zi_lp)
         resampled = self._resample(audio)
         self._ctcss.process(resampled)
+
+        # CTCSS notch: remove sub-audible tone from audio output
+        tone = self._ctcss.detected_tone
+        if not self._ctcss_notch_enabled or tone is None:
+            self._notch_zi = None
+            return resampled
+        # Recompute coefficients when the detected tone changes
+        if tone != self._notch_tone:
+            self._notch_b, self._notch_a = sp_signal.iirnotch(
+                tone, Q=30.0, fs=self.audio_rate)
+            self._notch_zi = sp_signal.lfilter_zi(
+                self._notch_b, self._notch_a) * 0.0
+            self._notch_tone = tone
+        resampled, self._notch_zi = sp_signal.lfilter(
+            self._notch_b, self._notch_a, resampled, zi=self._notch_zi)
         return resampled
 
 

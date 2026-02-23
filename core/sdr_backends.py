@@ -10,7 +10,7 @@ For pyrtlsdr, live tuning calls use the raw C handle rather than
 pyrtlsdr's Python wrappers because the wrappers call self.close() on
 any libusb error — which would destroy the USB handle from the UI
 thread while the capture thread is still reading.  The raw C functions
-are safe to call concurrently with rtlsdr_read_sync.
+are safe to call concurrently with rtlsdr_read_async.
 """
 
 from __future__ import annotations
@@ -77,6 +77,12 @@ class SDRBackend(ABC):
     def set_agc_mode(self, on: bool, gain_db: float) -> None: ...
     def set_offset_tuning(self, on: bool) -> None: ...
     def set_tuner_bandwidth(self, bw_hz: int) -> None: ...
+    def cancel_async(self) -> None:
+        """Signal an async capture loop to stop (no-op for most backends)."""
+
+    def reset_buffer(self) -> None:
+        """Reset internal buffers before starting a new capture session."""
+
     def get_valid_gains(self) -> List[float]:
         return []
 
@@ -91,6 +97,7 @@ class PyRtlSdrBackend(SDRBackend):
     def __init__(self) -> None:
         self._rtl: Optional[_RtlSdrBase] = None
         self._dev_handle = None  # raw C void* for thread-safe calls
+        self._capture_alive: bool = False
 
     def open(self, device_index: int, config: dict) -> bool:
         try:
@@ -132,6 +139,14 @@ class PyRtlSdrBackend(SDRBackend):
 
     def close(self) -> None:
         if self._rtl is not None:
+            if self._capture_alive:
+                logger.error(
+                    "close() called while async capture still alive — "
+                    "leaking USB handle to avoid BSOD"
+                )
+                self._rtl = None
+                self._dev_handle = None
+                return
             try:
                 self._rtl.close()
             except Exception:   # noqa: BLE001
@@ -139,19 +154,44 @@ class PyRtlSdrBackend(SDRBackend):
             self._rtl = None
             self._dev_handle = None
 
-    def stream_loop(self, chunk_size, running, on_samples, on_error):
-        while running():
+    def cancel_async(self) -> None:
+        if self._dev_handle is not None:
             try:
-                samples = self._rtl.read_samples(chunk_size)
+                # Set pyrtlsdr's flag first so its internal callback checker
+                # skips any trailing callbacks and read_bytes_async won't call
+                # self.close() on a negative return code path.
+                if self._rtl is not None:
+                    self._rtl.read_async_canceling = True
+                _librtlsdr.rtlsdr_cancel_async(self._dev_handle)
             except Exception as exc:   # noqa: BLE001
-                if running():
-                    logger.error("pyrtlsdr read error: %s", exc)
-                    if on_error:
-                        on_error(f"Stream error: {exc}")
-                break
+                logger.warning("cancel_async failed: %s", exc)
+
+    def reset_buffer(self) -> None:
+        if self._dev_handle is not None:
+            try:
+                _librtlsdr.rtlsdr_reset_buffer(self._dev_handle)
+            except Exception as exc:   # noqa: BLE001
+                logger.warning("reset_buffer failed: %s", exc)
+
+    def stream_loop(self, chunk_size, running, on_samples, on_error):
+        def _on_samples(samples, rtlsdr_obj):
+            if not running():
+                self.cancel_async()
+                return
             chunk = np.asarray(samples, dtype=np.complex64)
             if on_samples is not None:
                 on_samples(chunk)
+
+        self._capture_alive = True
+        try:
+            self._rtl.read_samples_async(_on_samples, num_samples=chunk_size)
+        except Exception as exc:   # noqa: BLE001
+            if running():
+                logger.error("pyrtlsdr async read error: %s", exc)
+                if on_error:
+                    on_error(f"Stream error: {exc}")
+        finally:
+            self._capture_alive = False
 
     # -- Live setters (raw C — safe during concurrent reads) --
 
@@ -231,6 +271,18 @@ class PyRtlSdrBackend(SDRBackend):
             if not hasattr(lib.rtlsdr_set_tuner_bandwidth, "argtypes"):
                 lib.rtlsdr_set_tuner_bandwidth.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
                 lib.rtlsdr_set_tuner_bandwidth.restype = ctypes.c_int
+        except Exception:   # noqa: BLE001
+            pass
+        try:
+            if not hasattr(lib.rtlsdr_reset_buffer, "argtypes"):
+                lib.rtlsdr_reset_buffer.argtypes = [ctypes.c_void_p]
+                lib.rtlsdr_reset_buffer.restype = ctypes.c_int
+        except Exception:   # noqa: BLE001
+            pass
+        try:
+            if not hasattr(lib.rtlsdr_cancel_async, "argtypes"):
+                lib.rtlsdr_cancel_async.argtypes = [ctypes.c_void_p]
+                lib.rtlsdr_cancel_async.restype = ctypes.c_int
         except Exception:   # noqa: BLE001
             pass
 

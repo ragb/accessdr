@@ -65,6 +65,15 @@ Accessible via **Options > Spectrum Settings** (++ctrl+s++).
 
 The waterfall is always displayed below the line graph. The top 40% of the spectrum panel shows the line graph, and the bottom 60% shows the waterfall spectrogram scrolling newest-at-top. All three colour schemes are designed to be safe for colour-blind users (CVD-safe).
 
+## NFM Settings
+
+Accessible via **Options > NFM Settings** (++ctrl+shift+n++).
+
+| Setting | Default | Description |
+|---|---|---|
+| `nfm_deviation` | 5000 Hz | FM deviation: 5000 Hz (standard 25 kHz channels) or 2500 Hz (PMR446 12.5 kHz channels) |
+| `nfm_ctcss_notch` | true | Remove detected CTCSS sub-audible tone from audio output. Eliminates the low-frequency hum on channels that use tone squelch. |
+
 ## WFM Settings
 
 Accessible via **Options > WFM Settings** (++ctrl+w++).

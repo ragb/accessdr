@@ -13,6 +13,7 @@ from typing import Callable, List, Optional
 
 import numpy as np
 
+from core.platform_utils import elevate_dsp_priority
 from core.sdr_backends import SDRBackend, create_backend, enumerate_devices  # noqa: F401
 
 logger = logging.getLogger(__name__)
@@ -125,13 +126,20 @@ class SDRDevice:
         if self._running:
             return
         self._running = True
+        if self._backend is not None:
+            self._backend.reset_buffer()
         self._thread = threading.Thread(
             target=self._stream_loop, daemon=True, name="SDRCapture"
         )
         self._thread.start()
+        elevate_dsp_priority(self._thread)
 
     def stop(self) -> None:
         self._running = False
+        # Don't call cancel_async() from the main thread — on Windows/WinUSB,
+        # cross-thread rtlsdr_cancel_async while rtlsdr_read_async is running
+        # can cause access violations.  The async callback checks running()
+        # and calls cancel_async() from the capture thread itself.
         if self._thread is not None:
             self._thread.join(timeout=5.0)
             if self._thread.is_alive():

@@ -70,6 +70,7 @@ OPEN_SCANNER_DIALOG = "open_scanner_dialog"
 OPEN_BOOKMARKS_DIALOG = "open_bookmarks_dialog"
 OPEN_AUDIO_DIALOG = "open_audio_dialog"
 OPEN_WFM_DIALOG = "open_wfm_dialog"
+OPEN_NFM_DIALOG = "open_nfm_dialog"
 OPEN_USER_GUIDE = "open_user_guide"
 
 # --- Window ---
@@ -149,6 +150,7 @@ def _build_keymap() -> dict[tuple[int, int], str]:
         (ord("B"), M):               OPEN_BOOKMARKS_DIALOG,
         (ord("D"), M):               OPEN_AUDIO_DIALOG,
         (ord("W"), M):               OPEN_WFM_DIALOG,
+        (ord("N"), M | S):           OPEN_NFM_DIALOG,
         (ord("H"), M):               OPEN_USER_GUIDE,
 
         # Help

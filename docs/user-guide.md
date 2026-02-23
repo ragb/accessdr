@@ -85,6 +85,8 @@ Used by most **two-way radio** systems: amateur (ham) radio repeaters, PMR446 wa
 
 NFM includes **CTCSS tone detection** — when a repeater or radio system uses a sub-audible tone (67.0–254.1 Hz) for access control, AccessDR detects and reports the tone. Press ++i++ to hear the detected CTCSS tone along with signal information.
 
+A **CTCSS notch filter** automatically removes the detected sub-audible tone from the audio output, eliminating the low-frequency hum that can be distracting on speakers or headphones with good bass response. The notch filter is enabled by default and can be toggled in **Options > NFM Settings** (++ctrl+shift+n++).
+
 ### AM — Amplitude Modulation
 
 Used for **AM broadcast radio** (530 kHz–1.71 MHz), **aviation communications** (108–137 MHz air band), and **shortwave broadcasts**. AM is simpler than FM and works well over long distances, which is why it is used for aircraft and international broadcasting. Typical bandwidth: 6–10 kHz.

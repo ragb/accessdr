@@ -149,10 +149,12 @@ class MainWindow(wx.Frame):
         item_spectrum = options_menu.Append(wx.ID_ANY, _("&Spectrum Settings…\tCtrl+S"))
         item_audio = options_menu.Append(wx.ID_ANY, _("&Audio Settings…\tCtrl+D"))
         item_wfm = options_menu.Append(wx.ID_ANY, _("&WFM Settings…\tCtrl+W"))
+        item_nfm = options_menu.Append(wx.ID_ANY, _("&NFM Settings…"))
         self.Bind(wx.EVT_MENU, lambda e: self._open_rf_dialog(), item_rf)
         self.Bind(wx.EVT_MENU, lambda e: self._open_spectrum_dialog(), item_spectrum)
         self.Bind(wx.EVT_MENU, lambda e: self._open_audio_dialog(), item_audio)
         self.Bind(wx.EVT_MENU, lambda e: self._open_wfm_dialog(), item_wfm)
+        self.Bind(wx.EVT_MENU, lambda e: self._open_nfm_dialog(), item_nfm)
         mb.Append(options_menu, _("&Options"))
 
         # Help
@@ -440,7 +442,8 @@ class MainWindow(wx.Frame):
         self._settings.mode = mode
         self._update_bw_choices(mode)
         wfm_kw = self._radio.wfm_kwargs() if mode == "WFM" else {}
-        self._radio.set_mode(mode, wfm_kw)
+        nfm_kw = self._radio.nfm_kwargs() if mode == "NFM" else {}
+        self._radio.set_mode(mode, wfm_kw, nfm_kw)
         speech.output(_("Mode {mode}").format(mode=mode))
 
     def _on_bw_change(self, event: wx.CommandEvent) -> None:
@@ -458,7 +461,8 @@ class MainWindow(wx.Frame):
         self._settings.mode = mode
         self._update_bw_choices(mode)
         wfm_kw = self._radio.wfm_kwargs() if mode == "WFM" else {}
-        self._radio.set_mode(mode, wfm_kw)
+        nfm_kw = self._radio.nfm_kwargs() if mode == "NFM" else {}
+        self._radio.set_mode(mode, wfm_kw, nfm_kw)
         speech.output(_("Mode {mode}").format(mode=mode))
 
     # ==================================================================
@@ -760,6 +764,7 @@ class MainWindow(wx.Frame):
             kb.OPEN_BOOKMARKS_DIALOG: self._open_bookmarks_dialog,
             kb.OPEN_AUDIO_DIALOG:   self._open_audio_dialog,
             kb.OPEN_WFM_DIALOG:     self._open_wfm_dialog,
+            kb.OPEN_NFM_DIALOG:     self._open_nfm_dialog,
             kb.OPEN_USER_GUIDE:     lambda: self._on_open_user_guide(None),
             kb.OPEN_HELP:           self._open_help_dialog,
         }
@@ -912,6 +917,13 @@ class MainWindow(wx.Frame):
             self._on_wfm_settings_changed()
         dlg.Destroy()
 
+    def _open_nfm_dialog(self) -> None:
+        from ui.dialogs.nfm_dialog import NFMDialog
+        dlg = NFMDialog(self, self._settings)
+        if dlg.ShowModal() == wx.ID_OK:
+            self._on_nfm_settings_changed()
+        dlg.Destroy()
+
     def _open_help_dialog(self) -> None:
         from ui.dialogs.help_dialog import HelpDialog
         self._open_or_raise("help", lambda: HelpDialog(self))
@@ -939,6 +951,10 @@ class MainWindow(wx.Frame):
     def _on_wfm_settings_changed(self) -> None:
         """Apply WFM settings changes — rebuild demodulator if in WFM mode."""
         self._radio.rebuild_wfm()
+
+    def _on_nfm_settings_changed(self) -> None:
+        """Apply NFM settings changes — rebuild demodulator if in NFM mode."""
+        self._radio.rebuild_nfm()
 
     def _on_rf_settings_changed(self, settings: Settings) -> None:
         self._settings = settings

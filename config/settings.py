@@ -55,6 +55,10 @@ class Settings:
     noise_blanker_enabled: bool = False
     noise_blanker_threshold: float = 5.0   # multiplier above median magnitude
 
+    # NFM
+    nfm_deviation: int = 5000           # Hz, 5000 = standard, 2500 = PMR446
+    nfm_ctcss_notch: bool = True        # remove detected CTCSS tone from audio
+
     # WFM
     wfm_deemphasis: str = "auto"        # "auto" | "50" | "75"
     wfm_stereo_mode: str = "auto"       # "auto" | "mono" | "stereo"

@@ -56,6 +56,7 @@ class DSPPipeline:
         audio_overruns_getter: Callable[[], int],
         fft_size: int = 1024,
         wfm_kwargs: Optional[dict] = None,
+        nfm_kwargs: Optional[dict] = None,
         callbacks: Optional[PipelineCallbacks] = None,
     ) -> None:
         self._sample_rate = sample_rate
@@ -78,9 +79,13 @@ class DSPPipeline:
         )
 
         # DSP objects
+        self._nfm_kwargs = nfm_kwargs or {}
+        init_kwargs = (wfm_kwargs or {}) if mode == "WFM" else (
+            self._nfm_kwargs if mode == "NFM" else {}
+        )
         self._demodulator: Demodulator = make_demodulator(
             mode, self._baseband_rate, AUDIO_RATE,
-            **(wfm_kwargs or {}),
+            **init_kwargs,
         )
         self._decimator = StatefulDecimator(
             factor=sample_rate // self._baseband_rate,
@@ -129,16 +134,32 @@ class DSPPipeline:
     def demodulator(self) -> Demodulator:
         return self._demodulator
 
-    def set_mode(self, mode: str, wfm_kwargs: Optional[dict] = None) -> None:
+    def set_mode(
+        self,
+        mode: str,
+        wfm_kwargs: Optional[dict] = None,
+        nfm_kwargs: Optional[dict] = None,
+    ) -> None:
         """Request a mode change — takes effect on the next process() call."""
         self._mode = mode
         self._wfm_kwargs = wfm_kwargs or {}
+        self._nfm_kwargs = nfm_kwargs or {}
 
-    def rebuild_demodulator(self, wfm_kwargs: Optional[dict] = None) -> None:
+    def rebuild_demodulator(
+        self,
+        wfm_kwargs: Optional[dict] = None,
+        nfm_kwargs: Optional[dict] = None,
+    ) -> None:
         """Force-rebuild the demodulator with new parameters."""
         if wfm_kwargs is not None:
             self._wfm_kwargs = wfm_kwargs
-        kwargs = self._wfm_kwargs if self._mode == "WFM" else {}
+        if nfm_kwargs is not None:
+            self._nfm_kwargs = nfm_kwargs
+        kwargs = (
+            self._wfm_kwargs if self._mode == "WFM"
+            else self._nfm_kwargs if self._mode == "NFM"
+            else {}
+        )
         self._demodulator = make_demodulator(
             self._mode, self._baseband_rate, AUDIO_RATE, **kwargs,
         )
@@ -170,7 +191,11 @@ class DSPPipeline:
         # Rebuild demodulator if mode changed
         if self._mode != self._demod_built_mode:
             self._demod_built_mode = self._mode
-            kwargs = self._wfm_kwargs if self._mode == "WFM" else {}
+            kwargs = (
+                self._wfm_kwargs if self._mode == "WFM"
+                else self._nfm_kwargs if self._mode == "NFM"
+                else {}
+            )
             self._demodulator = make_demodulator(
                 self._mode, self._baseband_rate, AUDIO_RATE, **kwargs,
             )
