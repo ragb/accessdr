@@ -305,6 +305,43 @@ The scanner automatically steps through a frequency range, pausing on active sig
 
 When a signal is found, the scanner pauses briefly so you can listen, then continues.
 
+## Remote SDR (rtl_tcp)
+
+AccessDR can receive IQ data from a remote `rtl_tcp` server instead of a locally connected USB dongle. This is useful when the antenna and SDR dongle are in a different location — for example a Raspberry Pi on the roof running `rtl_tcp`, streaming data to your PC over the network.
+
+### Setting Up a Remote Server
+
+On the remote machine (e.g. Raspberry Pi), start `rtl_tcp`:
+
+```bash
+rtl_tcp -a 0.0.0.0
+```
+
+This listens on port 1234 by default. Use `-p` to change the port.
+
+### Managing Servers
+
+Open the Remote SDR Servers dialog with ++ctrl+g++ to manage your server list:
+
+- **Add** — enter a name (e.g. "Roof Pi"), host address (IP or hostname), and port
+- **Edit** — modify the name, host, or port of a selected server
+- **Remove** — delete a selected server from the list
+- **Test Connection** — verify that the server is reachable and responding with a valid rtl_tcp handshake
+
+Changes are saved immediately on each action. You can configure zero or more servers.
+
+### Selecting a Remote Server
+
+Configured servers appear in the RF Settings device dropdown (++ctrl+r++) alongside local USB devices. Select a remote server to switch to it — the radio will restart using the rtl_tcp backend. Select a local device to switch back.
+
+When receiving from a remote server, the status bar shows the server name and the spoken status (++i++) includes the remote connection info.
+
+### Limitations
+
+- **Latency** — network latency adds delay to the audio. A local network (LAN or Wi-Fi) works well; a slow internet connection may cause dropouts.
+- **Bandwidth** — rtl_tcp streams raw IQ data at the full sample rate. At 2.4 MSPS, this is about 4.8 MB/s (38 Mbit/s). Ensure your network can handle this.
+- **Single client** — a standard rtl_tcp server supports one client at a time.
+
 ## Bookmarks
 
 Save and recall favourite frequencies:

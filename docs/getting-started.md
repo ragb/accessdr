@@ -3,7 +3,7 @@
 ## Requirements
 
 - **Operating System:** Windows 10 or 11
-- **Hardware:** Any RTL2832U-based SDR dongle (e.g. NESDR SMArt, RTL-SDR Blog V3/V4, generic RTL-SDR)
+- **Hardware:** Any RTL2832U-based SDR dongle (e.g. NESDR SMArt, RTL-SDR Blog V3/V4, generic RTL-SDR), or a remote `rtl_tcp` server on the network
 - **Screen reader:** NVDA, JAWS, or Windows Narrator (optional but recommended)
 
 ## Hardware Setup

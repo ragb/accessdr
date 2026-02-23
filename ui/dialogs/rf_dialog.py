@@ -63,11 +63,23 @@ class RFDialog(wx.Dialog):
 
         # --- Device ---
         devices = enumerate_devices()
-        device_labels = [d.get("label", str(d)) for d in devices] or [_("Default / Auto")]
+        self._local_labels = [d.get("label", str(d)) for d in devices] or [_("Default / Auto")]
+        self._local_count = len(self._local_labels)
+        self._remote_labels = []
+        for srv in self._settings.rtl_tcp_servers:
+            name = srv.get("name", srv.get("host", "?"))
+            host = srv.get("host", "?")
+            port = srv.get("port", 1234)
+            self._remote_labels.append(f"{name} ({host}:{port})")
+        all_labels = self._local_labels + self._remote_labels
         grid.Add(wx.StaticText(panel, label=_("SDR Device:")), 0, wx.ALIGN_CENTER_VERTICAL)
-        self._device_choice = wx.Choice(panel, choices=device_labels, name="SDR Device")
-        idx = min(self._settings.device_index, len(device_labels) - 1)
-        self._device_choice.SetSelection(idx)
+        self._device_choice = wx.Choice(panel, choices=all_labels, name="SDR Device")
+        active = self._settings.rtl_tcp_active
+        if 0 <= active < len(self._remote_labels):
+            self._device_choice.SetSelection(self._local_count + active)
+        else:
+            idx = min(self._settings.device_index, self._local_count - 1)
+            self._device_choice.SetSelection(idx)
         grid.Add(self._device_choice, 1, wx.EXPAND)
 
         # --- Gain / AGC ---
@@ -236,7 +248,12 @@ class RFDialog(wx.Dialog):
             self._gain_slider.Enable(enabled)
 
     def _on_ok(self, _event: wx.CommandEvent) -> None:
-        self._settings.device_index = self._device_choice.GetSelection()
+        sel = self._device_choice.GetSelection()
+        if sel >= self._local_count:
+            self._settings.rtl_tcp_active = sel - self._local_count
+        else:
+            self._settings.rtl_tcp_active = -1
+            self._settings.device_index = sel
         rate_idx = self._rate_choice.GetSelection()
         if 0 <= rate_idx < len(SAMPLE_RATES):
             self._settings.sample_rate = SAMPLE_RATES[rate_idx]

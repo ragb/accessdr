@@ -18,6 +18,7 @@ Software-defined radio uses a small USB dongle to receive radio signals across a
 - **Noise blanker** — suppresses impulse noise from electrical interference
 - **Waterfall display** — real-time spectrogram with CVD-safe colour schemes (Viridis, Magma, Grayscale) for spotting intermittent signals and drift
 - **Spectrum sonification** — hear the RF spectrum as a sweeping tone that maps signal strength to volume and frequency position to pitch
+- **Remote SDR (rtl_tcp)** — stream IQ data from a remote rtl_tcp server over the network, with multi-server management
 - **Frequency scanner** — automatically scan a range and stop on active signals
 - **Bookmarks** — save and recall your favourite frequencies
 - **Band presets** — jump to common bands (FM, Air, Amateur, Weather, Marine) with a single menu selection

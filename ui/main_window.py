@@ -150,11 +150,14 @@ class MainWindow(wx.Frame):
         item_audio = options_menu.Append(wx.ID_ANY, _("&Audio Settings…\tCtrl+D"))
         item_wfm = options_menu.Append(wx.ID_ANY, _("&WFM Settings…\tCtrl+W"))
         item_nfm = options_menu.Append(wx.ID_ANY, _("&NFM Settings…"))
+        options_menu.AppendSeparator()
+        item_rtl_tcp = options_menu.Append(wx.ID_ANY, _("Remote SD&R…\tCtrl+G"))
         self.Bind(wx.EVT_MENU, lambda e: self._open_rf_dialog(), item_rf)
         self.Bind(wx.EVT_MENU, lambda e: self._open_spectrum_dialog(), item_spectrum)
         self.Bind(wx.EVT_MENU, lambda e: self._open_audio_dialog(), item_audio)
         self.Bind(wx.EVT_MENU, lambda e: self._open_wfm_dialog(), item_wfm)
         self.Bind(wx.EVT_MENU, lambda e: self._open_nfm_dialog(), item_nfm)
+        self.Bind(wx.EVT_MENU, lambda e: self._open_rtl_tcp_dialog(), item_rtl_tcp)
         mb.Append(options_menu, _("&Options"))
 
         # Help
@@ -477,9 +480,11 @@ class MainWindow(wx.Frame):
             return
         self._cursor.set_pipeline(self._radio.pipeline)
         self._start_btn.SetLabel(_("\u25a0 Stop"))
-        self._statusbar.SetStatusText(
-            _("Receiving — {freq}").format(freq=fmt_freq(self._cursor.listening_freq()))
-        )
+        status = _("Receiving — {freq}").format(freq=fmt_freq(self._cursor.listening_freq()))
+        srv = self._settings.active_rtl_tcp_server()
+        if srv is not None:
+            status += _(" [Remote: {name}]").format(name=srv.get("name", ""))
+        self._statusbar.SetStatusText(status)
         speech.output(_("Radio started."))
 
     def _stop_radio(self) -> None:
@@ -754,6 +759,7 @@ class MainWindow(wx.Frame):
             kb.OPEN_AUDIO_DIALOG:   self._open_audio_dialog,
             kb.OPEN_WFM_DIALOG:     self._open_wfm_dialog,
             kb.OPEN_NFM_DIALOG:     self._open_nfm_dialog,
+            kb.OPEN_RTL_TCP_DIALOG: self._open_rtl_tcp_dialog,
             kb.OPEN_USER_GUIDE:     lambda: self._on_open_user_guide(None),
             kb.OPEN_HELP:           self._open_help_dialog,
         }
@@ -873,10 +879,18 @@ class MainWindow(wx.Frame):
 
     def _open_rf_dialog(self) -> None:
         from ui.dialogs.rf_dialog import RFDialog
+        old_active = self._settings.rtl_tcp_active
         valid_gains = self._radio.get_valid_gains() if self._radio.running else []
         dlg = RFDialog(self, self._settings, valid_gains=valid_gains)
         if dlg.ShowModal() == wx.ID_OK:
-            self._on_rf_settings_changed(self._settings)
+            backend_changed = self._settings.rtl_tcp_active != old_active
+            if backend_changed and (self._radio.running or self._radio.paused):
+                self._stop_radio()
+                self._start_radio()
+                self._update_backend_status()
+            else:
+                self._on_rf_settings_changed(self._settings)
+                self._update_backend_status()
         dlg.Destroy()
 
     def _open_spectrum_dialog(self) -> None:
@@ -918,6 +932,36 @@ class MainWindow(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             self._on_nfm_settings_changed()
         dlg.Destroy()
+
+    def _open_rtl_tcp_dialog(self) -> None:
+        from ui.dialogs.rtl_tcp_dialog import RtlTcpDialog
+        import copy
+        old_active = self._settings.rtl_tcp_active
+        old_srv = copy.deepcopy(self._settings.active_rtl_tcp_server())
+        dlg = RtlTcpDialog(self, self._settings)
+        dlg.ShowModal()
+        dlg.Destroy()
+        # Check if the active server was removed or modified
+        new_srv = self._settings.active_rtl_tcp_server()
+        if self._radio.running or self._radio.paused:
+            if old_srv != new_srv or self._settings.rtl_tcp_active != old_active:
+                self._stop_radio()
+                self._start_radio()
+        self._update_backend_status()
+
+    def _update_backend_status(self) -> None:
+        """Update status bar to reflect current backend mode."""
+        srv = self._settings.active_rtl_tcp_server()
+        if srv is not None:
+            self._statusbar.SetStatusText(
+                _("Remote: {name} ({host}:{port})").format(
+                    name=srv.get("name", ""),
+                    host=srv.get("host", ""),
+                    port=srv.get("port", 1234),
+                )
+            )
+        elif not self._radio.running:
+            self._statusbar.SetStatusText(_("Ready — no device connected."))
 
     def _open_help_dialog(self) -> None:
         from ui.dialogs.help_dialog import HelpDialog

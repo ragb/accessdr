@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: accessdr 0.4.0\n"
+"Project-Id-Version: accessdr 0.5.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-23 11:58+0000\n"
+"POT-Creation-Date: 2026-02-23 22:36+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -159,303 +159,317 @@ msgstr ""
 msgid "&NFM Settings…"
 msgstr ""
 
-#: ui/main_window.py:158
+#: ui/main_window.py:154
+msgid "Remote SD&R…\tCtrl+G"
+msgstr ""
+
+#: ui/main_window.py:161
 msgid "&Options"
 msgstr ""
 
-#: ui/main_window.py:162
+#: ui/main_window.py:165
 msgid "&User Guide…\tCtrl+H"
 msgstr ""
 
-#: ui/main_window.py:163
+#: ui/main_window.py:166
 msgid "&Keyboard Shortcuts…\tF1"
 msgstr ""
 
-#: ui/main_window.py:165
+#: ui/main_window.py:168
 msgid "&About AccessDR"
 msgstr ""
 
-#: ui/main_window.py:167
+#: ui/main_window.py:170
 msgid "&Help"
 msgstr ""
 
-#: ui/main_window.py:183
+#: ui/main_window.py:186
 msgid "Frequency:"
 msgstr ""
 
-#: ui/main_window.py:206
+#: ui/main_window.py:209
 msgid "Step:"
 msgstr ""
 
-#: ui/dialogs/bookmarks_dialog.py:74 ui/main_window.py:219
+#: ui/dialogs/bookmarks_dialog.py:74 ui/main_window.py:222
 msgid "Mode:"
 msgstr ""
 
-#: ui/main_window.py:224
+#: ui/main_window.py:227
 msgid "BW:"
 msgstr ""
 
-#: ui/main_window.py:234 ui/main_window.py:489
+#: ui/main_window.py:237 ui/main_window.py:494
 msgid "▶ Start"
 msgstr ""
 
-#: ui/main_window.py:237 ui/main_window.py:488
+#: ui/main_window.py:240 ui/main_window.py:493
 msgid "Signal: —"
 msgstr ""
 
-#: ui/main_window.py:245
+#: ui/main_window.py:248
 msgid "Volume:"
 msgstr ""
 
-#: ui/main_window.py:254
+#: ui/main_window.py:257
 msgid "Mute (M)"
 msgstr ""
 
-#: ui/dialogs/scanner_dialog.py:65 ui/main_window.py:264
+#: ui/dialogs/scanner_dialog.py:65 ui/main_window.py:267
 msgid "Squelch (dBm):"
 msgstr ""
 
-#: ui/main_window.py:283 ui/main_window.py:645
+#: ui/main_window.py:286 ui/main_window.py:650
 msgid "Start Sweep (Ctrl+F5)"
 msgstr ""
 
-#: ui/main_window.py:320
+#: ui/main_window.py:323 ui/main_window.py:964
 msgid "Ready — no device connected."
 msgstr ""
 
-#: ui/main_window.py:349
+#: ui/main_window.py:352
 #, python-brace-format
 msgid "Tuned to {freq}"
 msgstr ""
 
-#: ui/main_window.py:368
+#: ui/main_window.py:371
 #, python-brace-format
 msgid "Enter frequency ({unit}):"
 msgstr ""
 
-#: ui/main_window.py:369
+#: ui/main_window.py:372
 msgid "Tune to Frequency"
 msgstr ""
 
-#: ui/dialogs/bookmarks_dialog.py:126 ui/main_window.py:376
-#: ui/main_window.py:397
+#: ui/dialogs/bookmarks_dialog.py:126 ui/main_window.py:379
+#: ui/main_window.py:400
 msgid "Invalid frequency."
 msgstr ""
 
-#: ui/main_window.py:389
+#: ui/main_window.py:392
 #, python-brace-format
 msgid "Enter listening frequency ({unit}):"
 msgstr ""
 
-#: ui/main_window.py:390
+#: ui/main_window.py:393
 msgid "Set Listening Frequency"
 msgstr ""
 
-#: ui/main_window.py:402 ui/main_window.py:713 ui/main_window.py:824
+#: ui/main_window.py:405 ui/main_window.py:718 ui/main_window.py:836
 #, python-brace-format
 msgid "Listening {freq}"
 msgstr ""
 
-#: ui/main_window.py:408 ui/main_window.py:414
+#: ui/main_window.py:411 ui/main_window.py:417
 #, python-brace-format
 msgid "Step {step}"
 msgstr ""
 
-#: ui/main_window.py:436 ui/main_window.py:455
+#: ui/main_window.py:439 ui/main_window.py:458
 #, python-brace-format
 msgid "Mode {mode}"
 msgstr ""
 
-#: ui/main_window.py:444
+#: ui/main_window.py:447
 #, python-brace-format
 msgid "Bandwidth {bw}"
 msgstr ""
 
-#: ui/main_window.py:476
+#: ui/main_window.py:479
 msgid "Could not open SDR device."
 msgstr ""
 
-#: ui/main_window.py:479 ui/main_window.py:508
+#: ui/main_window.py:482 ui/main_window.py:513
 msgid "■ Stop"
 msgstr ""
 
-#: ui/main_window.py:481 ui/main_window.py:510
+#: ui/main_window.py:483 ui/main_window.py:515
 #, python-brace-format
 msgid "Receiving — {freq}"
 msgstr ""
 
-#: ui/main_window.py:483
+#: ui/main_window.py:486
+#, python-brace-format
+msgid " [Remote: {name}]"
+msgstr ""
+
+#: ui/main_window.py:488
 msgid "Radio started."
 msgstr ""
 
-#: ui/dialogs/scanner_dialog.py:139 ui/main_window.py:490
+#: ui/dialogs/scanner_dialog.py:139 ui/main_window.py:495
 msgid "Stopped."
 msgstr ""
 
-#: ui/main_window.py:491
+#: ui/main_window.py:496
 msgid "Radio stopped."
 msgstr ""
 
-#: ui/main_window.py:500
+#: ui/main_window.py:505
 msgid "▶ Resume"
 msgstr ""
 
-#: ui/main_window.py:502
+#: ui/main_window.py:507
 #, python-brace-format
 msgid "Paused — {freq}"
 msgstr ""
 
-#: ui/main_window.py:504
+#: ui/main_window.py:509
 msgid "Paused."
 msgstr ""
 
-#: ui/main_window.py:512
+#: ui/main_window.py:517
 msgid "Resumed."
 msgstr ""
 
-#: ui/main_window.py:520 ui/main_window.py:806
+#: ui/main_window.py:525 ui/main_window.py:812
 msgid "Stereo"
 msgstr ""
 
-#: ui/main_window.py:520 ui/main_window.py:806
+#: ui/main_window.py:525 ui/main_window.py:812
 msgid "Mono"
 msgstr ""
 
-#: ui/main_window.py:523
+#: ui/main_window.py:528
 #, python-brace-format
 msgid "Receiving — {freq} [{label}]"
 msgstr ""
 
-#: ui/main_window.py:530 ui/main_window.py:809
+#: ui/main_window.py:535 ui/main_window.py:815
 #, python-brace-format
 msgid "RDS: {name}"
 msgstr ""
 
-#: ui/main_window.py:540
+#: ui/main_window.py:545
 #, python-brace-format
 msgid "Signal: {db:.1f} dBFS  [{s_unit}]"
 msgstr ""
 
-#: ui/main_window.py:561
+#: ui/main_window.py:566
 #, python-brace-format
 msgid "Spectrum {start} to {end}"
 msgstr ""
 
-#: ui/main_window.py:572
+#: ui/main_window.py:577
 #, python-brace-format
 msgid "Signal {s_unit}, {db:.0f} dBFS"
 msgstr ""
 
-#: ui/main_window.py:587 ui/main_window.py:609
+#: ui/main_window.py:592 ui/main_window.py:614
 #, python-brace-format
 msgid "Volume {v} percent"
 msgstr ""
 
-#: ui/main_window.py:593 ui/main_window.py:772 ui/main_window.py:819
+#: ui/main_window.py:598 ui/main_window.py:778 ui/main_window.py:831
 msgid "Muted"
 msgstr ""
 
-#: ui/main_window.py:593 ui/main_window.py:772
+#: ui/main_window.py:598 ui/main_window.py:778
 msgid "Unmuted"
 msgstr ""
 
-#: ui/main_window.py:600 ui/main_window.py:618
+#: ui/main_window.py:605 ui/main_window.py:623
 #, python-brace-format
 msgid "Squelch {val:.0f} dBm"
 msgstr ""
 
-#: ui/main_window.py:628
+#: ui/main_window.py:633
 msgid "Noise blanker on"
 msgstr ""
 
-#: ui/main_window.py:629
+#: ui/main_window.py:634
 msgid "Noise blanker off"
 msgstr ""
 
-#: ui/main_window.py:646
+#: ui/main_window.py:651
 msgid "Continuous sweep stopped."
 msgstr ""
 
-#: ui/main_window.py:653
+#: ui/main_window.py:658
 msgid "Stop Sweep (Ctrl+F5)"
 msgstr ""
 
-#: ui/main_window.py:654
+#: ui/main_window.py:659
 msgid "Continuous sweep started."
 msgstr ""
 
-#: ui/main_window.py:693
+#: ui/main_window.py:698
 msgid "Modulation selection cancelled."
 msgstr ""
 
-#: ui/main_window.py:712
+#: ui/main_window.py:717
 #, python-brace-format
 msgid "LO {freq}"
 msgstr ""
 
-#: ui/main_window.py:776
+#: ui/main_window.py:782
 msgid "Select modulation."
 msgstr ""
 
-#: ui/main_window.py:783
+#: ui/main_window.py:789
 msgid "Sonification snapshot."
 msgstr ""
 
-#: ui/main_window.py:787
+#: ui/main_window.py:793
 msgid "on"
 msgstr ""
 
-#: ui/main_window.py:787
+#: ui/main_window.py:793
 msgid "off"
 msgstr ""
 
-#: ui/main_window.py:788
+#: ui/main_window.py:794
 #, python-brace-format
 msgid "Demod follows cursor {state}"
 msgstr ""
 
-#: ui/main_window.py:795
+#: ui/main_window.py:801
 msgid "Radio not running."
 msgstr ""
 
-#: ui/main_window.py:799
+#: ui/main_window.py:805
 #, python-brace-format
 msgid "Signal {db:.1f} dBFS, {s_unit}"
 msgstr ""
 
-#: ui/main_window.py:813
+#: ui/main_window.py:825
 #, python-brace-format
 msgid "CTCSS {tone:.1f} Hz"
 msgstr ""
 
-#: ui/main_window.py:816
+#: ui/main_window.py:828
 msgid "Squelch open"
 msgstr ""
 
-#: ui/main_window.py:816
+#: ui/main_window.py:828
 msgid "Squelch closed"
 msgstr ""
 
-#: ui/main_window.py:821
+#: ui/main_window.py:833
 #, python-brace-format
 msgid "Offset {khz:+.1f} kHz"
 msgstr ""
 
-#: ui/main_window.py:840
+#: ui/main_window.py:852
 #, python-brace-format
 msgid "Band: {name}, {freq}, mode {mode}"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:155 ui/main_window.py:927
+#: ui/main_window.py:957
+#, python-brace-format
+msgid "Remote: {name} ({host}:{port})"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:156 ui/main_window.py:977
 msgid "User guide not found. Run 'invoke build-help' first."
 msgstr ""
 
-#: ui/main_window.py:989
+#: ui/main_window.py:1039
 #, python-brace-format
 msgid "SDR error: {msg}"
 msgstr ""
 
-#: ui/main_window.py:992
+#: ui/main_window.py:1042
 #, python-brace-format
 msgid "Error: {msg}"
 msgstr ""
@@ -623,7 +637,8 @@ msgstr ""
 msgid "Delete Selected"
 msgstr ""
 
-#: ui/dialogs/bookmarks_dialog.py:94 ui/dialogs/help_dialog.py:134
+#: ui/dialogs/bookmarks_dialog.py:94 ui/dialogs/help_dialog.py:135
+#: ui/dialogs/rtl_tcp_dialog.py:146
 msgid "Close"
 msgstr ""
 
@@ -823,62 +838,66 @@ msgid "WFM Settings"
 msgstr ""
 
 #: ui/dialogs/help_dialog.py:72
+msgid "Remote SDR settings"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:73
 msgid "Help (this window)"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:74
+#: ui/dialogs/help_dialog.py:75
 msgid "--- Scanner (when open) ---"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:75
+#: ui/dialogs/help_dialog.py:76
 msgid "Hold on frequency"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:76
+#: ui/dialogs/help_dialog.py:77
 msgid "Skip to next"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:77
+#: ui/dialogs/help_dialog.py:78
 msgid "Stop scan"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:79
+#: ui/dialogs/help_dialog.py:80
 msgid "--- General ---"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:80
+#: ui/dialogs/help_dialog.py:81
 msgid "Open Bands menu"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:81
+#: ui/dialogs/help_dialog.py:82
 msgid "Save bookmark"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:82
+#: ui/dialogs/help_dialog.py:83
 msgid "Quit"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:92
+#: ui/dialogs/help_dialog.py:93
 msgid "Keyboard Shortcuts — AccessDR"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:109
+#: ui/dialogs/help_dialog.py:110
 msgid "AccessDR Keyboard Shortcuts"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:119
+#: ui/dialogs/help_dialog.py:120
 msgid "Action"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:120
+#: ui/dialogs/help_dialog.py:121
 msgid "Key(s)"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:129
+#: ui/dialogs/help_dialog.py:130
 msgid "Open User Guide"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:158
+#: ui/dialogs/help_dialog.py:159
 msgid "Keyboard Shortcuts for AccessDR."
 msgstr ""
 
@@ -902,7 +921,7 @@ msgstr ""
 msgid "Remove CTCSS tone from audio"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:25 ui/dialogs/rf_dialog.py:130
+#: ui/dialogs/rf_dialog.py:25 ui/dialogs/rf_dialog.py:142
 #: ui/dialogs/wfm_dialog.py:20
 msgid "Auto"
 msgstr ""
@@ -911,51 +930,51 @@ msgstr ""
 msgid "Default / Auto"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:67
+#: ui/dialogs/rf_dialog.py:75
 msgid "SDR Device:"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:74
+#: ui/dialogs/rf_dialog.py:86
 msgid "RF Gain (dB):"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:102
+#: ui/dialogs/rf_dialog.py:114
 msgid "RTL AGC"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:112
+#: ui/dialogs/rf_dialog.py:124
 msgid "Sample Rate:"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:121
+#: ui/dialogs/rf_dialog.py:133
 msgid "IQ Buffer Size:"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:131
+#: ui/dialogs/rf_dialog.py:143
 msgid "IF Bandwidth:"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:142
+#: ui/dialogs/rf_dialog.py:154
 msgid "PPM Correction:"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:151
+#: ui/dialogs/rf_dialog.py:163
 msgid "Offset Tuning (remove DC spike)"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:159
+#: ui/dialogs/rf_dialog.py:171
 msgid "Bias Tee (powers antenna via coax)"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:169
+#: ui/dialogs/rf_dialog.py:181
 msgid "Noise Blanker"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:175
+#: ui/dialogs/rf_dialog.py:187
 msgid "NB Threshold:"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:218
+#: ui/dialogs/rf_dialog.py:230
 msgid ""
 "Bias Tee supplies 4.5 V DC through the antenna connector.\n"
 "\n"
@@ -967,8 +986,84 @@ msgid ""
 "Enable Bias Tee?"
 msgstr ""
 
-#: ui/dialogs/rf_dialog.py:225
+#: ui/dialogs/rf_dialog.py:237
 msgid "Bias Tee — Danger"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:42
+msgid "Name:"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:46
+msgid "Host:"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:50
+msgid "Port:"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:72
+msgid "Please enter a host address."
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:96
+msgid "Remote SDR Servers"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:116
+msgid "Name"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:117
+msgid "Host"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:118
+msgid "Port"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:124
+msgid "&Add…"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:125
+msgid "&Edit…"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:126
+msgid "&Remove"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:127
+msgid "&Test Connection"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:178
+msgid "Add Server"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:192
+msgid "Edit Server"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:219
+#, python-brace-format
+msgid "Removed {name}"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:230
+#, python-brace-format
+msgid "Testing connection to {host}:{port}…"
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:259
+#, python-brace-format
+msgid "Connection OK — tuner type {tuner}, {gains} gain steps."
+msgstr ""
+
+#: ui/dialogs/rtl_tcp_dialog.py:264
+#, python-brace-format
+msgid "Connection failed: {error}"
 msgstr ""
 
 #: ui/dialogs/scanner_dialog.py:29

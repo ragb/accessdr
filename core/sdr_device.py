@@ -24,10 +24,11 @@ CHUNK_SIZE = 65_536  # default; overridden by Settings.sdr_buffer_size
 class SDRDevice:
     """RTL-SDR receiver — delegates to the best available backend."""
 
-    def __init__(self, chunk_size: int = CHUNK_SIZE) -> None:
+    def __init__(self, chunk_size: int = CHUNK_SIZE, settings=None) -> None:
         self._backend: Optional[SDRBackend] = None
         self._thread: Optional[threading.Thread] = None
         self._running = False
+        self._settings = settings
         self.chunk_size: int = chunk_size
 
         self.centre_freq: int = 98_100_000
@@ -49,7 +50,7 @@ class SDRDevice:
         if self._backend is not None:
             self.close()
 
-        backend = create_backend()
+        backend = create_backend(self._settings)
         config = dict(
             centre_freq=self.centre_freq,
             sample_rate=self.sample_rate,

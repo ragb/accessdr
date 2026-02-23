@@ -86,6 +86,19 @@ Accessible via **Options > WFM Settings** (++ctrl+w++).
 | `wfm_hiblend_enabled` | true | Reduce treble on weak signals to cut FM hiss |
 | `wfm_rds_enabled` | true | Decode RDS station name and radio text |
 
+## Remote SDR (rtl_tcp)
+
+Accessible via **Options > Remote SDR** (++ctrl+g++). Also affects the device list in **Options > RF Settings** (++ctrl+r++).
+
+| Setting | Default | Description |
+|---|---|---|
+| `rtl_tcp_servers` | [] (empty) | List of remote rtl_tcp servers. Each entry has a name, host, and port. |
+| `rtl_tcp_active` | -1 (local) | Index of the active remote server, or -1 to use the local USB dongle. |
+
+When one or more servers are configured, they appear in the RF Settings device dropdown alongside any local USB devices. Selecting a remote server switches the backend to rtl_tcp; selecting a local device switches back.
+
+Use the Remote SDR Servers dialog (++ctrl+g++) to add, edit, remove, and test servers. Changes are saved immediately on each action.
+
 ## Language
 
 | Setting | Default | Description |

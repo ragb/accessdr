@@ -17,6 +17,9 @@ from __future__ import annotations
 
 import ctypes
 import logging
+import socket
+import struct
+import threading
 from abc import ABC, abstractmethod
 from typing import Callable, List, Optional
 
@@ -373,6 +376,199 @@ class SoapyBackend(SDRBackend):
 
 
 # ---------------------------------------------------------------------------
+# rtl_tcp remote backend
+# ---------------------------------------------------------------------------
+
+# R820T gain table in dB — rtl_tcp only reports gain_count, not the values.
+_R820T_GAINS = [
+    0.0, 0.9, 1.4, 2.7, 3.7, 7.7, 8.7, 12.5, 14.4, 15.7,
+    16.6, 19.7, 20.7, 22.9, 25.4, 28.0, 29.7, 32.8, 33.8,
+    36.4, 37.2, 38.6, 40.2, 42.1, 43.4, 43.9, 44.5, 48.0, 49.6,
+]
+
+# rtl_tcp command opcodes
+_CMD_SET_FREQ = 0x01
+_CMD_SET_SAMPLE_RATE = 0x02
+_CMD_SET_GAIN_MODE = 0x03
+_CMD_SET_GAIN = 0x04
+_CMD_SET_FREQ_CORRECTION = 0x05
+_CMD_SET_AGC_MODE = 0x08
+_CMD_SET_DIRECT_SAMPLING = 0x09
+_CMD_SET_OFFSET_TUNING = 0x0A
+_CMD_SET_TUNER_BANDWIDTH = 0x0B
+_CMD_SET_BIAS_TEE = 0x0E
+
+
+class RtlTcpBackend(SDRBackend):
+    """Backend streaming IQ data from a remote rtl_tcp server."""
+
+    def __init__(self, host: str, port: int) -> None:
+        self._host = host
+        self._port = port
+        self._sock: Optional[socket.socket] = None
+        self._cmd_lock = threading.Lock()
+        self._tuner_type: int = 0
+        self._gain_count: int = 0
+
+    def open(self, device_index: int, config: dict) -> bool:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5.0)
+            sock.connect((self._host, self._port))
+
+            # Read 12-byte handshake header
+            header = b""
+            while len(header) < 12:
+                chunk = sock.recv(12 - len(header))
+                if not chunk:
+                    raise ConnectionError("rtl_tcp closed during handshake")
+                header += chunk
+
+            magic = header[:4]
+            if magic != b"RTL0":
+                raise ConnectionError(
+                    f"Bad rtl_tcp magic: {magic!r} (expected b'RTL0')"
+                )
+            self._tuner_type = struct.unpack(">I", header[4:8])[0]
+            self._gain_count = struct.unpack(">I", header[8:12])[0]
+            logger.info(
+                "rtl_tcp connected to %s:%d  tuner=%d  gains=%d",
+                self._host, self._port, self._tuner_type, self._gain_count,
+            )
+            self._sock = sock
+        except Exception as exc:  # noqa: BLE001
+            logger.error("rtl_tcp connect failed: %s", exc)
+            try:
+                sock.close()
+            except Exception:  # noqa: BLE001
+                pass
+            return False
+
+        # Send initial configuration commands
+        sr = config.get("sample_rate", 2_400_000)
+        freq = config.get("centre_freq", 98_100_000)
+        gain = config.get("gain", 30.0)
+        ppm = config.get("ppm", 0)
+        agc = config.get("agc_mode", False)
+
+        self._send_cmd(_CMD_SET_SAMPLE_RATE, sr)
+        self._send_cmd(_CMD_SET_FREQ, freq)
+        if agc:
+            self._send_cmd(_CMD_SET_AGC_MODE, 1)
+            self._send_cmd(_CMD_SET_GAIN_MODE, 0)
+        else:
+            self._send_cmd(_CMD_SET_AGC_MODE, 0)
+            self._send_cmd(_CMD_SET_GAIN_MODE, 1)
+            self._send_cmd(_CMD_SET_GAIN, int(gain * 10))
+        if ppm != 0:
+            self._send_cmd(_CMD_SET_FREQ_CORRECTION, ppm)
+        self._send_cmd(_CMD_SET_OFFSET_TUNING, int(config.get("offset_tuning", False)))
+        bw = config.get("tuner_bandwidth", 0)
+        if bw:
+            self._send_cmd(_CMD_SET_TUNER_BANDWIDTH, bw)
+        self._send_cmd(_CMD_SET_BIAS_TEE, int(config.get("bias_tee", False)))
+
+        return True
+
+    def close(self) -> None:
+        if self._sock is not None:
+            try:
+                self._sock.shutdown(socket.SHUT_RDWR)
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                self._sock.close()
+            except Exception:  # noqa: BLE001
+                pass
+            self._sock = None
+
+    def stream_loop(self, chunk_size, running, on_samples, on_error):
+        if self._sock is None:
+            return
+        self._sock.settimeout(2.0)
+        # Each complex sample = 2 bytes (uint8 I + uint8 Q)
+        byte_count = chunk_size * 2
+        buf = bytearray(byte_count)
+
+        while running():
+            try:
+                view = memoryview(buf)
+                received = 0
+                while received < byte_count:
+                    if not running():
+                        return
+                    try:
+                        n = self._sock.recv_into(view[received:], byte_count - received)
+                    except socket.timeout:
+                        continue
+                    if n == 0:
+                        raise ConnectionError("rtl_tcp server closed connection")
+                    received += n
+
+                # Convert uint8 IQ pairs to complex64
+                raw = np.frombuffer(buf, dtype=np.uint8)
+                iq = raw.astype(np.float32)
+                iq = (iq - 127.5) / 127.5
+                samples = iq[0::2] + 1j * iq[1::2]
+                if on_samples is not None:
+                    on_samples(samples.astype(np.complex64))
+            except socket.timeout:
+                continue
+            except Exception as exc:  # noqa: BLE001
+                if running():
+                    logger.error("rtl_tcp stream error: %s", exc)
+                    if on_error:
+                        on_error(f"Stream error: {exc}")
+                return
+
+    # -- Command sending --
+
+    def _send_cmd(self, opcode: int, param: int) -> None:
+        """Send a 5-byte command to the rtl_tcp server (thread-safe)."""
+        if self._sock is None:
+            return
+        data = struct.pack(">BI", opcode, param & 0xFFFFFFFF)
+        with self._cmd_lock:
+            try:
+                self._sock.sendall(data)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("rtl_tcp send_cmd(0x%02x) failed: %s", opcode, exc)
+
+    # -- Live setters --
+
+    def set_frequency(self, freq_hz: int) -> None:
+        self._send_cmd(_CMD_SET_FREQ, freq_hz)
+
+    def set_sample_rate(self, rate: int) -> None:
+        self._send_cmd(_CMD_SET_SAMPLE_RATE, rate)
+
+    def set_gain(self, gain_db: float) -> None:
+        self._send_cmd(_CMD_SET_GAIN, int(gain_db * 10))
+
+    def set_ppm(self, ppm: int) -> None:
+        if ppm != 0:
+            self._send_cmd(_CMD_SET_FREQ_CORRECTION, ppm)
+
+    def set_agc_mode(self, on: bool, gain_db: float = 30.0) -> None:
+        self._send_cmd(_CMD_SET_AGC_MODE, int(on))
+        self._send_cmd(_CMD_SET_GAIN_MODE, 0 if on else 1)
+        if not on:
+            self._send_cmd(_CMD_SET_GAIN, int(gain_db * 10))
+
+    def set_offset_tuning(self, on: bool) -> None:
+        self._send_cmd(_CMD_SET_OFFSET_TUNING, int(on))
+
+    def set_tuner_bandwidth(self, bw_hz: int) -> None:
+        self._send_cmd(_CMD_SET_TUNER_BANDWIDTH, bw_hz)
+
+    def set_bias_tee(self, on: bool) -> None:
+        self._send_cmd(_CMD_SET_BIAS_TEE, int(on))
+
+    def get_valid_gains(self) -> List[float]:
+        return list(_R820T_GAINS)
+
+
+# ---------------------------------------------------------------------------
 # Demo backend (no hardware)
 # ---------------------------------------------------------------------------
 
@@ -429,8 +625,16 @@ def enumerate_devices() -> List[dict]:
     return []
 
 
-def create_backend() -> SDRBackend:
-    """Return the best available backend."""
+def create_backend(settings=None) -> SDRBackend:
+    """Return the best available backend.
+
+    If *settings* has an active rtl_tcp server, return an `RtlTcpBackend`
+    connected to that server.  Otherwise fall through to local backends.
+    """
+    if settings is not None:
+        srv = settings.active_rtl_tcp_server()
+        if srv is not None:
+            return RtlTcpBackend(srv["host"], srv["port"])
     if _PYRTLSDR_AVAILABLE:
         return PyRtlSdrBackend()
     if _SOAPY_AVAILABLE:

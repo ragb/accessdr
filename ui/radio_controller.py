@@ -31,7 +31,7 @@ class RadioController:
         self._settings = settings
         self._audio = audio
         self._noise_blanker = noise_blanker
-        self._sdr = SDRDevice(chunk_size=settings.sdr_buffer_size)
+        self._sdr = SDRDevice(chunk_size=settings.sdr_buffer_size, settings=settings)
         self._pipeline: Optional[DSPPipeline] = None
         self._running = False
         self._paused = False
@@ -59,6 +59,10 @@ class RadioController:
     @chunk_size.setter
     def chunk_size(self, value: int) -> None:
         self._sdr.chunk_size = value
+
+    @property
+    def sdr(self) -> SDRDevice:
+        return self._sdr
 
     def set_error_callback(self, cb: Callable[[str], None]) -> None:
         self._sdr.on_error = cb

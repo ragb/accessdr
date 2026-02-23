@@ -85,6 +85,7 @@ When "demod follows cursor" is enabled (Shift+C), moving the cursor with Left/Ri
 | ++ctrl+b++ | Bookmarks |
 | ++ctrl+d++ | Audio Settings (device, buffer size) |
 | ++ctrl+w++ | WFM Settings (de-emphasis, stereo, hi-blend, RDS) |
+| ++ctrl+g++ | Remote SDR Servers (add, edit, remove, test rtl_tcp servers) |
 | ++f1++ | Keyboard Shortcuts help |
 
 ## Scanner (when open)

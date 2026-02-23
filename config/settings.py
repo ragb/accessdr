@@ -77,8 +77,23 @@ class Settings:
     # SDR buffer
     sdr_buffer_size: int = 65_536   # IQ samples per read (power of 2)
 
+    # Remote SDR (rtl_tcp)
+    # List of server dicts: [{"name": "...", "host": "...", "port": 1234}, ...]
+    rtl_tcp_servers: list = field(default_factory=list)
+    rtl_tcp_active: int = -1             # index into servers, -1 = local
+
     # Step
     step: int = 1_000               # Hz
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def active_rtl_tcp_server(self) -> dict | None:
+        """Return the active remote server dict, or None if local."""
+        if 0 <= self.rtl_tcp_active < len(self.rtl_tcp_servers):
+            return self.rtl_tcp_servers[self.rtl_tcp_active]
+        return None
 
     # ------------------------------------------------------------------
     # Persistence
@@ -93,6 +108,21 @@ class Settings:
         try:
             with open(path, "r", encoding="utf-8") as fh:
                 data = json.load(fh)
+            # Migrate old single-server fields → server list
+            if "rtl_tcp_host" in data and "rtl_tcp_servers" not in data:
+                host = data.pop("rtl_tcp_host", "")
+                port = data.pop("rtl_tcp_port", 1234)
+                mode = data.pop("backend_mode", "local")
+                if host:
+                    data["rtl_tcp_servers"] = [
+                        {"name": host, "host": host, "port": port}
+                    ]
+                    data["rtl_tcp_active"] = 0 if mode == "rtl_tcp" else -1
+            else:
+                # Remove stale keys if migration already happened
+                data.pop("rtl_tcp_host", None)
+                data.pop("rtl_tcp_port", None)
+                data.pop("backend_mode", None)
             # Filter to known fields only to tolerate schema changes
             known = {f for f in cls.__dataclass_fields__}
             filtered = {k: v for k, v in data.items() if k in known}
