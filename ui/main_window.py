@@ -32,7 +32,7 @@ from core.platform_utils import elevate_process_priority
 from core.scanner import Scanner
 from core.signal_utils import s_meter
 from ui.cursor_controller import CursorController
-from ui.formatting import fmt_freq
+from ui.formatting import fmt_freq, freq_number, freq_unit, parse_freq
 from ui.radio_controller import RadioController
 from ui.spectrum_controller import SpectrumController
 from ui.spectrum_panel import SpectrumPanel
@@ -361,24 +361,17 @@ class MainWindow(wx.Frame):
 
     def _open_freq_dialog(self) -> None:
         """Open a modal dialog to enter a new frequency."""
-        current = self._settings.frequency / 1_000_000
+        cur_hz = self._settings.frequency
+        unit = freq_unit(cur_hz)
         dlg = wx.TextEntryDialog(
             self,
-            _("Enter frequency (MHz):"),
+            _("Enter frequency ({unit}):").format(unit=unit),
             _("Tune to Frequency"),
-            value=f"{current:.3f}",
+            value=freq_number(cur_hz),
         )
         if dlg.ShowModal() == wx.ID_OK:
-            text = dlg.GetValue().strip().lower()
             try:
-                text = text.replace("mhz", "").replace("khz", "").replace("hz", "").strip()
-                val = float(text)
-                if val < 30_000:
-                    freq_hz = int(val * 1_000_000)    # assumed MHz
-                elif val < 30_000_000:
-                    freq_hz = int(val * 1_000)        # assumed kHz
-                else:
-                    freq_hz = int(val)
+                freq_hz = parse_freq(dlg.GetValue(), default_unit=unit)
             except ValueError:
                 speech.output(_("Invalid frequency."))
                 dlg.Destroy()
@@ -389,24 +382,17 @@ class MainWindow(wx.Frame):
 
     def _open_demod_freq_dialog(self) -> None:
         """Open a modal dialog to set the demod (listening) frequency."""
-        current = self._cursor.listening_freq() / 1_000_000
+        cur_hz = int(self._cursor.listening_freq())
+        unit = freq_unit(cur_hz)
         dlg = wx.TextEntryDialog(
             self,
-            _("Enter listening frequency (MHz):"),
+            _("Enter listening frequency ({unit}):").format(unit=unit),
             _("Set Listening Frequency"),
-            value=f"{current:.3f}",
+            value=freq_number(cur_hz),
         )
         if dlg.ShowModal() == wx.ID_OK:
-            text = dlg.GetValue().strip().lower()
             try:
-                text = text.replace("mhz", "").replace("khz", "").replace("hz", "").strip()
-                val = float(text)
-                if val < 30_000:
-                    freq_hz = int(val * 1_000_000)
-                elif val < 30_000_000:
-                    freq_hz = int(val * 1_000)
-                else:
-                    freq_hz = int(val)
+                freq_hz = parse_freq(dlg.GetValue(), default_unit=unit)
             except ValueError:
                 speech.output(_("Invalid frequency."))
                 dlg.Destroy()
@@ -572,9 +558,9 @@ class MainWindow(wx.Frame):
         # Update spectrum panel accessible name with current range
         start_hz, end_hz = self._spectrum_ctrl.spectrum_range()
         self._spectrum_panel.SetName(
-            _("Spectrum {start} to {end} MHz").format(
-                start=f"{start_hz / 1_000_000:.3f}",
-                end=f"{end_hz / 1_000_000:.3f}",
+            _("Spectrum {start} to {end}").format(
+                start=fmt_freq(int(start_hz)),
+                end=fmt_freq(int(end_hz)),
             )
         )
 

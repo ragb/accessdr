@@ -82,31 +82,27 @@ class SpectrumController:
 
     def _announce_zoom(self) -> None:
         start_hz, end_hz = self.spectrum_range()
-        start_mhz = start_hz / 1_000_000
-        end_mhz = end_hz / 1_000_000
+        start = fmt_freq(int(start_hz))
+        end = fmt_freq(int(end_hz))
         if self._zoom_level == 0:
-            msg = _("Full spectrum, {start} to {end} MHz").format(
-                start=f"{start_mhz:.3f}", end=f"{end_mhz:.3f}"
-            )
+            msg = _("Full spectrum, {start} to {end}").format(start=start, end=end)
         else:
             factor = 2 ** self._zoom_level
-            msg = _("Zoom {level}x, {start} to {end} MHz").format(
-                level=factor, start=f"{start_mhz:.3f}", end=f"{end_mhz:.3f}"
+            msg = _("Zoom {level}x, {start} to {end}").format(
+                level=factor, start=start, end=end
             )
         speech.output(msg)
 
     def describe_spectrum(self, sweeping: bool = False) -> None:
         start_hz, end_hz = self.spectrum_range()
-        start_mhz = start_hz / 1_000_000
-        end_mhz = end_hz / 1_000_000
+        start = fmt_freq(int(start_hz))
+        end = fmt_freq(int(end_hz))
         if self._zoom_level == 0:
-            msg = _("Full spectrum, {start} to {end} MHz").format(
-                start=f"{start_mhz:.3f}", end=f"{end_mhz:.3f}"
-            )
+            msg = _("Full spectrum, {start} to {end}").format(start=start, end=end)
         else:
             factor = 2 ** self._zoom_level
-            msg = _("Zoom {level}x, {start} to {end} MHz").format(
-                level=factor, start=f"{start_mhz:.3f}", end=f"{end_mhz:.3f}"
+            msg = _("Zoom {level}x, {start} to {end}").format(
+                level=factor, start=start, end=end
             )
         if sweeping:
             msg += _(", sweep active")
@@ -128,5 +124,5 @@ class SpectrumController:
         if not peaks:
             speech.output(_("No peaks detected."))
             return
-        parts = [f"{f / 1e6:.3f} MHz {db:.0f} dBm" for f, db in peaks]
+        parts = [f"{fmt_freq(int(f))} {db:.0f} dBm" for f, db in peaks]
         speech.output(_("Peaks: ") + ", ".join(parts))

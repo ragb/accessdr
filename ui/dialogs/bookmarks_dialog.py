@@ -12,6 +12,7 @@ from typing import Callable, Optional
 import wx
 from accessibility import speech
 from config.bookmarks import Bookmark, BookmarkStore
+from ui.formatting import fmt_freq, parse_freq
 
 
 class BookmarksDialog(wx.Frame):
@@ -65,9 +66,9 @@ class BookmarksDialog(wx.Frame):
         add_grid.Add(self._label_ctrl, 1, wx.EXPAND)
 
         add_grid.Add(
-            wx.StaticText(panel, label=_("Frequency (MHz):")), 0, wx.ALIGN_CENTER_VERTICAL
+            wx.StaticText(panel, label=_("Frequency (MHz or kHz):")), 0, wx.ALIGN_CENTER_VERTICAL
         )
-        self._freq_ctrl = wx.TextCtrl(panel, name="Bookmark frequency MHz")
+        self._freq_ctrl = wx.TextCtrl(panel, name="Bookmark frequency")
         add_grid.Add(self._freq_ctrl, 1, wx.EXPAND)
 
         add_grid.Add(wx.StaticText(panel, label=_("Mode:")), 0, wx.ALIGN_CENTER_VERTICAL)
@@ -108,7 +109,7 @@ class BookmarksDialog(wx.Frame):
         self._list.DeleteAllItems()
         for bm in self._store.get_all():
             idx = self._list.InsertItem(self._list.GetItemCount(), bm.label)
-            self._list.SetItem(idx, 1, f"{bm.frequency / 1e6:.3f} MHz")
+            self._list.SetItem(idx, 1, fmt_freq(bm.frequency))
             self._list.SetItem(idx, 2, bm.mode)
 
     def _on_add(self, _event: wx.CommandEvent) -> None:
@@ -120,7 +121,7 @@ class BookmarksDialog(wx.Frame):
             speech.output(_("Please enter a label."))
             return
         try:
-            freq_hz = int(float(freq_str) * 1_000_000)
+            freq_hz = parse_freq(freq_str, default_unit="mhz")
         except ValueError:
             speech.output(_("Invalid frequency."))
             return
@@ -131,8 +132,8 @@ class BookmarksDialog(wx.Frame):
         self._label_ctrl.Clear()
         self._freq_ctrl.Clear()
         speech.output(
-            _("Bookmark added: {label}, {freq} MHz, {mode}.").format(
-                label=label, freq=f"{freq_hz / 1e6:.3f}", mode=mode
+            _("Bookmark added: {label}, {freq}, {mode}.").format(
+                label=label, freq=fmt_freq(freq_hz), mode=mode
             )
         )
 
@@ -145,8 +146,8 @@ class BookmarksDialog(wx.Frame):
         if self._on_load_cb:
             self._on_load_cb(bm)
         speech.output(
-            _("Loaded bookmark: {label}, {freq} MHz, {mode}.").format(
-                label=bm.label, freq=f"{bm.frequency / 1e6:.3f}", mode=bm.mode
+            _("Loaded bookmark: {label}, {freq}, {mode}.").format(
+                label=bm.label, freq=fmt_freq(bm.frequency), mode=bm.mode
             )
         )
 
