@@ -14,6 +14,9 @@ from __future__ import annotations
 import logging
 import math
 import queue
+import shutil
+import subprocess
+import sys
 import threading
 import wave
 from datetime import datetime
@@ -21,6 +24,7 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
+from scipy.signal import resample_poly
 
 logger = logging.getLogger(__name__)
 
@@ -74,31 +78,91 @@ CHANNELS = 2          # always stereo output; mono sources are upmixed in write(
 DEFAULT_BLOCKSIZE = 4096
 
 
+def ffmpeg_available() -> bool:
+    """Return True if ffmpeg is on the system PATH."""
+    return shutil.which("ffmpeg") is not None
+
+
+def available_formats() -> list[str]:
+    """Return recording formats supported on this system."""
+    fmts = ["wav"]
+    if ffmpeg_available():
+        fmts.extend(["flac", "ogg", "mp3"])
+    return fmts
+
+
+# Recording sample rates — chosen to be ≥2× the audio bandwidth of each mode
+# and to divide evenly from 48 kHz (so resample_poly uses small integer ratios).
+_RECORDING_RATES: dict[str, int] = {
+    "WFM": 48_000,   # 15 kHz audio BW → 48 kHz (no resample)
+    "NFM": 16_000,   # 3–5 kHz audio BW → 16 kHz (÷3)
+    "AM":  16_000,    # 5 kHz audio BW → 16 kHz (÷3)
+    "DSB": 16_000,    # 5 kHz audio BW → 16 kHz (÷3)
+    "USB": 8_000,     # 2.7 kHz audio BW → 8 kHz (÷6)
+    "LSB": 8_000,     # 2.7 kHz audio BW → 8 kHz (÷6)
+    "CW":  8_000,     # 0.5 kHz audio BW → 8 kHz (÷6)
+}
+
+
+def recording_rate_for_mode(mode: str) -> int:
+    """Return a sensible recording sample rate for the given demod mode."""
+    return _RECORDING_RATES.get(mode, AUDIO_RATE)
+
+
+def _resample_channels(audio: np.ndarray, src_rate: int, dst_rate: int) -> np.ndarray:
+    """Resample (N, channels) float32 audio from *src_rate* to *dst_rate*.
+
+    Returns the input unchanged when rates match.  Uses integer ratio
+    resample_poly for each channel independently.
+    """
+    if dst_rate == src_rate:
+        return audio
+    from math import gcd
+    g = gcd(dst_rate, src_rate)
+    up, down = dst_rate // g, src_rate // g
+    if audio.ndim == 1:
+        return resample_poly(audio, up, down).astype(np.float32)
+    # Per-channel to keep memory layout simple
+    out = [resample_poly(audio[:, ch], up, down).astype(np.float32)
+           for ch in range(audio.shape[1])]
+    return np.column_stack(out)
+
+
 class AudioRecorder:
     """WAV file recorder — captures audio written through the callback."""
 
     def __init__(self) -> None:
         self._recording: bool = False
         self._wav_file: Optional[wave.Wave_write] = None
+        self._src_rate: int = AUDIO_RATE
+        self._dst_rate: int = AUDIO_RATE
 
     @property
     def recording(self) -> bool:
         return self._recording
 
-    def start(self, sample_rate: int, channels: int = CHANNELS, path: str = "") -> str:
+    def start(
+        self,
+        sample_rate: int,
+        channels: int = CHANNELS,
+        path: str = "",
+        rec_rate: int = 0,
+    ) -> str:
         """Begin writing audio to a WAV file. Returns the file path."""
         if self._recording:
             return ""
         if not path:
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             path = str(Path.home() / f"accessdr_{ts}.wav")
+        self._src_rate = sample_rate
+        self._dst_rate = rec_rate if rec_rate > 0 else sample_rate
         try:
             self._wav_file = wave.open(path, "wb")
             self._wav_file.setnchannels(channels)
             self._wav_file.setsampwidth(2)           # 16-bit
-            self._wav_file.setframerate(sample_rate)
+            self._wav_file.setframerate(self._dst_rate)
             self._recording = True
-            logger.info("Recording started: %s", path)
+            logger.info("Recording started: %s (%d Hz)", path, self._dst_rate)
             return path
         except Exception as exc:   # noqa: BLE001
             logger.error("Could not start recording: %s", exc)
@@ -120,10 +184,122 @@ class AudioRecorder:
         if not self._recording or self._wav_file is None:
             return
         try:
-            pcm = (audio * 32767.0).astype(np.int16)
+            resampled = _resample_channels(audio, self._src_rate, self._dst_rate)
+            pcm = (resampled * 32767.0).astype(np.int16)
             self._wav_file.writeframes(pcm.tobytes())
         except Exception:      # noqa: BLE001
             pass
+
+
+class FfmpegRecorder:
+    """Compressed audio recorder — pipes PCM to an ffmpeg subprocess."""
+
+    _CODEC_FLAGS: dict[str, list[str]] = {
+        "flac": [],
+        "ogg": ["-c:a", "libvorbis", "-q:a", "6"],
+        "mp3": ["-c:a", "libmp3lame", "-q:a", "2"],
+    }
+
+    def __init__(self) -> None:
+        self._recording: bool = False
+        self._proc: Optional[subprocess.Popen] = None
+        self._queue: queue.Queue = queue.Queue(maxsize=256)
+        self._thread: Optional[threading.Thread] = None
+        self._src_rate: int = AUDIO_RATE
+        self._dst_rate: int = AUDIO_RATE
+
+    @property
+    def recording(self) -> bool:
+        return self._recording
+
+    def start(
+        self,
+        sample_rate: int,
+        channels: int = CHANNELS,
+        path: str = "",
+        fmt: str = "flac",
+        rec_rate: int = 0,
+    ) -> str:
+        """Begin encoding audio via ffmpeg. Returns the file path."""
+        if self._recording:
+            return ""
+        if not path:
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            path = str(Path.home() / f"accessdr_{ts}.{fmt}")
+        self._src_rate = sample_rate
+        self._dst_rate = rec_rate if rec_rate > 0 else sample_rate
+        codec = self._CODEC_FLAGS.get(fmt, [])
+        cmd = [
+            "ffmpeg", "-y",
+            "-f", "s16le",
+            "-ar", str(self._dst_rate),
+            "-ac", str(channels),
+            "-i", "pipe:0",
+            *codec,
+            path,
+        ]
+        try:
+            creationflags = 0
+            if sys.platform == "win32":
+                creationflags = subprocess.CREATE_NO_WINDOW
+            self._proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=creationflags,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Could not start ffmpeg: %s", exc)
+            return ""
+        self._recording = True
+        self._thread = threading.Thread(target=self._writer, daemon=True)
+        self._thread.start()
+        logger.info("Recording started (ffmpeg %s): %s", fmt, path)
+        return path
+
+    def stop(self) -> None:
+        """Stop recording and wait for ffmpeg to finish."""
+        self._recording = False
+        if self._thread is not None:
+            # Sentinel to unblock the writer thread
+            self._queue.put(None)
+            self._thread.join(timeout=5)
+            self._thread = None
+        if self._proc is not None:
+            try:
+                self._proc.stdin.close()
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                self._proc.wait(timeout=10)
+            except Exception:  # noqa: BLE001
+                self._proc.kill()
+            self._proc = None
+        logger.info("Recording stopped (ffmpeg)")
+
+    def write_frames(self, audio: np.ndarray) -> None:
+        """Convert float32 audio to int16 bytes and enqueue for ffmpeg."""
+        if not self._recording:
+            return
+        try:
+            resampled = _resample_channels(audio, self._src_rate, self._dst_rate)
+            pcm = (resampled * 32767.0).astype(np.int16).tobytes()
+            self._queue.put_nowait(pcm)
+        except queue.Full:
+            pass
+
+    def _writer(self) -> None:
+        """Background thread: drain queue → ffmpeg stdin."""
+        while True:
+            data = self._queue.get()
+            if data is None:
+                break
+            if self._proc is not None and self._proc.stdin is not None:
+                try:
+                    self._proc.stdin.write(data)
+                except Exception:  # noqa: BLE001
+                    break
 
 
 class AudioOutput:
@@ -251,9 +427,16 @@ class AudioOutput:
     def recorder(self) -> AudioRecorder:
         return self._recorder
 
-    def start_recording(self, path: str = "") -> str:
-        """Begin writing audio to a WAV file. Returns the file path."""
-        return self._recorder.start(self.sample_rate, CHANNELS, path)
+    def start_recording(self, path: str = "", fmt: str = "wav", mode: str = "WFM") -> str:
+        """Begin recording audio. Returns the file path."""
+        self.stop_recording()
+        rec_rate = recording_rate_for_mode(mode)
+        if fmt in ("flac", "ogg", "mp3"):
+            self._recorder = FfmpegRecorder()
+            return self._recorder.start(self.sample_rate, CHANNELS, path, fmt, rec_rate)
+        else:
+            self._recorder = AudioRecorder()
+            return self._recorder.start(self.sample_rate, CHANNELS, path, rec_rate)
 
     def stop_recording(self) -> None:
         """Stop recording and close the WAV file."""

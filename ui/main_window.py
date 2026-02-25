@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import datetime
+from pathlib import Path
 from typing import Callable, Optional
 
 import numpy as np
@@ -88,6 +90,7 @@ class MainWindow(wx.Frame):
         self._sweeping: bool = False               # continuous sweep running
         self._mode_pending: bool = False           # waiting for mode letter after M
         self._above_threshold: bool = False        # auto-announce threshold state
+        self._recording_path: str = ""               # current recording file path
 
         # Open dialogs cache (so we don't create duplicates)
         self._dialogs: dict = {}
@@ -148,6 +151,7 @@ class MainWindow(wx.Frame):
         item_rf = options_menu.Append(wx.ID_ANY, _("&RF Settings…\tCtrl+R"))
         item_spectrum = options_menu.Append(wx.ID_ANY, _("&Spectrum Settings…\tCtrl+S"))
         item_audio = options_menu.Append(wx.ID_ANY, _("&Audio Settings…\tCtrl+D"))
+        item_rec = options_menu.Append(wx.ID_ANY, _("R&ecording Settings…\tCtrl+E"))
         item_wfm = options_menu.Append(wx.ID_ANY, _("&WFM Settings…\tCtrl+W"))
         item_nfm = options_menu.Append(wx.ID_ANY, _("&NFM Settings…"))
         options_menu.AppendSeparator()
@@ -155,6 +159,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, lambda e: self._open_rf_dialog(), item_rf)
         self.Bind(wx.EVT_MENU, lambda e: self._open_spectrum_dialog(), item_spectrum)
         self.Bind(wx.EVT_MENU, lambda e: self._open_audio_dialog(), item_audio)
+        self.Bind(wx.EVT_MENU, lambda e: self._open_recording_dialog(), item_rec)
         self.Bind(wx.EVT_MENU, lambda e: self._open_wfm_dialog(), item_wfm)
         self.Bind(wx.EVT_MENU, lambda e: self._open_nfm_dialog(), item_nfm)
         self.Bind(wx.EVT_MENU, lambda e: self._open_rtl_tcp_dialog(), item_rtl_tcp)
@@ -713,6 +718,7 @@ class MainWindow(wx.Frame):
             kb.START_STOP:          lambda: self._on_start_stop(None),
             kb.TOGGLE_PAUSE:        self._toggle_pause,
             kb.TOGGLE_MUTE:         self._toggle_mute_action,
+            kb.TOGGLE_RECORDING:    self._toggle_recording,
             # Frequency
             kb.ANNOUNCE_LO:         lambda: speech.output(_("LO {freq}").format(freq=fmt_freq(self._settings.frequency))),
             kb.ANNOUNCE_LISTEN:     lambda: speech.output(_("Listening {freq}").format(freq=fmt_freq(self._cursor.listening_freq()))),
@@ -760,6 +766,7 @@ class MainWindow(wx.Frame):
             kb.OPEN_WFM_DIALOG:     self._open_wfm_dialog,
             kb.OPEN_NFM_DIALOG:     self._open_nfm_dialog,
             kb.OPEN_RTL_TCP_DIALOG: self._open_rtl_tcp_dialog,
+            kb.OPEN_RECORDING_DIALOG: self._open_recording_dialog,
             kb.OPEN_USER_GUIDE:     lambda: self._on_open_user_guide(None),
             kb.OPEN_HELP:           self._open_help_dialog,
         }
@@ -837,6 +844,57 @@ class MainWindow(wx.Frame):
                 freq=fmt_freq(self._cursor.listening_freq())
             ))
         speech.output(", ".join(parts))
+
+    # ==================================================================
+    # Recording
+    # ==================================================================
+
+    def _toggle_recording(self) -> None:
+        """Toggle audio recording on/off (R key)."""
+        if self._recording_path:
+            self._stop_recording()
+        else:
+            self._start_recording()
+
+    def _start_recording(self) -> None:
+        fmt = self._settings.recording_format
+        folder = self._settings.recording_path
+        if not folder or not os.path.isdir(folder):
+            folder = str(Path.home())
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        path = os.path.join(folder, f"accessdr_{ts}.{fmt}")
+        mode = self._settings.mode
+        result = self._audio.start_recording(path=path, fmt=fmt, mode=mode)
+        if result:
+            self._recording_path = result
+            fname = os.path.basename(result)
+            speech.output(
+                _("Recording started: {filename}").format(filename=fname)
+            )
+            self._update_recording_status()
+        else:
+            speech.output(_("Could not start recording."))
+
+    def _stop_recording(self) -> None:
+        self._audio.stop_recording()
+        if self._recording_path:
+            fname = os.path.basename(self._recording_path)
+            speech.output(
+                _("Recording stopped: {filename}").format(filename=fname)
+            )
+            self._recording_path = ""
+        self._update_recording_status()
+
+    def _update_recording_status(self) -> None:
+        """Update the status bar to show/hide [REC: filename]."""
+        text = self._statusbar.GetStatusText()
+        # Strip any existing REC tag
+        if " [REC:" in text:
+            text = text[: text.index(" [REC:")]
+        if self._recording_path:
+            fname = os.path.basename(self._recording_path)
+            text += _(" [REC: {filename}]").format(filename=fname)
+        self._statusbar.SetStatusText(text)
 
     # ==================================================================
     # Band jump
@@ -917,6 +975,12 @@ class MainWindow(wx.Frame):
         dlg = AudioDialog(self, self._settings, self._audio)
         if dlg.ShowModal() == wx.ID_OK:
             self._on_audio_settings_changed(self._settings)
+        dlg.Destroy()
+
+    def _open_recording_dialog(self) -> None:
+        from ui.dialogs.recording_dialog import RecordingDialog
+        dlg = RecordingDialog(self, self._settings)
+        dlg.ShowModal()
         dlg.Destroy()
 
     def _open_wfm_dialog(self) -> None:
@@ -1051,6 +1115,7 @@ class MainWindow(wx.Frame):
 
     def _on_close(self, event: wx.CloseEvent) -> None:
         self._cursor.stop()
+        self._stop_recording()
         self._stop_radio()
         self._settings.save()
         self._bookmarks.save()

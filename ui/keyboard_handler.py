@@ -31,6 +31,7 @@ MODE_SELECT_START = "mode_select_start"
 START_STOP = "start_stop"
 TOGGLE_PAUSE = "toggle_pause"
 TOGGLE_MUTE = "toggle_mute"
+TOGGLE_RECORDING = "toggle_recording"
 
 # --- Info ---
 ANNOUNCE_INFO = "announce_info"
@@ -72,6 +73,7 @@ OPEN_AUDIO_DIALOG = "open_audio_dialog"
 OPEN_WFM_DIALOG = "open_wfm_dialog"
 OPEN_NFM_DIALOG = "open_nfm_dialog"
 OPEN_RTL_TCP_DIALOG = "open_rtl_tcp_dialog"
+OPEN_RECORDING_DIALOG = "open_recording_dialog"
 OPEN_USER_GUIDE = "open_user_guide"
 
 # --- Window ---
@@ -153,7 +155,11 @@ def _build_keymap() -> dict[tuple[int, int], str]:
         (ord("W"), M):               OPEN_WFM_DIALOG,
         (ord("N"), M | S):           OPEN_NFM_DIALOG,
         (ord("G"), M):               OPEN_RTL_TCP_DIALOG,
+        (ord("E"), M):               OPEN_RECORDING_DIALOG,
         (ord("H"), M):               OPEN_USER_GUIDE,
+
+        # Recording
+        (ord("R"), NONE):            TOGGLE_RECORDING,
 
         # Help
         (wx.WXK_F1, NONE):          OPEN_HELP,

@@ -35,6 +35,7 @@ class Settings:
     muted: bool = False
     audio_device: Optional[str] = None
     recording_path: str = ""
+    recording_format: str = "wav"    # "wav" | "flac" | "ogg" | "mp3"
     audio_buffer_size: int = 4096    # sounddevice blocksize (samples)
 
     # Spectrum / sonification
