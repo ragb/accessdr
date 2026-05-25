@@ -12,6 +12,7 @@ Usage:
 """
 
 import argparse
+import ctypes
 import sys
 import time
 import logging
@@ -47,7 +48,7 @@ def fm_discriminant(iq: np.ndarray) -> np.ndarray:
     return out
 
 
-def run_test(freq_hz: int, capture_seconds: int) -> None:
+def run_test(freq_hz: int, capture_seconds: int, offset_tuning: bool = False) -> None:
     freq_mhz = freq_hz / 1e6
 
     # --- DSP setup (matches core/dsp/demodulator.py WFM pipeline) ---
@@ -103,6 +104,28 @@ def run_test(freq_hz: int, capture_seconds: int) -> None:
     sdr.center_freq = freq_hz
     sdr.gain = "auto"
 
+    # Enable bias tee to power external amplifier via SMA connector
+    try:
+        from rtlsdr.librtlsdr import librtlsdr as _lib
+        if not hasattr(_lib.rtlsdr_set_bias_tee, "argtypes"):
+            _lib.rtlsdr_set_bias_tee.argtypes = [ctypes.c_void_p, ctypes.c_int]
+            _lib.rtlsdr_set_bias_tee.restype = ctypes.c_int
+        _lib.rtlsdr_set_bias_tee(sdr.dev_p, 1)
+        logger.info("Bias tee ENABLED")
+    except Exception as exc:
+        logger.warning("Could not enable bias tee: %s", exc)
+
+    # Enable offset tuning to avoid DC spike at center frequency
+    if offset_tuning:
+        try:
+            if not hasattr(_lib.rtlsdr_set_offset_tuning, "argtypes"):
+                _lib.rtlsdr_set_offset_tuning.argtypes = [ctypes.c_void_p, ctypes.c_int]
+                _lib.rtlsdr_set_offset_tuning.restype = ctypes.c_int
+            _lib.rtlsdr_set_offset_tuning(sdr.dev_p, 1)
+            logger.info("Offset tuning ENABLED")
+        except Exception as exc:
+            logger.warning("Could not enable offset tuning: %s", exc)
+
     chunks = 0
     t0 = time.time()
 
@@ -157,10 +180,12 @@ def main():
                         help="FM frequency in MHz (default: 105.7)")
     parser.add_argument("--time", type=int, default=120,
                         help="Capture duration in seconds (default: 120)")
+    parser.add_argument("--offset-tuning", action="store_true",
+                        help="Enable RTL-SDR offset tuning (avoids DC spike)")
     args = parser.parse_args()
 
     freq_hz = int(args.freq * 1_000_000)
-    run_test(freq_hz, args.time)
+    run_test(freq_hz, args.time, offset_tuning=args.offset_tuning)
 
 
 if __name__ == "__main__":
