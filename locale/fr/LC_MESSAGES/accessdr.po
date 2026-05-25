@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: accessdr 0.5.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-23 23:16+0000\n"
+"POT-Creation-Date: 2026-05-25 12:32+0100\n"
 "PO-Revision-Date: 2026-05-24 18:23+0200\n"
 "Last-Translator: Michel Such <michel.such@free.fr>\n"
 "Language: fr\n"
@@ -228,7 +228,7 @@ msgstr "Squelch (dBm):"
 msgid "Start Sweep (Ctrl+F5)"
 msgstr "Démarrer le Balayage (Ctrl+F5)"
 
-#: ui/main_window.py:328 ui/main_window.py:1027
+#: ui/main_window.py:328 ui/main_window.py:1028
 msgid "Ready — no device connected."
 msgstr "Prêt — Aucun périphérique connecté."
 
@@ -455,45 +455,45 @@ msgstr "Squelch fermé"
 msgid "Offset {khz:+.1f} kHz"
 msgstr "Décalage {khz:+.1f} kHz"
 
-#: ui/main_window.py:871
+#: ui/main_window.py:872
 #, python-brace-format
 msgid "Recording started: {filename}"
 msgstr "Enregistrement démarré : {filename}"
 
-#: ui/main_window.py:875
+#: ui/main_window.py:876
 msgid "Could not start recording."
 msgstr "Impossible de démarrer l'enregistrement."
 
-#: ui/main_window.py:882
+#: ui/main_window.py:883
 #, python-brace-format
 msgid "Recording stopped: {filename}"
 msgstr "Enregistrement arrêté : {filename}"
 
-#: ui/main_window.py:895
+#: ui/main_window.py:896
 #, python-brace-format
 msgid " [REC: {filename}]"
 msgstr " [REC : {filename}]"
 
-#: ui/main_window.py:909
+#: ui/main_window.py:910
 #, python-brace-format
 msgid "Band: {name}, {freq}, mode {mode}"
 msgstr "Bande: {name}, {freq}, mode {mode}"
 
-#: ui/main_window.py:1020
+#: ui/main_window.py:1021
 #, python-brace-format
 msgid "Remote: {name} ({host}:{port})"
 msgstr "Distant : {name} ({host}:{port})"
 
-#: ui/dialogs/help_dialog.py:158 ui/main_window.py:1040
+#: ui/dialogs/help_dialog.py:158 ui/main_window.py:1041
 msgid "User guide not found. Run 'invoke build-help' first."
 msgstr "Guide utilisateur non trouvé. Exécutez d'abord 'invoke build-help'."
 
-#: ui/main_window.py:1102
+#: ui/main_window.py:1103
 #, python-brace-format
 msgid "SDR error: {msg}"
 msgstr "Erreur SDR: {msg}"
 
-#: ui/main_window.py:1105
+#: ui/main_window.py:1106
 #, python-brace-format
 msgid "Error: {msg}"
 msgstr "Erreur: {msg}"
@@ -931,7 +931,9 @@ msgstr "Parcourir..."
 
 #: ui/dialogs/recording_dialog.py:82
 msgid "Install ffmpeg and add it to PATH to enable FLAC, OGG, and MP3 formats."
-msgstr "Installez ffmpeg et ajoutez-le au PATH pour activer les formats FLAC, OGG et MP3."
+msgstr ""
+"Installez ffmpeg et ajoutez-le au PATH pour activer les formats FLAC, OGG"
+" et MP3."
 
 #: ui/dialogs/recording_dialog.py:110
 msgid "Choose recording folder"

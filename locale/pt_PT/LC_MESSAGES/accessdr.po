@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AccessDR 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-23 23:16+0000\n"
+"POT-Creation-Date: 2026-05-25 12:32+0100\n"
 "PO-Revision-Date: 2026-02-19 11:40+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: pt_PT\n"
@@ -228,7 +228,7 @@ msgstr "Squelch (dBm):"
 msgid "Start Sweep (Ctrl+F5)"
 msgstr "Iniciar Varrimento (Ctrl+F5)"
 
-#: ui/main_window.py:328 ui/main_window.py:1027
+#: ui/main_window.py:328 ui/main_window.py:1028
 msgid "Ready — no device connected."
 msgstr "Pronto — nenhum dispositivo ligado."
 
@@ -455,45 +455,45 @@ msgstr "Squelch fechado"
 msgid "Offset {khz:+.1f} kHz"
 msgstr "Desvio {khz:+.1f} kHz"
 
-#: ui/main_window.py:871
+#: ui/main_window.py:872
 #, python-brace-format
 msgid "Recording started: {filename}"
 msgstr ""
 
-#: ui/main_window.py:875
+#: ui/main_window.py:876
 msgid "Could not start recording."
 msgstr "Não foi possível iniciar a gravação."
 
-#: ui/main_window.py:882
+#: ui/main_window.py:883
 #, python-brace-format
 msgid "Recording stopped: {filename}"
 msgstr ""
 
-#: ui/main_window.py:895
+#: ui/main_window.py:896
 #, python-brace-format
 msgid " [REC: {filename}]"
 msgstr ""
 
-#: ui/main_window.py:909
+#: ui/main_window.py:910
 #, python-brace-format
 msgid "Band: {name}, {freq}, mode {mode}"
 msgstr "Banda: {name}, {freq}, modo {mode}"
 
-#: ui/main_window.py:1020
+#: ui/main_window.py:1021
 #, python-brace-format
 msgid "Remote: {name} ({host}:{port})"
 msgstr "Remoto: {name} ({host}:{port})"
 
-#: ui/dialogs/help_dialog.py:158 ui/main_window.py:1040
+#: ui/dialogs/help_dialog.py:158 ui/main_window.py:1041
 msgid "User guide not found. Run 'invoke build-help' first."
 msgstr "Guia do utilizador não encontrado. Execute 'invoke build-help' primeiro."
 
-#: ui/main_window.py:1102
+#: ui/main_window.py:1103
 #, python-brace-format
 msgid "SDR error: {msg}"
 msgstr "Erro SDR: {msg}"
 
-#: ui/main_window.py:1105
+#: ui/main_window.py:1106
 #, python-brace-format
 msgid "Error: {msg}"
 msgstr "Erro: {msg}"
