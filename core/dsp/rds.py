@@ -15,11 +15,12 @@ RDS protocol summary (IEC 62106 / NRSC-4-B):
   - All groups carry PTY in bits 6–10 of block B
 
 Demodulation approach:
-  Real-only coherent product demodulation with differential decode.
-  The 57 kHz carrier is derived from the 19 kHz stereo pilot via the
-  triple-frequency identity cos(3θ) = 4cos³(θ) − 3cos(θ).  After
-  mixing and lowpass filtering, differential BPSK decode (XOR of
-  consecutive bit signs) recovers data regardless of carrier phase.
+  Costas loop PLL tracks the 57 kHz RDS carrier phase directly from
+  the bandpass-filtered subcarrier signal.  This replaces the earlier
+  pilot-derived carrier (cos(3θ)) which amplified pilot phase noise
+  by cubing.  The PLL provides robust carrier recovery at SNR as low
+  as ~3 dB.  Differential BPSK decode (XOR of consecutive bit signs)
+  recovers data regardless of PLL lock phase (0° or 180° ambiguity).
 """
 
 from __future__ import annotations
@@ -115,26 +116,36 @@ class RDSDecoder:
         self._pty_confirm_count: int = 0
 
         # --- DSP filters ---
-        # FIR bandpass 55.5–58.5 kHz to isolate RDS subcarrier.
-        # 501-tap Kaiser (beta=8) gives ~97 dB rejection at 53 kHz (L-R edge)
-        # vs only ~10 dB for the previous 4th-order IIR Butterworth at 54–60 kHz.
-        # This sharp cutoff is critical: the L-R stereo subcarrier (23–53 kHz)
-        # has spectral tails from audio content above 15 kHz that leak into the
-        # RDS band and overwhelm the weak RDS signal without adequate rejection.
-        _BPF_TAPS = 501
+        # FIR bandpass 56–58 kHz to isolate RDS subcarrier.
+        # Narrowed from 55.5–58.5 kHz to reject L-R stereo leakage: audio
+        # content at 16–18 kHz creates DSB energy at 54–56 kHz (38+f) which
+        # falls within the old passband.  The RDS BPSK main lobe is only
+        # 56.4–57.6 kHz (57 ± 594 Hz), so 56–58 kHz captures all signal
+        # energy including first sidelobes.
+        # 1001-tap Kaiser (beta=8) for sharp transition at the narrower BW.
+        _BPF_TAPS = 1001
         self._rds_bpf = sp_signal.firwin(
-            _BPF_TAPS, [55_500, 58_500], pass_zero=False,
+            _BPF_TAPS, [56_000, 58_000], pass_zero=False,
             fs=baseband_rate, window=("kaiser", 8),
         )
         self._rds_bpf_zi = sp_signal.lfilter_zi(self._rds_bpf, [1.0]) * 0.0
 
-        # Pilot delay buffer: the FIR BPF introduces (N-1)/2 samples of group
-        # delay.  We must delay the pilot by the same amount so the derived
-        # 57 kHz carrier stays phase-aligned with the filtered RDS signal.
-        # Without this compensation, the product demodulator output is
-        # attenuated by cos(phase_offset), losing ~4 dB of SNR margin.
-        self._pilot_delay = (_BPF_TAPS - 1) // 2
-        self._pilot_buf = np.zeros(self._pilot_delay)
+        # --- Costas loop PLL for 57 kHz carrier recovery ---
+        # Tracks carrier phase directly from the bandpass-filtered RDS signal.
+        # Replaces noisy pilot-derived carrier (cubing amplifies phase noise).
+        self._pll_freq = 2.0 * np.pi * 57_000.0 / baseband_rate  # rad/sample
+        self._pll_center_freq = self._pll_freq
+        self._pll_phase = 0.0
+        # Block size ≈ 1/4 bit period for sub-bit phase updates
+        # Bit period = baseband_rate / 1187.5 ≈ 202 samples at 240 kHz
+        self._pll_block_size = max(1, int(baseband_rate / 5000))
+        # Loop filter gains (2nd-order, critically damped, ~50 Hz BW)
+        _block_rate = baseband_rate / self._pll_block_size
+        _zeta = 0.707
+        _omega_n = 2.0 * np.pi * 50.0
+        _wT = _omega_n / _block_rate
+        self._pll_alpha = 2.0 * _zeta * _wT   # proportional (phase)
+        self._pll_beta = _wT * _wT             # integral (frequency)
 
         # Lowpass for RDS demodulated baseband.  The RDS bit rate is 1187.5 bps
         # so the theoretical minimum bandwidth is ~600 Hz.  A 1.2 kHz cutoff
@@ -199,7 +210,8 @@ class RDSDecoder:
         self._blocks_collected = 0
         self._sync_errors = 0
         self._rds_bpf_zi = sp_signal.lfilter_zi(self._rds_bpf, [1.0]) * 0.0
-        self._pilot_buf = np.zeros(self._pilot_delay)
+        self._pll_phase = 0.0
+        self._pll_freq = self._pll_center_freq
         self._rds_lpf_zi = sp_signal.sosfilt_zi(self._rds_lpf) * 0.0
         self._clock_phase = 0.0
         self._clock_freq_offset = 0.0
@@ -227,25 +239,14 @@ class RDSDecoder:
             self._rds_bpf, [1.0], mpx, zi=self._rds_bpf_zi,
         )
 
-        # 2. Delay pilot to compensate FIR group delay, then derive carrier
-        self._pilot_buf = np.concatenate([self._pilot_buf, pilot])
-        if len(self._pilot_buf) < self._pilot_delay + len(mpx):
-            self._debug_chunks += 1
-            return  # still filling delay buffer at startup
-        delayed_pilot = self._pilot_buf[:len(mpx)]
-        self._pilot_buf = self._pilot_buf[len(mpx):]
-
-        pilot_peak = np.max(np.abs(delayed_pilot))
+        # 2. Check pilot presence (stereo pilot → RDS likely present)
+        pilot_peak = float(np.max(np.abs(pilot)))
         if pilot_peak < 1e-8:
+            self._debug_chunks += 1
             return  # no pilot → no stereo → probably no RDS
-        pilot_norm = delayed_pilot / pilot_peak
-        # cos(3θ) = 4cos³(θ) − 3cos(θ) — derives 57 kHz from 19 kHz pilot
-        carrier = 4.0 * pilot_norm ** 3 - 3.0 * pilot_norm
 
-        # 3. Coherent product demodulation — real-valued, no quadrature needed.
-        # Differential BPSK decode (XOR of consecutive bit signs) cancels
-        # any constant carrier phase offset from the pilot BPF group delay.
-        demod = rds_band * carrier * 2.0
+        # 3. Costas loop demodulation — PLL tracks 57 kHz carrier phase
+        demod = self._costas_demod(rds_band)
 
         # 4. Lowpass at 1.2 kHz (RDS data bandwidth)
         demod_mf, self._rds_lpf_zi = sp_signal.sosfilt(
@@ -340,6 +341,65 @@ class RDSDecoder:
             return rds_snr
 
         return 0.0
+
+    def _costas_demod(self, rds_band: np.ndarray) -> np.ndarray:
+        """Demodulate RDS subcarrier using a Costas loop PLL.
+
+        Processes the bandpass-filtered 57 kHz signal in small blocks.
+        For each block: mix with NCO to get I/Q, compute phase error
+        from I×Q (data-independent for BPSK since d²=1), update PLL.
+        Returns the I branch (coherent baseband output).
+        """
+        n = len(rds_band)
+        output = np.empty(n)
+        bs = self._pll_block_size
+
+        for start in range(0, n, bs):
+            end = min(start + bs, n)
+            seg = rds_band[start:end]
+            seg_len = end - start
+
+            # Generate NCO oscillator for this block
+            t = np.arange(seg_len, dtype=np.float64)
+            phases = self._pll_phase + self._pll_freq * t
+            cos_nco = np.cos(phases)
+            sin_nco = np.sin(phases)
+
+            # I/Q demodulation (mix to baseband, ×2 for amplitude)
+            i_branch = seg * cos_nco * 2.0
+            q_branch = seg * (-sin_nco) * 2.0
+
+            # Block-average acts as LPF, rejecting 2×carrier components
+            i_avg = float(np.mean(i_branch))
+            q_avg = float(np.mean(q_branch))
+
+            # Costas phase error: I×Q / (I²+Q²)
+            # For BPSK: I×Q = A²/2 × sin(2φ_err) — data cancels (d²=1)
+            # Normalization makes loop gain amplitude-independent.
+            power = i_avg * i_avg + q_avg * q_avg
+            if power > 1e-20:
+                phase_error = (i_avg * q_avg) / power
+            else:
+                phase_error = 0.0
+
+            # Loop filter: proportional (phase) + integral (frequency)
+            self._pll_freq += self._pll_beta * phase_error
+            self._pll_phase += self._pll_alpha * phase_error
+
+            # Advance NCO phase by block duration
+            self._pll_phase += self._pll_freq * seg_len
+            self._pll_phase %= (2.0 * np.pi)
+
+            # Clamp frequency near 57 kHz (±200 Hz max drift)
+            max_drift = 2.0 * np.pi * 200.0 / self._baseband_rate
+            if self._pll_freq < self._pll_center_freq - max_drift:
+                self._pll_freq = self._pll_center_freq - max_drift
+            elif self._pll_freq > self._pll_center_freq + max_drift:
+                self._pll_freq = self._pll_center_freq + max_drift
+
+            output[start:end] = i_branch
+
+        return output
 
     def _extract_bits(self, demod: np.ndarray) -> None:
         """Recover clock and extract bits via differential BPSK.
