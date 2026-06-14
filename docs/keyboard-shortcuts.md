@@ -27,10 +27,23 @@
 
 | Key | Action |
 |---|---|
-| ++page-up++ | Volume up (+5%) |
-| ++page-down++ | Volume down (-5%) |
-| ++shift+page-up++ | Squelch up (+3 dB) |
-| ++shift+page-down++ | Squelch down (-3 dB) |
+| ++f11++ | Volume up (+5%) |
+| ++f12++ | Volume down (-5%) |
+| ++shift+f11++ | Squelch up (+3 dB) |
+| ++shift+f12++ | Squelch down (-3 dB) |
+
+## Channels and Scenes (VFO / MR)
+
+The radio works like a handheld: **VFO mode** for free tuning within a band
+*scene*, and **MR mode** for stepping through numbered memory *channels*.
+
+| Key | Action |
+|---|---|
+| ++v++ | Toggle VFO / Memory (MR) mode |
+| ++page-up++ | Channel up (MR) or frequency step up (VFO, clamped to band edges) |
+| ++page-down++ | Channel down (MR) or frequency step down (VFO, clamped to band edges) |
+| ++"["++ | Previous scene (VFO mode) |
+| ++"]"++ | Next scene (VFO mode) |
 
 ## Demodulation Modes
 

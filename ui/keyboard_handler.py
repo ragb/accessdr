@@ -27,6 +27,13 @@ OPEN_DEMOD_FREQ_DIALOG = "open_demod_freq_dialog"
 # --- Mode selection ---
 MODE_SELECT_START = "mode_select_start"
 
+# --- Channel / scene navigation (VFO / MR) ---
+PAGE_NAV_UP = "page_nav_up"
+PAGE_NAV_DOWN = "page_nav_down"
+TOGGLE_VFO_MR = "toggle_vfo_mr"
+SCENE_PREV = "scene_prev"
+SCENE_NEXT = "scene_next"
+
 # --- Radio control ---
 START_STOP = "start_stop"
 TOGGLE_PAUSE = "toggle_pause"
@@ -112,11 +119,18 @@ def _build_keymap() -> dict[tuple[int, int], str]:
         # Info
         (ord("I"), NONE):            ANNOUNCE_INFO,
 
+        # Channel / scene navigation
+        (wx.WXK_PAGEUP, NONE):      PAGE_NAV_UP,
+        (wx.WXK_PAGEDOWN, NONE):    PAGE_NAV_DOWN,
+        (ord("V"), NONE):            TOGGLE_VFO_MR,
+        (ord("["), NONE):            SCENE_PREV,
+        (ord("]"), NONE):            SCENE_NEXT,
+
         # Volume / squelch
-        (wx.WXK_PAGEUP, NONE):      VOLUME_UP,
-        (wx.WXK_PAGEDOWN, NONE):    VOLUME_DOWN,
-        (wx.WXK_PAGEUP, S):         SQUELCH_UP,
-        (wx.WXK_PAGEDOWN, S):       SQUELCH_DOWN,
+        (wx.WXK_F11, NONE):         VOLUME_UP,
+        (wx.WXK_F12, NONE):         VOLUME_DOWN,
+        (wx.WXK_F11, S):            SQUELCH_UP,
+        (wx.WXK_F12, S):            SQUELCH_DOWN,
 
         # Sonification
         (wx.WXK_F5, NONE):          SNAPSHOT,

@@ -22,11 +22,14 @@ from accessibility import speech
 from accessibility.sonification import Sonification
 from config.bands import BAND_NAMES, centre_frequency, get_band
 from config.bookmarks import Bookmark, BookmarkStore
+from config.channels import Channel, ChannelMapStore
 from config.modes import (
     AUDIO_RATE, BW_OPTIONS, MODE_KEYS, MODES,
     STEP_LABELS, STEPS,
 )
+from config.scenes import Scene, SceneStore
 from config.settings import Settings
+from core.operating_mode import OperatingState, OpMode
 from core.audio import AudioOutput
 from core.dsp.noise_blanker import NoiseBlanker
 from core.dsp.pipeline import PipelineCallbacks
@@ -83,6 +86,18 @@ class MainWindow(wx.Frame):
         )
         self._bookmarks = BookmarkStore()
         self._bookmarks.load()
+        self._scenes = SceneStore()
+        self._scenes.load()
+        self._channels = ChannelMapStore()
+        self._channels.load()
+
+        # Operating mode (VFO/MR). Active scene defaults to the free scene;
+        # active channel map is the store's active map. Restored op-state
+        # across restarts arrives in a later step.
+        self._opstate = OperatingState(
+            scene=self._scenes.free_scene(),
+            channel_map=self._channels.active_map(),
+        )
 
         # Runtime state
         self._step_idx = STEPS.index(self._settings.step) if self._settings.step in STEPS else 3
@@ -462,6 +477,103 @@ class MainWindow(wx.Frame):
         self._radio.set_mode(mode, wfm_kw, nfm_kw)
         speech.output(_("Mode {mode}").format(mode=mode))
 
+    def _set_bandwidth(self, value: int) -> None:
+        """Select a bandwidth value, syncing the choice control.
+
+        ``settings.bandwidth`` is not consumed by the DSP pipeline (demod
+        kwargs carry the filtering), so this just records the value and
+        reflects it in the UI for consistency.
+        """
+        self._settings.bandwidth = value
+        options = BW_OPTIONS.get(self._settings.mode, [])
+        for idx, (bw, _label) in enumerate(options):
+            if bw == value:
+                self._bw_choice.SetSelection(idx)
+                break
+
+    # ==================================================================
+    # Operating mode (VFO / MR), scenes and channels
+    # ==================================================================
+
+    def _page_nav(self, direction: int) -> None:
+        """PageUp/Down: channel step in MR mode, frequency step in VFO."""
+        res = self._opstate.step(
+            direction, self._settings.frequency, STEPS[self._step_idx]
+        )
+        if res.mode is OpMode.VFO:
+            if res.frequency is not None:
+                self._cursor.reset_offset()
+                self._tune(res.frequency)
+                if res.at_edge:
+                    speech.output(_("Band edge"))
+        elif res.channel is None:
+            speech.output(_("No channels in this map."))
+        else:
+            self._load_channel(res.channel)
+
+    def _load_channel(self, ch: Channel) -> None:
+        """Tune to a channel and announce number, label, frequency."""
+        self._cursor.reset_offset()
+        self._set_mode(ch.mode)
+        self._set_bandwidth(ch.bandwidth)
+        self._tune(ch.frequency)
+        speech.output(
+            _("Channel {n}, {label}, {freq}").format(
+                n=ch.number, label=ch.label, freq=fmt_freq(ch.frequency)
+            )
+        )
+
+    def _toggle_vfo_mr(self) -> None:
+        """Toggle between VFO (free/scene) and MR (channel memory)."""
+        mode = self._opstate.toggle_mode()
+        if mode is OpMode.MR:
+            ch = self._opstate.current_channel()
+            if ch is None:
+                speech.output(_("Memory mode. No channels."))
+            else:
+                self._load_channel(ch)
+        else:
+            speech.output(
+                _("VFO mode. {scene}").format(scene=self._opstate.scene.name)
+            )
+
+    def _apply_scene(self, scene: Scene) -> None:
+        """Apply a scene's demod setup and tune into its band."""
+        self._opstate.set_scene(scene)
+        self._set_mode(scene.mode)
+        self._set_bandwidth(scene.bandwidth)
+        if scene.nfm_deviation is not None:
+            self._settings.nfm_deviation = scene.nfm_deviation
+            self._radio.rebuild_nfm()
+        if scene.wfm_deemphasis is not None:
+            self._settings.wfm_deemphasis = scene.wfm_deemphasis
+            self._radio.rebuild_wfm()
+        if scene.squelch is not None:
+            self._settings.squelch = scene.squelch
+            self._audio.squelch = scene.squelch
+            self._sq_slider.SetValue(int(scene.squelch))
+            self._sq_lbl.SetLabel(f"{scene.squelch:.0f} dBm")
+        landing = scene.landing_freq()
+        if landing is not None:
+            self._cursor.reset_offset()
+            self._tune(landing)
+        speech.output(_("Scene {name}").format(name=scene.name))
+
+    def _cycle_scene(self, direction: int) -> None:
+        """Select the next/previous scene (VFO mode only)."""
+        if self._opstate.mode is not OpMode.VFO:
+            speech.output(_("Scenes are available in VFO mode."))
+            return
+        scenes = self._scenes.get_all()
+        if not scenes:
+            return
+        names = [s.name for s in scenes]
+        try:
+            idx = names.index(self._opstate.scene.name)
+        except ValueError:
+            idx = 0
+        self._apply_scene(scenes[(idx + direction) % len(scenes)])
+
     # ==================================================================
     # Start / Stop
     # ==================================================================
@@ -729,6 +841,12 @@ class MainWindow(wx.Frame):
             kb.FREQ_DOWN_FAST:      lambda: self._step_frequency(-10),
             # Mode
             kb.MODE_SELECT_START:   self._start_mode_select,
+            # Channel / scene navigation (VFO / MR)
+            kb.PAGE_NAV_UP:         lambda: self._page_nav(+1),
+            kb.PAGE_NAV_DOWN:       lambda: self._page_nav(-1),
+            kb.TOGGLE_VFO_MR:       self._toggle_vfo_mr,
+            kb.SCENE_PREV:          lambda: self._cycle_scene(-1),
+            kb.SCENE_NEXT:          lambda: self._cycle_scene(+1),
             # Info
             kb.ANNOUNCE_INFO:       self._announce_info,
             # Volume / squelch
@@ -1119,6 +1237,8 @@ class MainWindow(wx.Frame):
         self._stop_radio()
         self._settings.save()
         self._bookmarks.save()
+        self._scenes.save()
+        self._channels.save()
         for dlg in self._dialogs.values():
             try:
                 dlg.Destroy()
