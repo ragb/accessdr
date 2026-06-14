@@ -1,0 +1,72 @@
+"""Tests for config.scenes — band scene model and persistence."""
+
+from __future__ import annotations
+
+import os
+
+from config.scenes import (
+    FREE_SCENE_NAME,
+    Scene,
+    SceneStore,
+    default_scenes,
+)
+
+
+def test_free_scene_is_unbounded():
+    free = Scene(FREE_SCENE_NAME)
+    assert free.unbounded
+    assert free.landing_freq() is None
+
+
+def test_bounded_scene_lands_at_default_then_start():
+    s = Scene("FM", 88_000_000, 108_000_000, default_freq=98_000_000)
+    assert not s.unbounded
+    assert s.landing_freq() == 98_000_000
+    s2 = Scene("Air", 118_000_000, 137_000_000)
+    assert s2.landing_freq() == 118_000_000  # falls back to band start
+
+
+def test_default_scenes_include_free_and_bands():
+    names = [s.name for s in default_scenes()]
+    assert FREE_SCENE_NAME in names
+    assert "FM Broadcast" in names
+    assert "PMR446" in names
+
+
+def test_load_missing_seeds_defaults(tmp_path):
+    store = SceneStore()
+    store.load(os.path.join(tmp_path, "nope.json"))
+    assert store.by_name(FREE_SCENE_NAME) is not None
+    assert len(store.scenes) > 1
+
+
+def test_round_trip(tmp_path):
+    path = os.path.join(tmp_path, "scenes.json")
+    store = SceneStore()
+    store.load(os.path.join(tmp_path, "missing.json"))  # seed defaults
+    store.add(Scene("Custom", 144_000_000, 146_000_000, "NFM", 12_500, 12_500))
+    store.save(path)
+
+    fresh = SceneStore()
+    fresh.load(path)
+    custom = fresh.by_name("Custom")
+    assert custom is not None
+    assert custom.freq_start == 144_000_000
+    assert custom.mode == "NFM"
+    assert custom.step == 12_500
+
+
+def test_free_scene_created_if_absent():
+    store = SceneStore(scenes=[Scene("FM", 88_000_000, 108_000_000)])
+    free = store.free_scene()
+    assert free.name == FREE_SCENE_NAME
+    assert store.scenes[0].name == FREE_SCENE_NAME  # inserted at front
+
+
+def test_corrupt_file_falls_back_to_defaults(tmp_path):
+    path = os.path.join(tmp_path, "bad.json")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("{ not valid json")
+    store = SceneStore()
+    store.load(path)
+    assert store.by_name(FREE_SCENE_NAME) is not None
