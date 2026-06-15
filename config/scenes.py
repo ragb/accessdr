@@ -100,16 +100,29 @@ class SceneStore:
     # ------------------------------------------------------------------
 
     def load(self, path: str = SCENES_FILE) -> None:
-        """Load scenes from JSON (seeds defaults when file is missing)."""
+        """Load scenes from JSON (seeds defaults when file is missing).
+
+        Any newly-shipped default bands not already present (by name) are
+        merged in, so app updates add new bands without losing the user's
+        own bands or edits.
+        """
         try:
             with open(path, "r", encoding="utf-8") as fh:
                 data = json.load(fh)
             self.scenes = [Scene(**item) for item in data]
+            self._merge_new_defaults()
         except FileNotFoundError:
             self.scenes = default_scenes()
         except (json.JSONDecodeError, TypeError, KeyError) as exc:
             print(f"[scenes] Could not load {path}: {exc}")
             self.scenes = default_scenes()
+
+    def _merge_new_defaults(self) -> None:
+        """Append default bands whose names aren't already in the plan."""
+        have = {s.name for s in self.scenes}
+        for d in default_scenes():
+            if d.name not in have:
+                self.scenes.append(d)
 
     def save(self, path: str = SCENES_FILE) -> None:
         """Persist scenes to JSON file."""
