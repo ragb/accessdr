@@ -121,6 +121,10 @@ class ChannelsPanel(wx.Panel):
         self._bw_ctrl = wx.Choice(self, name="Channel bandwidth")
         grid.Add(self._bw_ctrl, 0)
 
+        grid.Add(wx.StaticText(self, label=_("Squelch (dBm, optional):")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._squelch_ctrl = wx.TextCtrl(self, name="Channel squelch")
+        grid.Add(self._squelch_ctrl, 0)
+
         form_sizer.Add(grid, 0, wx.EXPAND | wx.ALL, 6)
 
         form_btns = wx.BoxSizer(wx.HORIZONTAL)
@@ -276,6 +280,7 @@ class ChannelsPanel(wx.Panel):
         self._freq_ctrl.SetValue(fmt_freq(ch.frequency))
         self._mode_ctrl.SetStringSelection(ch.mode)
         self._refresh_bw_choices(ch.mode, ch.bandwidth)
+        self._squelch_ctrl.SetValue("" if ch.squelch is None else f"{ch.squelch:.0f}")
         self._pending_overrides = {k: getattr(ch, k) for k in self._OVERRIDE_KEYS}
         self._update_ms_btn()
 
@@ -295,6 +300,12 @@ class ChannelsPanel(wx.Panel):
         number = self._num_ctrl.GetValue()
         mode = self._mode_ctrl.GetStringSelection()
         bandwidth = self._form_bandwidth()
+        sq_text = self._squelch_ctrl.GetValue().strip()
+        try:
+            squelch = float(sq_text) if sq_text else None
+        except ValueError:
+            speech.output(_("Invalid squelch value."))
+            return
         # Upsert by number.
         existing = next((c for c in cmap.channels if c.number == number), None)
         if existing is None:
@@ -305,6 +316,7 @@ class ChannelsPanel(wx.Panel):
             existing.frequency = freq_hz
             existing.mode = mode
             existing.bandwidth = bandwidth
+        existing.squelch = squelch
         # Carry the modulation overrides edited via the Settings… button.
         for key, val in self._pending_overrides.items():
             setattr(existing, key, val)
@@ -326,6 +338,7 @@ class ChannelsPanel(wx.Panel):
         if mode in MODES:
             self._mode_ctrl.SetStringSelection(mode)
         self._refresh_bw_choices(mode, bandwidth)
+        self._squelch_ctrl.SetValue("")
         self._pending_overrides = {}
         self._update_ms_btn()
         self._label_ctrl.SetFocus()

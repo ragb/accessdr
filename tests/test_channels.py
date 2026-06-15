@@ -73,7 +73,9 @@ def test_round_trip(tmp_path):
 
     fresh = ChannelMapStore()
     fresh.load(path)
-    assert len(fresh.maps) == 2
+    # The two custom maps survive (default maps are merged in after them).
+    names = [m.name for m in fresh.maps]
+    assert names[:2] == ["Repeaters", "Air"]
     assert fresh.active == 1
     assert fresh.active_map().name == "Air"
     ch = fresh.active_map().channels[0]
@@ -87,8 +89,18 @@ def test_active_clamped_when_out_of_range(tmp_path):
     store.save(path)
     fresh = ChannelMapStore()
     fresh.load(path)
-    assert fresh.active == 0
-    assert fresh.active_map().name == "Only"
+    assert 0 <= fresh.active < len(fresh.maps)   # clamped to a valid map
+    assert "Only" in [m.name for m in fresh.maps]
+
+
+def test_load_merges_new_default_maps(tmp_path):
+    path = os.path.join(tmp_path, "channels.json")
+    ChannelMapStore(maps=[ChannelMap("Mine", [])]).save(path)
+    fresh = ChannelMapStore()
+    fresh.load(path)
+    names = [m.name for m in fresh.maps]
+    assert names[0] == "Mine"                    # user's map preserved/first
+    assert "PMR446" in names and "CB (CEPT FM)" in names  # defaults merged in
 
 
 def test_set_active_clamps():

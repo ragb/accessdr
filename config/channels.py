@@ -34,6 +34,7 @@ class Channel:
     wfm_stereo_mode: Optional[str] = None
     wfm_hiblend_enabled: Optional[bool] = None
     wfm_rds_enabled: Optional[bool] = None
+    squelch: Optional[float] = None     # per-channel squelch (dBm); None = keep
 
 
 @dataclass
@@ -110,7 +111,11 @@ class ChannelMapStore:
     # ------------------------------------------------------------------
 
     def load(self, path: str = CHANNELS_FILE) -> None:
-        """Load channel maps from JSON (seeds defaults when missing)."""
+        """Load channel maps from JSON (seeds defaults when missing).
+
+        Any newly-shipped default maps not already present (by name) are
+        merged in, so app updates add maps without losing the user's own.
+        """
         try:
             with open(path, "r", encoding="utf-8") as fh:
                 data = json.load(fh)
@@ -124,6 +129,8 @@ class ChannelMapStore:
             self.active = data.get("active", 0)
             if not self.maps:
                 self.maps = default_maps()
+            else:
+                self._merge_new_defaults()
         except FileNotFoundError:
             self.maps = default_maps()
             self.active = 0
@@ -132,6 +139,13 @@ class ChannelMapStore:
             self.maps = default_maps()
             self.active = 0
         self._clamp_active()
+
+    def _merge_new_defaults(self) -> None:
+        """Append default maps whose names aren't already present."""
+        have = {m.name for m in self.maps}
+        for d in default_maps():
+            if d.name not in have:
+                self.maps.append(d)
 
     def save(self, path: str = CHANNELS_FILE) -> None:
         """Persist channel maps to JSON file."""

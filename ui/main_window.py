@@ -553,12 +553,22 @@ class MainWindow(wx.Frame):
         else:
             self._load_channel(res.channel)
 
+    def _apply_squelch_override(self, value) -> None:
+        """Apply a band/channel squelch override (dBm) to audio + UI."""
+        if value is None:
+            return
+        self._settings.squelch = value
+        self._audio.squelch = value
+        self._sq_slider.SetValue(int(value))
+        self._sq_lbl.SetLabel(f"{value:.0f} dBm")
+
     def _load_channel(self, ch: Channel) -> None:
         """Tune to a channel and announce number, label, frequency."""
         self._cursor.reset_offset()
         self._set_mode(ch.mode)
         self._set_bandwidth(ch.bandwidth)
         self._apply_mode_overrides(ch)
+        self._apply_squelch_override(ch.squelch)
         self._tune(ch.frequency)
         speech.output(
             _("Channel {n}, {label}, {freq}").format(
@@ -577,11 +587,7 @@ class MainWindow(wx.Frame):
         self._set_mode(scene.mode)
         self._set_bandwidth(scene.bandwidth)
         self._apply_mode_overrides(scene)
-        if scene.squelch is not None:
-            self._settings.squelch = scene.squelch
-            self._audio.squelch = scene.squelch
-            self._sq_slider.SetValue(int(scene.squelch))
-            self._sq_lbl.SetLabel(f"{scene.squelch:.0f} dBm")
+        self._apply_squelch_override(scene.squelch)
         landing = scene.landing_freq()
         if landing is not None:
             self._cursor.reset_offset()
