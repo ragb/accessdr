@@ -331,12 +331,15 @@ class MainWindow(wx.Frame):
         self._mode_choice = wx.Choice(page, choices=MODES, name="Modulation")
         self._mode_choice.SetStringSelection(self._settings.mode)
         self._mode_choice.Bind(wx.EVT_CHOICE, self._on_mode_change)
+        self._mode_settings_btn = wx.Button(page, label=_("Settings…"), name="Modulation settings")
+        self._mode_settings_btn.Bind(wx.EVT_BUTTON, lambda e: self._open_mode_settings())
         bw_label = wx.StaticText(page, label=_("Bandwidth:"))
         self._bw_choice = wx.Choice(page, choices=[], name="Filter bandwidth")
         self._bw_choice.Bind(wx.EVT_CHOICE, self._on_bw_change)
-        for w in (mode_label, self._mode_choice, bw_label, self._bw_choice):
+        for w in (mode_label, self._mode_choice, self._mode_settings_btn, bw_label, self._bw_choice):
             mode_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
         sizer.Add(mode_row, 0, wx.ALL, 6)
+        self._update_mode_settings_btn()
 
         page.SetSizer(sizer)
         notebook.AddPage(page, _("VFO"))
@@ -456,6 +459,7 @@ class MainWindow(wx.Frame):
         wfm_kw = self._radio.wfm_kwargs() if mode == "WFM" else {}
         nfm_kw = self._radio.nfm_kwargs() if mode == "NFM" else {}
         self._radio.set_mode(mode, wfm_kw, nfm_kw)
+        self._update_mode_settings_btn()
         speech.output(_("Modulation {mode}").format(mode=mode))
 
     def _on_bw_change(self, event: wx.CommandEvent) -> None:
@@ -475,6 +479,7 @@ class MainWindow(wx.Frame):
         wfm_kw = self._radio.wfm_kwargs() if mode == "WFM" else {}
         nfm_kw = self._radio.nfm_kwargs() if mode == "NFM" else {}
         self._radio.set_mode(mode, wfm_kw, nfm_kw)
+        self._update_mode_settings_btn()
         speech.output(_("Modulation {mode}").format(mode=mode))
 
     def _apply_mode_overrides(self, source) -> None:
@@ -493,6 +498,26 @@ class MainWindow(wx.Frame):
         if changed:
             self._radio.rebuild_wfm()
             self._radio.rebuild_nfm()
+
+    def _update_mode_settings_btn(self) -> None:
+        """Enable the VFO Settings… button only if the modulation has settings."""
+        from config.mode_params import params_for
+        if hasattr(self, "_mode_settings_btn"):
+            self._mode_settings_btn.Enable(bool(params_for(self._settings.mode)))
+
+    def _open_mode_settings(self) -> None:
+        """Edit the current (live) modulation's settings."""
+        from config.mode_params import params_for
+        from ui.dialogs.mode_settings_dialog import ModeSettingsDialog
+        mode = self._settings.mode
+        if not params_for(mode):
+            return
+        dlg = ModeSettingsDialog(self, mode, self._settings, is_override=False)
+        if dlg.ShowModal() == wx.ID_OK:
+            self._radio.rebuild_wfm()
+            self._radio.rebuild_nfm()
+            speech.output(_("{mode} settings applied.").format(mode=mode))
+        dlg.Destroy()
 
     def _set_bandwidth(self, value: int) -> None:
         """Select a bandwidth value, syncing the choice control.
