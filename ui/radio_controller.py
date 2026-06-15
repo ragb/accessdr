@@ -118,6 +118,7 @@ class RadioController:
             self._sdr.set_tuner_bandwidth(self._settings.tuner_bandwidth)
         else:
             self._sdr.set_tuner_bandwidth(0)  # auto
+        self._sdr.set_dithering(self._settings.tuner_dithering)
         self._sdr.set_bias_tee(self._settings.bias_tee)
 
         self._sdr.on_samples = self._pipeline.process
@@ -207,10 +208,16 @@ class RadioController:
             self._sdr.set_agc_mode(s.agc_mode)
             self._sdr.set_offset_tuning(s.offset_tuning)
             self._sdr.set_tuner_bandwidth(s.tuner_bandwidth)
+            self._sdr.set_dithering(s.tuner_dithering)
             self._sdr.set_bias_tee(s.bias_tee)
             # Re-tune so a changed upconverter offset takes effect now.
             self._sdr.set_frequency(self._hw_freq(s.frequency))
         return need_restart
+
+    @property
+    def applied_tuner_bandwidth(self) -> int:
+        """Actual IF bandwidth (Hz) the tuner applied for the last request."""
+        return self._sdr.applied_tuner_bandwidth
 
     def rebuild_wfm(self) -> None:
         """Rebuild WFM demodulator from current settings."""

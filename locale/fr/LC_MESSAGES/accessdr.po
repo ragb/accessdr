@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: accessdr 0.5.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-15 18:49+0100\n"
+"POT-Creation-Date: 2026-06-15 20:14+0100\n"
 "PO-Revision-Date: 2026-05-24 18:23+0200\n"
 "Last-Translator: Michel Such <michel.such@free.fr>\n"
 "Language: fr\n"
@@ -339,7 +339,7 @@ msgid "Mute (M)"
 msgstr "Muet (M)"
 
 #: ui/dialogs/scanner_dialog.py:65 ui/main_window.py:248
-#: ui/panels/scenes_panel.py:129
+#: ui/panels/scenes_panel.py:138
 msgid "Squelch (dBm):"
 msgstr "Squelch (dBm):"
 
@@ -356,17 +356,17 @@ msgid "Step:"
 msgstr "Pas:"
 
 #: ui/main_window.py:330 ui/panels/channels_panel.py:109
-#: ui/panels/scenes_panel.py:106
+#: ui/panels/scenes_panel.py:103
 msgid "Modulation:"
 msgstr ""
 
 #: ui/main_window.py:334 ui/panels/channels_panel.py:114
-#: ui/panels/scenes_panel.py:102
+#: ui/panels/scenes_panel.py:108
 msgid "Settings…"
 msgstr ""
 
 #: ui/main_window.py:336 ui/panels/channels_panel.py:120
-#: ui/panels/scenes_panel.py:109
+#: ui/panels/scenes_panel.py:114
 msgid "Bandwidth:"
 msgstr ""
 
@@ -388,7 +388,7 @@ msgid "Tune to Frequency"
 msgstr "Accorder à la Fréquence"
 
 #: ui/main_window.py:402 ui/main_window.py:423 ui/panels/channels_panel.py:298
-#: ui/panels/scenes_panel.py:254
+#: ui/panels/scenes_panel.py:263
 msgid "Invalid frequency."
 msgstr "Fréquence invalide."
 
@@ -667,12 +667,17 @@ msgstr "Distant : {name} ({host}:{port})"
 msgid "User guide not found. Run 'invoke build-help' first."
 msgstr "Guide utilisateur non trouvé. Exécutez d'abord 'invoke build-help'."
 
-#: ui/main_window.py:1349
+#: ui/main_window.py:1330
+#, python-brace-format
+msgid "IF bandwidth {bw:.0f} kHz"
+msgstr ""
+
+#: ui/main_window.py:1357
 #, python-brace-format
 msgid "SDR error: {msg}"
 msgstr "Erreur SDR: {msg}"
 
-#: ui/main_window.py:1352
+#: ui/main_window.py:1360
 #, python-brace-format
 msgid "Error: {msg}"
 msgstr "Erreur: {msg}"
@@ -1050,7 +1055,7 @@ msgid "(default)"
 msgstr ""
 
 #: ui/dialogs/mode_settings_dialog.py:28 ui/panels/channels_panel.py:408
-#: ui/panels/scenes_panel.py:290
+#: ui/panels/scenes_panel.py:299
 #, python-brace-format
 msgid "{mode} settings"
 msgstr ""
@@ -1147,18 +1152,22 @@ msgid "Offset Tuning (remove DC spike)"
 msgstr "Réglage par décalage (suppression du pic de courant continu)"
 
 #: ui/dialogs/rf_dialog.py:204
+msgid "Disable tuner dithering (cleaner CW/SSB/digital)"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:212
 msgid "Bias Tee (powers antenna via coax)"
 msgstr "Bias Tee (Alimentation de l'antenne via coaxial)"
 
-#: ui/dialogs/rf_dialog.py:214
+#: ui/dialogs/rf_dialog.py:222
 msgid "Noise Blanker"
 msgstr "Réducteur de bruit"
 
-#: ui/dialogs/rf_dialog.py:220
+#: ui/dialogs/rf_dialog.py:228
 msgid "NB Threshold:"
 msgstr "Seuil NB:"
 
-#: ui/dialogs/rf_dialog.py:263
+#: ui/dialogs/rf_dialog.py:271
 msgid ""
 "Bias Tee supplies 4.5 V DC through the antenna connector.\n"
 "\n"
@@ -1179,7 +1188,7 @@ msgstr ""
 "\n"
 "Activer le Bias Tee ?"
 
-#: ui/dialogs/rf_dialog.py:270
+#: ui/dialogs/rf_dialog.py:278
 msgid "Bias Tee — Danger"
 msgstr "Bias Tee — Danger"
 
@@ -1467,7 +1476,7 @@ msgstr ""
 msgid "Save Channel"
 msgstr ""
 
-#: ui/panels/channels_panel.py:132 ui/panels/scenes_panel.py:137
+#: ui/panels/channels_panel.py:132 ui/panels/scenes_panel.py:146
 msgid "Store Current VFO"
 msgstr ""
 
@@ -1483,15 +1492,15 @@ msgstr ""
 msgid "Move Down"
 msgstr ""
 
-#: ui/panels/channels_panel.py:145 ui/panels/scenes_panel.py:148
+#: ui/panels/channels_panel.py:145 ui/panels/scenes_panel.py:157
 msgid "Delete Selected"
 msgstr "Effacer l'élément sélectionné"
 
-#: ui/panels/channels_panel.py:146 ui/panels/scenes_panel.py:149
+#: ui/panels/channels_panel.py:146 ui/panels/scenes_panel.py:158
 msgid "Import…"
 msgstr ""
 
-#: ui/panels/channels_panel.py:147 ui/panels/scenes_panel.py:150
+#: ui/panels/channels_panel.py:147 ui/panels/scenes_panel.py:159
 msgid "Export…"
 msgstr ""
 
@@ -1559,7 +1568,7 @@ msgstr ""
 msgid "Channel {n}."
 msgstr ""
 
-#: ui/panels/channels_panel.py:403 ui/panels/scenes_panel.py:285
+#: ui/panels/channels_panel.py:403 ui/panels/scenes_panel.py:294
 #, python-brace-format
 msgid "No settings for {mode}."
 msgstr ""
@@ -1576,7 +1585,7 @@ msgstr ""
 msgid "Map exported."
 msgstr ""
 
-#: ui/panels/channels_panel.py:440 ui/panels/scenes_panel.py:366
+#: ui/panels/channels_panel.py:440 ui/panels/scenes_panel.py:375
 #, python-brace-format
 msgid "Export failed: {err}"
 msgstr ""
@@ -1589,7 +1598,7 @@ msgstr ""
 msgid "Imported"
 msgstr ""
 
-#: ui/panels/channels_panel.py:458 ui/panels/scenes_panel.py:381
+#: ui/panels/channels_panel.py:458 ui/panels/scenes_panel.py:390
 #, python-brace-format
 msgid "Import failed: {err}"
 msgstr ""
@@ -1603,86 +1612,86 @@ msgstr ""
 msgid "Band"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:90
+#: ui/panels/scenes_panel.py:91
 msgid "Group:"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:93
+#: ui/panels/scenes_panel.py:95
 msgid "Band start (MHz, blank = unbounded):"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:96
+#: ui/panels/scenes_panel.py:99
 msgid "Band end (MHz, blank = unbounded):"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:113
-msgid "Follow tuning step"
-msgstr ""
-
-#: ui/panels/scenes_panel.py:117
+#: ui/panels/scenes_panel.py:118
 msgid "Tuning step:"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:120
+#: ui/panels/scenes_panel.py:121
+msgid "Follow tuning step"
+msgstr ""
+
+#: ui/panels/scenes_panel.py:127
 msgid "Default frequency (MHz, optional):"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:125
+#: ui/panels/scenes_panel.py:134
 msgid "Advanced (optional)"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:136
+#: ui/panels/scenes_panel.py:145
 msgid "Save Band"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:147
+#: ui/panels/scenes_panel.py:156
 msgid "Apply Selected"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:247
+#: ui/panels/scenes_panel.py:256
 msgid "Please enter a band name."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:271
+#: ui/panels/scenes_panel.py:280
 msgid "Invalid numeric value."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:295
+#: ui/panels/scenes_panel.py:304
 msgid "Modulation settings updated. Save the band to apply."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:310
+#: ui/panels/scenes_panel.py:319
 #, python-brace-format
 msgid "Saved band {name}."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:327
+#: ui/panels/scenes_panel.py:336
 #, python-brace-format
 msgid "Storing {freq} as a band. Enter a name and edges, then save."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:335 ui/panels/scenes_panel.py:343
+#: ui/panels/scenes_panel.py:344 ui/panels/scenes_panel.py:352
 msgid "No band selected."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:348
+#: ui/panels/scenes_panel.py:357
 #, python-brace-format
 msgid "Deleted band {name}."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:356
+#: ui/panels/scenes_panel.py:365
 msgid "Export band plan"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:364
+#: ui/panels/scenes_panel.py:373
 msgid "Band plan exported."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:370
+#: ui/panels/scenes_panel.py:379
 msgid "Import band plan"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:389
+#: ui/panels/scenes_panel.py:398
 msgid "Band plan imported."
 msgstr ""
 

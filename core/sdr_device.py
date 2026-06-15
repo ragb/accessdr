@@ -39,6 +39,8 @@ class SDRDevice:
         self.offset_tuning: bool = False
         self.tuner_bandwidth: int = 0  # Hz, 0 = auto
         self.direct_sampling: int = 0  # 0 = off, 1 = I-branch, 2 = Q-branch
+        self.tuner_dithering: bool = True
+        self.applied_tuner_bandwidth: int = 0  # actual BW the tuner applied (Hz)
 
         self.on_samples: Optional[Callable[[np.ndarray], None]] = None
         self.on_error: Optional[Callable[[str], None]] = None
@@ -61,6 +63,7 @@ class SDRDevice:
             offset_tuning=self.offset_tuning,
             tuner_bandwidth=self.tuner_bandwidth,
             direct_sampling=self.direct_sampling,
+            tuner_dithering=self.tuner_dithering,
         )
         if not backend.open(device_index, config):
             if self.on_error:
@@ -109,11 +112,24 @@ class SDRDevice:
         if self._backend is not None:
             self._backend.set_offset_tuning(on)
 
-    def set_tuner_bandwidth(self, bw_hz: int) -> None:
-        """Set hardware IF bandwidth. 0 = automatic."""
+    def set_tuner_bandwidth(self, bw_hz: int) -> int:
+        """Set hardware IF bandwidth. 0 = automatic.
+
+        Returns the actual bandwidth the tuner applied in Hz (it quantises
+        to discrete steps), or *bw_hz* if the backend can't report it.
+        """
         self.tuner_bandwidth = bw_hz
+        applied = bw_hz
         if self._backend is not None:
-            self._backend.set_tuner_bandwidth(bw_hz)
+            applied = self._backend.set_tuner_bandwidth(bw_hz)
+        self.applied_tuner_bandwidth = applied
+        return applied
+
+    def set_dithering(self, on: bool) -> None:
+        """Enable/disable tuner frequency dithering. Off = cleaner narrowband."""
+        self.tuner_dithering = on
+        if self._backend is not None:
+            self._backend.set_dithering(on)
 
     def set_bias_tee(self, on: bool) -> None:
         if self._backend is not None:
