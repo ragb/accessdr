@@ -44,16 +44,51 @@ class ChannelMap:
         return n
 
 
+# PMR446 analogue FM: 16 channels, 12.5 kHz spacing from 446.00625 MHz.
+_PMR446_BASE_HZ = 446_006_250
+_PMR446_STEP_HZ = 12_500
+
+# CB CEPT 40-channel FM frequencies (Hz), in channel order. Channels 23–25
+# are intentionally out of frequency sequence (the standard CB anomaly).
+_CB_CEPT_HZ = [
+    26_965_000, 26_975_000, 26_985_000, 27_005_000, 27_015_000,
+    27_025_000, 27_035_000, 27_055_000, 27_065_000, 27_075_000,
+    27_085_000, 27_105_000, 27_115_000, 27_125_000, 27_135_000,
+    27_155_000, 27_165_000, 27_175_000, 27_185_000, 27_205_000,
+    27_215_000, 27_225_000, 27_255_000, 27_235_000, 27_245_000,
+    27_265_000, 27_275_000, 27_285_000, 27_295_000, 27_305_000,
+    27_315_000, 27_325_000, 27_335_000, 27_345_000, 27_355_000,
+    27_365_000, 27_375_000, 27_385_000, 27_395_000, 27_405_000,
+]
+
+
+def _pmr446_map() -> ChannelMap:
+    return ChannelMap(
+        "PMR446",
+        [
+            Channel(n, f"PMR {n}", _PMR446_BASE_HZ + (n - 1) * _PMR446_STEP_HZ,
+                    "NFM", 12_500)
+            for n in range(1, 17)
+        ],
+    )
+
+
+def _cb_cept_map() -> ChannelMap:
+    return ChannelMap(
+        "CB (CEPT FM)",
+        [
+            Channel(n, f"CB {n}", hz, "NFM", 12_500)
+            for n, hz in enumerate(_CB_CEPT_HZ, start=1)
+        ],
+    )
+
+
 def default_maps() -> List[ChannelMap]:
-    """Ship one starter map with a few common simplex frequencies."""
+    """Ship an empty scratch map plus standard PMR446 and CB band maps."""
     return [
-        ChannelMap(
-            "My Channels",
-            [
-                Channel(1, "PMR446 Ch1", 446_006_250, "NFM", 12_500),
-                Channel(2, "NOAA WX1", 162_400_000, "NFM", 12_500),
-            ],
-        ),
+        ChannelMap("My Channels", []),
+        _pmr446_map(),
+        _cb_cept_map(),
     ]
 
 

@@ -35,6 +35,31 @@ def test_load_missing_seeds_defaults(tmp_path):
     assert store.active_map().name == default_maps()[0].name
 
 
+def test_default_maps_include_pmr_and_cb():
+    names = [m.name for m in default_maps()]
+    assert names == ["My Channels", "PMR446", "CB (CEPT FM)"]
+
+
+def test_pmr446_map():
+    pmr = next(m for m in default_maps() if m.name == "PMR446")
+    assert len(pmr.channels) == 16
+    assert pmr.channels[0].frequency == 446_006_250   # ch1
+    assert pmr.channels[15].frequency == 446_193_750  # ch16
+    assert all(c.mode == "NFM" and c.bandwidth == 12_500 for c in pmr.channels)
+
+
+def test_cb_cept_map():
+    cb = next(m for m in default_maps() if m.name == "CB (CEPT FM)")
+    assert len(cb.channels) == 40
+    assert cb.channels[0].frequency == 26_965_000    # ch1
+    assert cb.channels[39].frequency == 27_405_000   # ch40
+    # The standard CB anomaly: ch23 is higher than ch24/25.
+    assert cb.channels[22].frequency == 27_255_000   # ch23
+    assert cb.channels[23].frequency == 27_235_000   # ch24
+    assert cb.channels[24].frequency == 27_245_000   # ch25
+    assert all(c.mode == "NFM" for c in cb.channels)
+
+
 def test_round_trip(tmp_path):
     path = os.path.join(tmp_path, "channels.json")
     store = ChannelMapStore(
