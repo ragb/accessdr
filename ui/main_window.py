@@ -36,6 +36,8 @@ from core.scanner import Scanner
 from core.signal_utils import s_meter
 from ui.cursor_controller import CursorController
 from ui.formatting import fmt_freq, freq_number, freq_unit, parse_freq
+from ui.panels.channels_panel import ChannelsPanel
+from ui.panels.scenes_panel import ScenesPanel
 from ui.radio_controller import RadioController
 from ui.spectrum_controller import SpectrumController
 from ui.spectrum_panel import SpectrumPanel
@@ -49,7 +51,7 @@ class MainWindow(wx.Frame):
     """Primary application window."""
 
     def __init__(self, parent, title: str) -> None:
-        super().__init__(parent, title=title, size=(640, 560))
+        super().__init__(parent, title=title, size=(700, 780))
         self.SetName("AccessDR Main Window")
 
         # Load persisted settings
@@ -154,8 +156,8 @@ class MainWindow(wx.Frame):
         item_channels = radio_menu.Append(wx.ID_ANY, _("&Channels…\tCtrl+B"))
         item_scanner = radio_menu.Append(wx.ID_ANY, _("Sca&nner…\tCtrl+N"))
         self.Bind(wx.EVT_MENU, self._on_enter_freq_menu, item_freq)
-        self.Bind(wx.EVT_MENU, lambda e: self._open_scenes_dialog(), item_scenes)
-        self.Bind(wx.EVT_MENU, lambda e: self._open_channels_dialog(), item_channels)
+        self.Bind(wx.EVT_MENU, lambda e: self._show_scenes_tab(), item_scenes)
+        self.Bind(wx.EVT_MENU, lambda e: self._show_channels_tab(), item_channels)
         self.Bind(wx.EVT_MENU, lambda e: self._open_scanner_dialog(), item_scanner)
         mb.Append(radio_menu, _("&Radio"))
 
@@ -199,56 +201,25 @@ class MainWindow(wx.Frame):
         panel.SetName("Main controls panel")
         outer = wx.BoxSizer(wx.VERTICAL)
 
-        # --- Frequency row ---
-        freq_row = wx.BoxSizer(wx.HORIZONTAL)
-        freq_label = wx.StaticText(panel, label=_("Frequency:"))
-        self._freq_ctrl = wx.TextCtrl(
-            panel,
-            value=fmt_freq(self._settings.frequency),
-            name="Frequency display",
-            size=(160, -1),
+        # === Notebook: VFO / Channels / Scenes ===
+        self._notebook = wx.Notebook(panel, name="Workspace")
+        self._build_vfo_page(self._notebook)          # page 0
+        self._memory_panel = ChannelsPanel(
+            self._notebook, self._channels,
+            on_load=self._on_channel_load,
+            get_current=self._get_current_vfo,
+            on_changed=self._on_channels_changed,
         )
-        self._freq_ctrl.SetEditable(False)
-
-        tune_up = wx.Button(panel, label="\u25b2", name="Tune up", size=(32, -1))
-        tune_dn = wx.Button(panel, label="\u25bc", name="Tune down", size=(32, -1))
-        tune_up.Bind(wx.EVT_BUTTON, lambda e: self._step_frequency(+1))
-        tune_dn.Bind(wx.EVT_BUTTON, lambda e: self._step_frequency(-1))
-        # Keep for mouse users but skip in keyboard tab order.
-        def _skip_focus(evt):
-            btn = evt.GetEventObject()
-            if wx.GetKeyState(wx.WXK_SHIFT):
-                btn.Navigate(wx.NavigationKeyEvent.IsBackward)
-            else:
-                btn.Navigate(wx.NavigationKeyEvent.IsForward)
-        for btn in (tune_up, tune_dn):
-            btn.Bind(wx.EVT_SET_FOCUS, _skip_focus)
-
-        step_label = wx.StaticText(panel, label=_("Step:"))
-        self._step_choice = wx.Choice(
-            panel, choices=[_(s) for s in STEP_LABELS], name="Tuning step"
+        self._notebook.AddPage(self._memory_panel, _("Channels"))   # page 1
+        self._scenes_panel = ScenesPanel(
+            self._notebook, self._scenes,
+            on_apply=self._on_scene_apply,
+            get_current=self._get_current_vfo,
+            on_changed=self._on_scenes_changed,
         )
-        self._step_choice.SetSelection(self._step_idx)
-        self._step_choice.Bind(wx.EVT_CHOICE, self._on_step_change)
-
-        for w in (freq_label, self._freq_ctrl, tune_up, tune_dn, step_label, self._step_choice):
-            freq_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
-        outer.Add(freq_row, 0, wx.ALL, 8)
-
-        # --- Mode / BW row ---
-        mode_row = wx.BoxSizer(wx.HORIZONTAL)
-        mode_label = wx.StaticText(panel, label=_("Mode:"))
-        self._mode_choice = wx.Choice(panel, choices=MODES, name="Demodulation mode")
-        self._mode_choice.SetStringSelection(self._settings.mode)
-        self._mode_choice.Bind(wx.EVT_CHOICE, self._on_mode_change)
-
-        bw_label = wx.StaticText(panel, label=_("BW:"))
-        self._bw_choice = wx.Choice(panel, choices=[], name="Filter bandwidth")
-        self._bw_choice.Bind(wx.EVT_CHOICE, self._on_bw_change)
-
-        for w in (mode_label, self._mode_choice, bw_label, self._bw_choice):
-            mode_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
-        outer.Add(mode_row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+        self._notebook.AddPage(self._scenes_panel, _("Scenes"))     # page 2
+        self._notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self._on_tab_changed)
+        outer.Add(self._notebook, 1, wx.EXPAND | wx.ALL, 8)
 
         # --- Start/Stop + Signal ---
         ctrl_row = wx.BoxSizer(wx.HORIZONTAL)
@@ -313,28 +284,90 @@ class MainWindow(wx.Frame):
 
         panel.SetSizer(outer)
 
-        # Tab order
-        self._freq_ctrl.MoveBeforeInTabOrder(self._step_choice)
-        self._step_choice.MoveBeforeInTabOrder(self._mode_choice)
-        self._mode_choice.MoveBeforeInTabOrder(self._bw_choice)
-        self._bw_choice.MoveBeforeInTabOrder(self._start_btn)
-        self._start_btn.MoveBeforeInTabOrder(self._vol_slider)
-        self._vol_slider.MoveBeforeInTabOrder(self._mute_btn)
-        self._mute_btn.MoveBeforeInTabOrder(self._sq_slider)
-        self._sq_slider.MoveBeforeInTabOrder(self._sweep_btn)
-
-        # Prevent native Left/Right handling on widgets that would steal
-        # arrow keys from the spectrum cursor (horizontal sliders, choices).
-        def _eat_left_right(event: wx.KeyEvent) -> None:
-            code = event.GetKeyCode()
-            if code in (wx.WXK_LEFT, wx.WXK_RIGHT) and event.GetModifiers() in (0, wx.MOD_CONTROL):
-                return  # consumed — main _on_key handler will process
-            event.Skip()
-        for w in (self._step_choice, self._mode_choice, self._bw_choice,
-                  self._vol_slider, self._sq_slider, self._sweep_btn):
-            w.Bind(wx.EVT_KEY_DOWN, _eat_left_right)
+        # Swallow Left/Right on the shared sliders/toggle so the spectrum
+        # cursor gets them (VFO-page choices are bound in _build_vfo_page).
+        for w in (self._vol_slider, self._sq_slider, self._sweep_btn):
+            w.Bind(wx.EVT_KEY_DOWN, self._eat_left_right)
 
         self._update_bw_choices(self._settings.mode)
+
+    def _build_vfo_page(self, notebook: wx.Notebook) -> None:
+        """Build the VFO tab: scene selector + frequency/step + mode/bw."""
+        page = wx.Panel(notebook)
+        page.SetName("VFO panel")
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        # Scene row
+        scene_row = wx.BoxSizer(wx.HORIZONTAL)
+        scene_label = wx.StaticText(page, label=_("Scene:"))
+        self._scene_choice = wx.Choice(
+            page, choices=[s.name for s in self._scenes.get_all()], name="Scene"
+        )
+        self._scene_choice.SetStringSelection(self._opstate.scene.name)
+        self._scene_choice.Bind(wx.EVT_CHOICE, self._on_scene_choice)
+        for w in (scene_label, self._scene_choice):
+            scene_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        sizer.Add(scene_row, 0, wx.ALL, 6)
+
+        # Frequency row
+        freq_row = wx.BoxSizer(wx.HORIZONTAL)
+        freq_label = wx.StaticText(page, label=_("Frequency:"))
+        self._freq_ctrl = wx.TextCtrl(
+            page, value=fmt_freq(self._settings.frequency),
+            name="Frequency display", size=(160, -1),
+        )
+        self._freq_ctrl.SetEditable(False)
+        tune_up = wx.Button(page, label="▲", name="Tune up", size=(32, -1))
+        tune_dn = wx.Button(page, label="▼", name="Tune down", size=(32, -1))
+        tune_up.Bind(wx.EVT_BUTTON, lambda e: self._step_frequency(+1))
+        tune_dn.Bind(wx.EVT_BUTTON, lambda e: self._step_frequency(-1))
+
+        # Keep tune buttons for mouse users but skip in keyboard tab order.
+        def _skip_focus(evt):
+            btn = evt.GetEventObject()
+            if wx.GetKeyState(wx.WXK_SHIFT):
+                btn.Navigate(wx.NavigationKeyEvent.IsBackward)
+            else:
+                btn.Navigate(wx.NavigationKeyEvent.IsForward)
+        for btn in (tune_up, tune_dn):
+            btn.Bind(wx.EVT_SET_FOCUS, _skip_focus)
+
+        step_label = wx.StaticText(page, label=_("Step:"))
+        self._step_choice = wx.Choice(
+            page, choices=[_(s) for s in STEP_LABELS], name="Tuning step"
+        )
+        self._step_choice.SetSelection(self._step_idx)
+        self._step_choice.Bind(wx.EVT_CHOICE, self._on_step_change)
+        for w in (freq_label, self._freq_ctrl, tune_up, tune_dn, step_label, self._step_choice):
+            freq_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        sizer.Add(freq_row, 0, wx.ALL, 6)
+
+        # Mode / BW row
+        mode_row = wx.BoxSizer(wx.HORIZONTAL)
+        mode_label = wx.StaticText(page, label=_("Mode:"))
+        self._mode_choice = wx.Choice(page, choices=MODES, name="Demodulation mode")
+        self._mode_choice.SetStringSelection(self._settings.mode)
+        self._mode_choice.Bind(wx.EVT_CHOICE, self._on_mode_change)
+        bw_label = wx.StaticText(page, label=_("BW:"))
+        self._bw_choice = wx.Choice(page, choices=[], name="Filter bandwidth")
+        self._bw_choice.Bind(wx.EVT_CHOICE, self._on_bw_change)
+        for w in (mode_label, self._mode_choice, bw_label, self._bw_choice):
+            mode_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        sizer.Add(mode_row, 0, wx.ALL, 6)
+
+        page.SetSizer(sizer)
+        notebook.AddPage(page, _("VFO"))
+
+        for w in (self._scene_choice, self._step_choice, self._mode_choice, self._bw_choice):
+            w.Bind(wx.EVT_KEY_DOWN, self._eat_left_right)
+
+    @staticmethod
+    def _eat_left_right(event: wx.KeyEvent) -> None:
+        """Swallow Left/Right on a control so the cursor handler gets them."""
+        code = event.GetKeyCode()
+        if code in (wx.WXK_LEFT, wx.WXK_RIGHT) and event.GetModifiers() in (0, wx.MOD_CONTROL):
+            return  # consumed — main _on_key handler will process
+        event.Skip()
 
     def _build_status_bar(self) -> None:
         self._statusbar = self.CreateStatusBar(name="Status bar")
@@ -555,6 +588,7 @@ class MainWindow(wx.Frame):
         if landing is not None:
             self._cursor.reset_offset()
             self._tune(landing)
+        self._refresh_scene_choice()
         speech.output(_("Scene {name}").format(name=scene.name))
 
     def _cycle_scene(self, direction: int) -> None:
@@ -781,6 +815,16 @@ class MainWindow(wx.Frame):
     # Keyboard shortcuts
     # ==================================================================
 
+    def _focus_in_management_panel(self, w) -> bool:  # noqa: ANN001
+        """True if focus is inside the Channels or Scenes management panel."""
+        targets = (getattr(self, "_memory_panel", None),
+                   getattr(self, "_scenes_panel", None))
+        while w is not None:
+            if w in targets:
+                return True
+            w = w.GetParent()
+        return False
+
     def _on_key(self, event: wx.KeyEvent) -> None:
         from ui import keyboard_handler as kb
 
@@ -800,6 +844,13 @@ class MainWindow(wx.Frame):
             return
 
         if isinstance(focused, wx.TextCtrl):
+            event.Skip()
+            return
+
+        # The Channels/Scenes management tabs handle their own keys (list
+        # navigation, type-ahead, form controls) — radio shortcuts only act
+        # on the VFO tab.
+        if self._focus_in_management_panel(focused):
             event.Skip()
             return
 
@@ -877,8 +928,8 @@ class MainWindow(wx.Frame):
             kb.OPEN_RF_DIALOG:      self._open_rf_dialog,
             kb.OPEN_SPECTRUM_DIALOG: self._open_spectrum_dialog,
             kb.OPEN_SCANNER_DIALOG: self._open_scanner_dialog,
-            kb.OPEN_CHANNELS_DIALOG: self._open_channels_dialog,
-            kb.OPEN_SCENES_DIALOG:  self._open_scenes_dialog,
+            kb.OPEN_CHANNELS_DIALOG: self._show_channels_tab,
+            kb.OPEN_SCENES_DIALOG:  self._show_scenes_tab,
             kb.OPEN_AUDIO_DIALOG:   self._open_audio_dialog,
             kb.OPEN_WFM_DIALOG:     self._open_wfm_dialog,
             kb.OPEN_NFM_DIALOG:     self._open_nfm_dialog,
@@ -1063,31 +1114,40 @@ class MainWindow(wx.Frame):
         from ui.dialogs.scanner_dialog import ScannerDialog
         self._open_or_raise("scanner", lambda: ScannerDialog(self, self._scanner))
 
-    def _open_channels_dialog(self) -> None:
-        from ui.dialogs.channels_dialog import ChannelsDialog
-        self._open_or_raise(
-            "channels",
-            lambda: ChannelsDialog(
-                self, self._channels,
-                on_load=self._on_channel_load,
-                get_current=self._get_current_vfo,
-                on_changed=self._on_channels_changed,
-            ),
-        )
+    def _show_channels_tab(self) -> None:
+        self._notebook.SetSelection(1)          # Channels page
+        self._memory_panel.SetFocus()
 
-    def _open_scenes_dialog(self) -> None:
-        from ui.dialogs.scenes_dialog import ScenesDialog
-        self._open_or_raise(
-            "scenes",
-            lambda: ScenesDialog(
-                self, self._scenes,
-                on_apply=self._on_scene_apply,
-                get_current=self._get_current_vfo,
-            ),
-        )
+    def _show_scenes_tab(self) -> None:
+        self._notebook.SetSelection(2)          # Scenes page
+        self._scenes_panel.SetFocus()
+
+    def _on_tab_changed(self, event) -> None:  # noqa: ANN001
+        """Move focus into the newly selected page (screen-reader landing)."""
+        page = self._notebook.GetCurrentPage()
+        if page is not None:
+            page.SetFocus()
+        event.Skip()
+
+    def _on_scene_choice(self, _event: wx.CommandEvent) -> None:
+        """Apply the scene picked from the VFO-tab dropdown."""
+        scene = self._scenes.by_name(self._scene_choice.GetStringSelection())
+        if scene is not None:
+            self._on_scene_apply(scene)
+
+    def _on_scenes_changed(self) -> None:
+        """Refresh the VFO scene dropdown after scene edits."""
+        self._refresh_scene_choice()
+
+    def _refresh_scene_choice(self) -> None:
+        """Rebuild the VFO scene dropdown and select the active scene."""
+        self._scene_choice.Set([s.name for s in self._scenes.get_all()])
+        if not self._scene_choice.SetStringSelection(self._opstate.scene.name):
+            if self._scene_choice.GetCount():
+                self._scene_choice.SetSelection(0)
 
     def _on_scene_apply(self, scene: Scene) -> None:
-        """Apply a scene from the dialog: enter VFO mode and load the band."""
+        """Apply a scene: enter VFO mode and load the band."""
         self._opstate.mode = OpMode.VFO
         self._apply_scene(scene)
 
