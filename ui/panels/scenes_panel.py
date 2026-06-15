@@ -59,16 +59,6 @@ class ScenesPanel(wx.Panel):
     def _build_ui(self) -> None:
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # Import / export row
-        top = wx.BoxSizer(wx.HORIZONTAL)
-        imp_btn = wx.Button(self, label=_("Import…"), name="Import band plan")
-        exp_btn = wx.Button(self, label=_("Export…"), name="Export band plan")
-        imp_btn.Bind(wx.EVT_BUTTON, self._on_import)
-        exp_btn.Bind(wx.EVT_BUTTON, self._on_export)
-        top.Add(imp_btn, 0, wx.RIGHT, 4)
-        top.Add(exp_btn, 0)
-        sizer.Add(top, 0, wx.ALL, 8)
-
         # Scene list
         self._list = wx.ListCtrl(
             self,
@@ -157,13 +147,17 @@ class ScenesPanel(wx.Panel):
         form_sizer.Add(form_btns, 0, wx.ALL, 4)
         sizer.Add(form_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
-        # Action buttons (Apply / Delete)
+        # Action buttons (Apply / Delete / Import / Export)
         btn_row = wx.BoxSizer(wx.HORIZONTAL)
         apply_btn = wx.Button(self, label=_("Apply Selected"), name="Apply selected scene")
         del_btn = wx.Button(self, label=_("Delete Selected"), name="Delete selected scene")
+        imp_btn = wx.Button(self, label=_("Import…"), name="Import band plan")
+        exp_btn = wx.Button(self, label=_("Export…"), name="Export band plan")
         apply_btn.Bind(wx.EVT_BUTTON, self._on_apply_selected)
         del_btn.Bind(wx.EVT_BUTTON, self._on_delete)
-        for b in (apply_btn, del_btn):
+        imp_btn.Bind(wx.EVT_BUTTON, self._on_import)
+        exp_btn.Bind(wx.EVT_BUTTON, self._on_export)
+        for b in (apply_btn, del_btn, imp_btn, exp_btn):
             btn_row.Add(b, 0, wx.RIGHT, 6)
         sizer.Add(btn_row, 0, wx.ALL, 8)
 

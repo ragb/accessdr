@@ -63,14 +63,10 @@ class ChannelsPanel(wx.Panel):
         self._map_choice.Bind(wx.EVT_CHOICE, self._on_map_change)
         new_map_btn = wx.Button(self, label=_("New Map"), name="New map")
         del_map_btn = wx.Button(self, label=_("Delete Map"), name="Delete map")
-        imp_btn = wx.Button(self, label=_("Import…"), name="Import map")
-        exp_btn = wx.Button(self, label=_("Export…"), name="Export map")
         new_map_btn.Bind(wx.EVT_BUTTON, self._on_new_map)
         del_map_btn.Bind(wx.EVT_BUTTON, self._on_delete_map)
-        imp_btn.Bind(wx.EVT_BUTTON, self._on_import)
-        exp_btn.Bind(wx.EVT_BUTTON, self._on_export)
         map_sizer.Add(self._map_choice, 1, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 6)
-        for b in (new_map_btn, del_map_btn, imp_btn, exp_btn):
+        for b in (new_map_btn, del_map_btn):
             map_sizer.Add(b, 0, wx.RIGHT, 4)
         sizer.Add(map_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
@@ -130,13 +126,17 @@ class ChannelsPanel(wx.Panel):
         form_sizer.Add(form_btns, 0, wx.ALL, 4)
         sizer.Add(form_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
-        # --- Action buttons (Load / Delete) ---
+        # --- Action buttons (Load / Delete / Import / Export) ---
         btn_row = wx.BoxSizer(wx.HORIZONTAL)
         load_btn = wx.Button(self, label=_("Load Selected"), name="Load selected channel")
         del_btn = wx.Button(self, label=_("Delete Selected"), name="Delete selected channel")
+        imp_btn = wx.Button(self, label=_("Import…"), name="Import map")
+        exp_btn = wx.Button(self, label=_("Export…"), name="Export map")
         load_btn.Bind(wx.EVT_BUTTON, self._on_load_selected)
         del_btn.Bind(wx.EVT_BUTTON, self._on_delete)
-        for b in (load_btn, del_btn):
+        imp_btn.Bind(wx.EVT_BUTTON, self._on_import)
+        exp_btn.Bind(wx.EVT_BUTTON, self._on_export)
+        for b in (load_btn, del_btn, imp_btn, exp_btn):
             btn_row.Add(b, 0, wx.RIGHT, 6)
         sizer.Add(btn_row, 0, wx.ALL, 8)
 

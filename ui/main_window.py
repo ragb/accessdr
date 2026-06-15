@@ -148,16 +148,11 @@ class MainWindow(wx.Frame):
         file_menu.Append(wx.ID_EXIT, _("E&xit\tAlt+F4"))
         mb.Append(file_menu, _("&File"))
 
-        # Radio
+        # Radio (VFO / Channels / Scenes live as tabs in the main window)
         radio_menu = wx.Menu()
         item_freq = radio_menu.Append(wx.ID_ANY, _("&Enter Frequency…\tCtrl+Q"))
-        radio_menu.AppendSeparator()
-        item_scenes = radio_menu.Append(wx.ID_ANY, _("&Scenes (bands)…\tCtrl+Shift+B"))
-        item_channels = radio_menu.Append(wx.ID_ANY, _("&Channels…\tCtrl+B"))
         item_scanner = radio_menu.Append(wx.ID_ANY, _("Sca&nner…\tCtrl+N"))
         self.Bind(wx.EVT_MENU, self._on_enter_freq_menu, item_freq)
-        self.Bind(wx.EVT_MENU, lambda e: self._show_scenes_tab(), item_scenes)
-        self.Bind(wx.EVT_MENU, lambda e: self._show_channels_tab(), item_channels)
         self.Bind(wx.EVT_MENU, lambda e: self._open_scanner_dialog(), item_scanner)
         mb.Append(radio_menu, _("&Radio"))
 
@@ -815,16 +810,6 @@ class MainWindow(wx.Frame):
     # Keyboard shortcuts
     # ==================================================================
 
-    def _focus_in_management_panel(self, w) -> bool:  # noqa: ANN001
-        """True if focus is inside the Channels or Scenes management panel."""
-        targets = (getattr(self, "_memory_panel", None),
-                   getattr(self, "_scenes_panel", None))
-        while w is not None:
-            if w in targets:
-                return True
-            w = w.GetParent()
-        return False
-
     def _on_key(self, event: wx.KeyEvent) -> None:
         from ui import keyboard_handler as kb
 
@@ -847,12 +832,16 @@ class MainWindow(wx.Frame):
             event.Skip()
             return
 
-        # The Channels/Scenes management tabs handle their own keys (list
-        # navigation, type-ahead, form controls) — radio shortcuts only act
-        # on the VFO tab.
-        if self._focus_in_management_panel(focused):
-            event.Skip()
-            return
+        # On the Channels/Scenes tabs, release plain navigation/typing keys
+        # (arrows, Page Up/Down, letters, Enter, Space) to the focused list or
+        # form control. Function keys and Ctrl/Alt shortcuts still work on
+        # every tab (start/stop, volume, tab switching, dialogs).
+        if self._notebook.GetSelection() != 0:  # 0 == VFO page
+            is_function_key = wx.WXK_F1 <= code <= wx.WXK_F24
+            has_cmd_modifier = bool(modifiers & (wx.MOD_CONTROL | wx.MOD_ALT))
+            if not is_function_key and not has_cmd_modifier:
+                event.Skip()
+                return
 
         # Layered mode selection: M then mode letter
         if self._mode_pending:
