@@ -1,10 +1,23 @@
 # AccessDR
 
-> **Note:** This project is a proof of concept in a very early alpha stage. Expect rough edges, missing features, and breaking changes.
+> **Note:** Early **beta** (0.7.0b1). Expect rough edges and breaking changes; translations are incomplete.
 
 **[Documentation](https://ragb.github.io/accessdr/)** | **[Download](https://github.com/ragb/accessdr/releases/latest)**
 
 Accessible SDR radio application designed for blind and visually impaired users. Screen reader driven, fully keyboard operated, with spectrum sonification. Built with Python, wxPython, and pyrtlsdr.
+
+## Features
+
+- **Full keyboard control & screen-reader output** (NVDA/JAWS) — every function is reachable and announced.
+- **Baofeng-style VFO / Memory operation** — free-tune within a **band**, or step through numbered **channel** memories. The active tab is the mode, with a live context anchor in the title bar.
+- **Bands** — service-grouped VFO presets (HF amateur, shortwave broadcast, CB, VHF/UHF) with per-band modulation, bandwidth and step, edited in a tree (++ctrl+shift+b++).
+- **Channels** — numbered memory maps (PMR446 and CB CEPT ship by default), reorderable, with per-channel overrides (++ctrl+b++).
+- **Modulations** — WFM (stereo + RDS), NFM (CTCSS), AM, USB, LSB, CW, DSB; modulation-specific settings live per band/channel.
+- **HF reception** — RTL direct sampling and upconverter (Ham It Up / SpyVerter) support.
+- **Spectrum sonification** — line graph + waterfall, an audible probe tone, and peak announcements.
+- **Scanner**, **remote SDR** (rtl_tcp), **recording**, and **i18n** (English, plus partial Portuguese and French).
+
+See the [keyboard shortcuts](https://ragb.github.io/accessdr/keyboard-shortcuts/) and [user guide](https://ragb.github.io/accessdr/user-guide/) for full details.
 
 ## Development Setup
 
@@ -37,18 +50,23 @@ core/
     rds.py               # RDS/RBDS decoder (PS, RT, PTY)
     spectrum.py          # FFT spectrum analyser + peak detection
   scanner.py             # Frequency scanner
+  operating_mode.py      # VFO / Memory (MR) state machine
 accessibility/
   speech.py              # Screen reader output (accessible_output2)
   sonification.py        # Spectrum-to-audio tone mapping + probe tone
 config/
   settings.py            # JSON-persisted settings
-  bookmarks.py           # Bookmark storage
-  bands.py               # Band definitions
+  bands.py               # Default band plan (seed table)
+  scenes.py              # Band (VFO preset) model + store
+  channels.py            # Channel memory model + maps
+  mode_params.py         # Per-modulation settings registry
 ui/
-  main_window.py         # Primary window + keyboard shortcuts
+  main_window.py         # Primary window, VFO/Channels notebook
+  keyboard_handler.py    # Keymap: (keycode, modifiers) -> action
   spectrum_panel.py      # Line graph + waterfall spectrogram display
   colormaps.py           # CVD-safe colormap LUTs (Viridis, Magma, Grayscale)
-  dialogs/               # RF, audio, spectrum, scanner, bookmarks, help
+  panels/                # VFO band tree, channels & bands editors
+  dialogs/               # RF, audio, spectrum, scanner, bands, modulation settings, help
 locale/                  # Translations (gettext .po/.mo)
 installer/               # NSIS installer script
 ```
@@ -82,12 +100,14 @@ NSIS required for `invoke installer` ([download](https://nsis.sourceforge.io/Dow
 
 ## Internationalisation
 
-Uses gettext. Portuguese (pt_PT) included.
+Uses gettext. Portuguese (pt_PT) and French (fr) included (partial).
 
 ```bash
-invoke extract-messages   # update locale/accessdr.pot
-# edit locale/pt_PT/LC_MESSAGES/accessdr.po
-invoke compile-messages   # build .mo files
+invoke i18n-build         # extract -> update -> compile (full pipeline)
+# or step by step:
+invoke i18n-extract       # update locale/accessdr.pot
+# edit locale/<lang>/LC_MESSAGES/accessdr.po
+invoke i18n-compile       # build .mo files
 ```
 
 ## About
