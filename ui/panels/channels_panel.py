@@ -44,10 +44,12 @@ class ChannelsPanel(wx.Panel):
         self._on_load_cb = on_load
         self._get_current_cb = get_current
         self._on_changed_cb = on_changed
+        self._pending_overrides: dict = {}   # mode overrides for the form
         self._build_ui()
         self._refresh_maps()
         self._refresh_list()
         self._refresh_bw_choices("WFM")
+        self._update_ms_btn()
 
     # ------------------------------------------------------------------
     # UI construction
@@ -105,10 +107,15 @@ class ChannelsPanel(wx.Panel):
         grid.Add(self._freq_ctrl, 1, wx.EXPAND)
 
         grid.Add(wx.StaticText(self, label=_("Modulation:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        mode_box = wx.BoxSizer(wx.HORIZONTAL)
         self._mode_ctrl = wx.Choice(self, choices=MODES, name="Channel modulation")
         self._mode_ctrl.SetSelection(0)
         self._mode_ctrl.Bind(wx.EVT_CHOICE, self._on_mode_change)
-        grid.Add(self._mode_ctrl, 0)
+        self._ms_btn = wx.Button(self, label=_("Settings…"), name="Channel modulation settings")
+        self._ms_btn.Bind(wx.EVT_BUTTON, self._on_mode_settings)
+        mode_box.Add(self._mode_ctrl, 0, wx.RIGHT, 6)
+        mode_box.Add(self._ms_btn, 0)
+        grid.Add(mode_box, 0)
 
         grid.Add(wx.StaticText(self, label=_("Bandwidth:")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._bw_ctrl = wx.Choice(self, name="Channel bandwidth")
@@ -119,11 +126,9 @@ class ChannelsPanel(wx.Panel):
         form_btns = wx.BoxSizer(wx.HORIZONTAL)
         save_btn = wx.Button(self, label=_("Save Channel"), name="Save channel")
         vfo_btn = wx.Button(self, label=_("Store Current VFO"), name="Store current VFO")
-        ms_btn = wx.Button(self, label=_("Modulation settings…"), name="Channel modulation settings")
         save_btn.Bind(wx.EVT_BUTTON, self._on_save_channel)
         vfo_btn.Bind(wx.EVT_BUTTON, self._on_store_vfo)
-        ms_btn.Bind(wx.EVT_BUTTON, self._on_mode_settings)
-        for b in (save_btn, vfo_btn, ms_btn):
+        for b in (save_btn, vfo_btn):
             form_btns.Add(b, 0, wx.RIGHT, 6)
         form_sizer.Add(form_btns, 0, wx.ALL, 4)
         sizer.Add(form_sizer, 0, wx.EXPAND | wx.ALL, 8)
@@ -245,8 +250,22 @@ class ChannelsPanel(wx.Panel):
     # Channel events
     # ------------------------------------------------------------------
 
+    # Per-mode override attributes carried with the channel.
+    _OVERRIDE_KEYS = (
+        "nfm_deviation", "nfm_ctcss_notch", "wfm_deemphasis",
+        "wfm_stereo_mode", "wfm_hiblend_enabled", "wfm_rds_enabled",
+    )
+
+    def _update_ms_btn(self) -> None:
+        """Enable the Settings… button only if the form modulation has settings."""
+        from config.mode_params import params_for
+        if hasattr(self, "_ms_btn"):
+            self._ms_btn.Enable(bool(params_for(self._mode_ctrl.GetStringSelection())))
+
     def _on_mode_change(self, _event: wx.CommandEvent) -> None:
         self._refresh_bw_choices(self._mode_ctrl.GetStringSelection())
+        self._pending_overrides = {}     # overrides are mode-specific
+        self._update_ms_btn()
 
     def _on_select(self, _event) -> None:  # noqa: ANN001
         ch = self._selected_channel()
@@ -257,6 +276,8 @@ class ChannelsPanel(wx.Panel):
         self._freq_ctrl.SetValue(fmt_freq(ch.frequency))
         self._mode_ctrl.SetStringSelection(ch.mode)
         self._refresh_bw_choices(ch.mode, ch.bandwidth)
+        self._pending_overrides = {k: getattr(ch, k) for k in self._OVERRIDE_KEYS}
+        self._update_ms_btn()
 
     def _on_save_channel(self, _event: wx.CommandEvent) -> None:
         cmap = self._store.active_map()
@@ -276,13 +297,17 @@ class ChannelsPanel(wx.Panel):
         bandwidth = self._form_bandwidth()
         # Upsert by number.
         existing = next((c for c in cmap.channels if c.number == number), None)
-        if existing is not None:
+        if existing is None:
+            existing = Channel(number, label, freq_hz, mode, bandwidth)
+            cmap.channels.append(existing)
+        else:
             existing.label = label
             existing.frequency = freq_hz
             existing.mode = mode
             existing.bandwidth = bandwidth
-        else:
-            cmap.channels.append(Channel(number, label, freq_hz, mode, bandwidth))
+        # Carry the modulation overrides edited via the Settings… button.
+        for key, val in self._pending_overrides.items():
+            setattr(existing, key, val)
         self._refresh_list()
         self._notify_changed()
         speech.output(
@@ -301,6 +326,8 @@ class ChannelsPanel(wx.Panel):
         if mode in MODES:
             self._mode_ctrl.SetStringSelection(mode)
         self._refresh_bw_choices(mode, bandwidth)
+        self._pending_overrides = {}
+        self._update_ms_btn()
         self._label_ctrl.SetFocus()
         speech.output(
             _("Storing {freq} to channel {n}. Enter a label and save.").format(
@@ -354,22 +381,23 @@ class ChannelsPanel(wx.Panel):
         speech.output(_("Channel {n}.").format(n=ch.number))
 
     def _on_mode_settings(self, _event: wx.CommandEvent) -> None:
-        ch = self._selected_channel()
-        if ch is None:
-            speech.output(_("Select a channel first."))
-            return
+        import types
         from config.mode_params import params_for
-        if not params_for(ch.mode):
-            speech.output(_("No settings for {mode}.").format(mode=ch.mode))
-            return
         from ui.dialogs.mode_settings_dialog import ModeSettingsDialog
+        mode = self._mode_ctrl.GetStringSelection()
+        params = params_for(mode)
+        if not params:
+            speech.output(_("No settings for {mode}.").format(mode=mode))
+            return
+        target = types.SimpleNamespace(**{p.key: self._pending_overrides.get(p.key) for p in params})
         dlg = ModeSettingsDialog(
-            self, ch.mode, ch, is_override=True,
-            title=_("{label} — {mode} settings").format(label=ch.label, mode=ch.mode),
+            self, mode, target, is_override=True,
+            title=_("{mode} settings").format(mode=mode),
         )
         if dlg.ShowModal() == wx.ID_OK:
-            self._notify_changed()
-            speech.output(_("Channel settings saved."))
+            for p in params:
+                self._pending_overrides[p.key] = getattr(target, p.key)
+            speech.output(_("Modulation settings updated. Save the channel to apply."))
         dlg.Destroy()
 
     # ------------------------------------------------------------------

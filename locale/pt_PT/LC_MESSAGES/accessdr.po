@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AccessDR 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-15 16:24+0100\n"
+"POT-Creation-Date: 2026-06-15 17:15+0100\n"
 "PO-Revision-Date: 2026-02-19 11:40+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: pt_PT\n"
@@ -339,7 +339,7 @@ msgid "Mute (M)"
 msgstr "Silenciar (M)"
 
 #: ui/dialogs/scanner_dialog.py:65 ui/main_window.py:248
-#: ui/panels/scenes_panel.py:122
+#: ui/panels/scenes_panel.py:129
 msgid "Squelch (dBm):"
 msgstr "Squelch (dBm):"
 
@@ -355,17 +355,18 @@ msgstr "Frequência:"
 msgid "Step:"
 msgstr "Passo:"
 
-#: ui/main_window.py:330 ui/panels/channels_panel.py:107
-#: ui/panels/scenes_panel.py:99
+#: ui/main_window.py:330 ui/panels/channels_panel.py:109
+#: ui/panels/scenes_panel.py:106
 msgid "Modulation:"
 msgstr ""
 
-#: ui/main_window.py:334
+#: ui/main_window.py:334 ui/panels/channels_panel.py:114
+#: ui/panels/scenes_panel.py:102
 msgid "Settings…"
 msgstr ""
 
-#: ui/main_window.py:336 ui/panels/channels_panel.py:113
-#: ui/panels/scenes_panel.py:102
+#: ui/main_window.py:336 ui/panels/channels_panel.py:120
+#: ui/panels/scenes_panel.py:109
 msgid "Bandwidth:"
 msgstr ""
 
@@ -386,8 +387,8 @@ msgstr "Introduzir frequência ({unit}):"
 msgid "Tune to Frequency"
 msgstr "Sintonizar Frequência"
 
-#: ui/main_window.py:402 ui/main_window.py:423 ui/panels/channels_panel.py:272
-#: ui/panels/scenes_panel.py:241
+#: ui/main_window.py:402 ui/main_window.py:423 ui/panels/channels_panel.py:293
+#: ui/panels/scenes_panel.py:254
 msgid "Invalid frequency."
 msgstr "Frequência inválida."
 
@@ -1050,7 +1051,8 @@ msgstr "Atalhos de teclado do AccessDR."
 msgid "(default)"
 msgstr ""
 
-#: ui/dialogs/mode_settings_dialog.py:28
+#: ui/dialogs/mode_settings_dialog.py:28 ui/panels/channels_panel.py:395
+#: ui/panels/scenes_panel.py:290
 #, python-brace-format
 msgid "{mode} settings"
 msgstr ""
@@ -1180,7 +1182,7 @@ msgstr ""
 msgid "Bias Tee — Danger"
 msgstr "Bias Tee — Perigo"
 
-#: ui/dialogs/rtl_tcp_dialog.py:42 ui/panels/scenes_panel.py:85
+#: ui/dialogs/rtl_tcp_dialog.py:42 ui/panels/scenes_panel.py:87
 msgid "Name:"
 msgstr "Nome:"
 
@@ -1300,7 +1302,7 @@ msgstr "Parar (Esc)"
 msgid "Results"
 msgstr "Resultados"
 
-#: ui/dialogs/scanner_dialog.py:92 ui/panels/channels_panel.py:81
+#: ui/dialogs/scanner_dialog.py:92 ui/panels/channels_panel.py:83
 msgid "Frequency"
 msgstr "Frequência"
 
@@ -1412,288 +1414,266 @@ msgstr "Limiar de anúncio automático (dBm):"
 msgid "General"
 msgstr ""
 
-#: ui/panels/channels_panel.py:60
+#: ui/panels/channels_panel.py:62
 msgid "Channel Map"
 msgstr ""
 
-#: ui/panels/channels_panel.py:64
+#: ui/panels/channels_panel.py:66
 msgid "New Map"
 msgstr ""
 
-#: ui/panels/channels_panel.py:65
+#: ui/panels/channels_panel.py:67
 msgid "Delete Map"
 msgstr ""
 
-#: ui/panels/channels_panel.py:79
+#: ui/panels/channels_panel.py:81
 msgid "Ch"
 msgstr ""
 
-#: ui/panels/channels_panel.py:80
+#: ui/panels/channels_panel.py:82
 msgid "Label"
 msgstr "Etiqueta"
 
-#: ui/panels/channels_panel.py:82
+#: ui/panels/channels_panel.py:84
 msgid "Modulation"
 msgstr ""
 
-#: ui/panels/channels_panel.py:83
+#: ui/panels/channels_panel.py:85
 msgid "Bandwidth"
 msgstr ""
 
-#: ui/panels/channels_panel.py:87
+#: ui/panels/channels_panel.py:89
 msgid "Channel"
 msgstr ""
 
-#: ui/panels/channels_panel.py:92
+#: ui/panels/channels_panel.py:94
 msgid "Number:"
 msgstr ""
 
-#: ui/panels/channels_panel.py:96
+#: ui/panels/channels_panel.py:98
 msgid "Label:"
 msgstr "Etiqueta:"
 
-#: ui/panels/channels_panel.py:101
+#: ui/panels/channels_panel.py:103
 msgid "Frequency (MHz or kHz):"
 msgstr "Frequência (MHz ou kHz):"
 
-#: ui/panels/channels_panel.py:120
+#: ui/panels/channels_panel.py:127
 msgid "Save Channel"
 msgstr ""
 
-#: ui/panels/channels_panel.py:121 ui/panels/scenes_panel.py:134
+#: ui/panels/channels_panel.py:128 ui/panels/scenes_panel.py:137
 msgid "Store Current VFO"
 msgstr ""
 
-#: ui/panels/channels_panel.py:122 ui/panels/scenes_panel.py:127
-msgid "Modulation settings…"
-msgstr ""
-
-#: ui/panels/channels_panel.py:133
+#: ui/panels/channels_panel.py:138
 msgid "Load Selected"
 msgstr "Carregar Selecionado"
 
-#: ui/panels/channels_panel.py:134
+#: ui/panels/channels_panel.py:139
 msgid "Move Up"
 msgstr ""
 
-#: ui/panels/channels_panel.py:135
+#: ui/panels/channels_panel.py:140
 msgid "Move Down"
 msgstr ""
 
-#: ui/panels/channels_panel.py:136 ui/panels/scenes_panel.py:145
+#: ui/panels/channels_panel.py:141 ui/panels/scenes_panel.py:148
 msgid "Delete Selected"
 msgstr "Apagar Selecionado"
 
-#: ui/panels/channels_panel.py:137 ui/panels/scenes_panel.py:146
+#: ui/panels/channels_panel.py:142 ui/panels/scenes_panel.py:149
 msgid "Import…"
 msgstr ""
 
-#: ui/panels/channels_panel.py:138 ui/panels/scenes_panel.py:147
+#: ui/panels/channels_panel.py:143 ui/panels/scenes_panel.py:150
 msgid "Export…"
 msgstr ""
 
-#: ui/panels/channels_panel.py:216
+#: ui/panels/channels_panel.py:221
 #, python-brace-format
 msgid "Map {name}"
 msgstr ""
 
-#: ui/panels/channels_panel.py:219
+#: ui/panels/channels_panel.py:224
 msgid "Map name:"
 msgstr ""
 
-#: ui/panels/channels_panel.py:219
+#: ui/panels/channels_panel.py:224
 msgid "New Channel Map"
 msgstr ""
 
-#: ui/panels/channels_panel.py:228
+#: ui/panels/channels_panel.py:233
 #, python-brace-format
 msgid "Map {name} created."
 msgstr ""
 
-#: ui/panels/channels_panel.py:233
+#: ui/panels/channels_panel.py:238
 msgid "Cannot delete the last map."
 msgstr ""
 
-#: ui/panels/channels_panel.py:242
+#: ui/panels/channels_panel.py:247
 #, python-brace-format
 msgid "Map {name} deleted."
 msgstr ""
 
-#: ui/panels/channels_panel.py:267
+#: ui/panels/channels_panel.py:288
 msgid "Please enter a label."
 msgstr "Por favor, introduza uma etiqueta."
 
-#: ui/panels/channels_panel.py:289
+#: ui/panels/channels_panel.py:314
 #, python-brace-format
 msgid "Saved channel {n}, {label}."
 msgstr ""
 
-#: ui/panels/channels_panel.py:306
+#: ui/panels/channels_panel.py:333
 #, python-brace-format
 msgid "Storing {freq} to channel {n}. Enter a label and save."
 msgstr ""
 
-#: ui/panels/channels_panel.py:314 ui/panels/channels_panel.py:323
-#: ui/panels/channels_panel.py:341
+#: ui/panels/channels_panel.py:341 ui/panels/channels_panel.py:350
+#: ui/panels/channels_panel.py:368
 msgid "No channel selected."
 msgstr ""
 
-#: ui/panels/channels_panel.py:328
+#: ui/panels/channels_panel.py:355
 #, python-brace-format
 msgid "Deleted channel {n}."
 msgstr ""
 
-#: ui/panels/channels_panel.py:347
+#: ui/panels/channels_panel.py:374
 msgid "Already at the edge."
 msgstr ""
 
-#: ui/panels/channels_panel.py:354
+#: ui/panels/channels_panel.py:381
 #, python-brace-format
 msgid "Channel {n}."
 msgstr ""
 
-#: ui/panels/channels_panel.py:359
-msgid "Select a channel first."
-msgstr ""
-
-#: ui/panels/channels_panel.py:363 ui/panels/scenes_panel.py:274
+#: ui/panels/channels_panel.py:390 ui/panels/scenes_panel.py:285
 #, python-brace-format
 msgid "No settings for {mode}."
 msgstr ""
 
-#: ui/panels/channels_panel.py:368
-#, python-brace-format
-msgid "{label} — {mode} settings"
+#: ui/panels/channels_panel.py:400
+msgid "Modulation settings updated. Save the channel to apply."
 msgstr ""
 
-#: ui/panels/channels_panel.py:372
-msgid "Channel settings saved."
-msgstr ""
-
-#: ui/panels/channels_panel.py:384
+#: ui/panels/channels_panel.py:412
 msgid "Export channel map"
 msgstr ""
 
-#: ui/panels/channels_panel.py:397
+#: ui/panels/channels_panel.py:425
 msgid "Map exported."
 msgstr ""
 
-#: ui/panels/channels_panel.py:399 ui/panels/scenes_panel.py:352
+#: ui/panels/channels_panel.py:427 ui/panels/scenes_panel.py:366
 #, python-brace-format
 msgid "Export failed: {err}"
 msgstr ""
 
-#: ui/panels/channels_panel.py:403
+#: ui/panels/channels_panel.py:431
 msgid "Import channel map"
 msgstr ""
 
-#: ui/panels/channels_panel.py:413
+#: ui/panels/channels_panel.py:441
 msgid "Imported"
 msgstr ""
 
-#: ui/panels/channels_panel.py:417 ui/panels/scenes_panel.py:367
+#: ui/panels/channels_panel.py:445 ui/panels/scenes_panel.py:381
 #, python-brace-format
 msgid "Import failed: {err}"
 msgstr ""
 
-#: ui/panels/channels_panel.py:424
+#: ui/panels/channels_panel.py:452
 #, python-brace-format
 msgid "Map {name} imported."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:75
+#: ui/panels/scenes_panel.py:77
 msgid "Band"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:88
+#: ui/panels/scenes_panel.py:90
 msgid "Group:"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:91
+#: ui/panels/scenes_panel.py:93
 msgid "Band start (MHz, blank = unbounded):"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:94
+#: ui/panels/scenes_panel.py:96
 msgid "Band end (MHz, blank = unbounded):"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:106
+#: ui/panels/scenes_panel.py:113
 msgid "Follow tuning step"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:110
+#: ui/panels/scenes_panel.py:117
 msgid "Tuning step:"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:113
+#: ui/panels/scenes_panel.py:120
 msgid "Default frequency (MHz, optional):"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:118
+#: ui/panels/scenes_panel.py:125
 msgid "Advanced (optional)"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:133
+#: ui/panels/scenes_panel.py:136
 msgid "Save Band"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:144
+#: ui/panels/scenes_panel.py:147
 msgid "Apply Selected"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:234
+#: ui/panels/scenes_panel.py:247
 msgid "Please enter a band name."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:258
+#: ui/panels/scenes_panel.py:271
 msgid "Invalid numeric value."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:270
-msgid "Select a band first."
+#: ui/panels/scenes_panel.py:295
+msgid "Modulation settings updated. Save the band to apply."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:279
-#, python-brace-format
-msgid "{name} — {mode} settings"
-msgstr ""
-
-#: ui/panels/scenes_panel.py:283
-msgid "Band settings saved."
-msgstr ""
-
-#: ui/panels/scenes_panel.py:298
+#: ui/panels/scenes_panel.py:310
 #, python-brace-format
 msgid "Saved band {name}."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:313
+#: ui/panels/scenes_panel.py:327
 #, python-brace-format
 msgid "Storing {freq} as a band. Enter a name and edges, then save."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:321 ui/panels/scenes_panel.py:329
+#: ui/panels/scenes_panel.py:335 ui/panels/scenes_panel.py:343
 msgid "No band selected."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:334
+#: ui/panels/scenes_panel.py:348
 #, python-brace-format
 msgid "Deleted band {name}."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:342
+#: ui/panels/scenes_panel.py:356
 msgid "Export band plan"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:350
+#: ui/panels/scenes_panel.py:364
 msgid "Band plan exported."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:356
+#: ui/panels/scenes_panel.py:370
 msgid "Import band plan"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:375
+#: ui/panels/scenes_panel.py:389
 msgid "Band plan imported."
 msgstr ""
 
@@ -2145,5 +2125,26 @@ msgstr ""
 #~ msgstr "Modo"
 
 #~ msgid "Mode settings…"
+#~ msgstr ""
+
+#~ msgid "Modulation settings…"
+#~ msgstr ""
+
+#~ msgid "Select a channel first."
+#~ msgstr ""
+
+#~ msgid "{label} — {mode} settings"
+#~ msgstr ""
+
+#~ msgid "Channel settings saved."
+#~ msgstr ""
+
+#~ msgid "Select a band first."
+#~ msgstr ""
+
+#~ msgid "{name} — {mode} settings"
+#~ msgstr ""
+
+#~ msgid "Band settings saved."
 #~ msgstr ""
 

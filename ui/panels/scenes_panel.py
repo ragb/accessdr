@@ -50,9 +50,11 @@ class ScenesPanel(wx.Panel):
         self._on_apply_cb = on_apply
         self._get_current_cb = get_current
         self._on_changed_cb = on_changed
+        self._pending_overrides: dict = {}   # mode overrides for the form
         self._build_ui()
         self._refresh_tree()
         self._refresh_bw_choices("WFM")
+        self._update_ms_btn()
 
     # ------------------------------------------------------------------
     # UI construction
@@ -93,10 +95,15 @@ class ScenesPanel(wx.Panel):
         self._end_ctrl = wx.TextCtrl(self, name="Band end")
         _row(_("Band end (MHz, blank = unbounded):"), self._end_ctrl)
 
+        mode_box = wx.BoxSizer(wx.HORIZONTAL)
         self._mode_ctrl = wx.Choice(self, choices=MODES, name="Band modulation")
         self._mode_ctrl.SetSelection(0)
         self._mode_ctrl.Bind(wx.EVT_CHOICE, self._on_mode_change)
-        _row(_("Modulation:"), self._mode_ctrl)
+        self._ms_btn = wx.Button(self, label=_("Settings…"), name="Band modulation settings")
+        self._ms_btn.Bind(wx.EVT_BUTTON, self._on_mode_settings)
+        mode_box.Add(self._mode_ctrl, 0, wx.RIGHT, 6)
+        mode_box.Add(self._ms_btn, 0)
+        _row(_("Modulation:"), mode_box)
 
         self._bw_ctrl = wx.Choice(self, name="Band bandwidth")
         _row(_("Bandwidth:"), self._bw_ctrl)
@@ -123,10 +130,6 @@ class ScenesPanel(wx.Panel):
         self._squelch_ctrl = wx.TextCtrl(self, name="Squelch override")
         adv_grid.Add(self._squelch_ctrl, 1, wx.EXPAND)
         adv_sizer.Add(adv_grid, 0, wx.EXPAND | wx.ALL, 6)
-
-        ms_btn = wx.Button(self, label=_("Modulation settings…"), name="Band modulation settings")
-        ms_btn.Bind(wx.EVT_BUTTON, self._on_mode_settings)
-        adv_sizer.Add(ms_btn, 0, wx.ALL, 4)
         form_sizer.Add(adv_sizer, 0, wx.EXPAND | wx.ALL, 4)
 
         form_btns = wx.BoxSizer(wx.HORIZONTAL)
@@ -202,8 +205,23 @@ class ScenesPanel(wx.Panel):
     # Form <-> band
     # ------------------------------------------------------------------
 
+    # Per-mode override attributes carried with the band.
+    _OVERRIDE_KEYS = (
+        "nfm_deviation", "nfm_ctcss_notch", "wfm_deemphasis",
+        "wfm_stereo_mode", "wfm_hiblend_enabled", "wfm_rds_enabled",
+    )
+
+    def _update_ms_btn(self) -> None:
+        """Enable the Settings… button only if the form modulation has settings."""
+        from config.mode_params import params_for
+        if hasattr(self, "_ms_btn"):
+            self._ms_btn.Enable(bool(params_for(self._mode_ctrl.GetStringSelection())))
+
     def _on_mode_change(self, _event: wx.CommandEvent) -> None:
-        self._refresh_bw_choices(self._mode_ctrl.GetStringSelection())
+        mode = self._mode_ctrl.GetStringSelection()
+        self._refresh_bw_choices(mode)
+        self._pending_overrides = {}     # overrides are mode-specific
+        self._update_ms_btn()
 
     def _on_select(self, _event) -> None:  # noqa: ANN001
         s = self._selected_scene()
@@ -220,13 +238,8 @@ class ScenesPanel(wx.Panel):
         )
         self._default_ctrl.SetValue("" if s.default_freq is None else fmt_freq(s.default_freq))
         self._squelch_ctrl.SetValue("" if s.squelch is None else f"{s.squelch:.0f}")
-
-    # Mode-override attributes carried across a form save (edited via the
-    # "Mode settings…" button, not the structural form fields).
-    _OVERRIDE_KEYS = (
-        "nfm_deviation", "nfm_ctcss_notch", "wfm_deemphasis",
-        "wfm_stereo_mode", "wfm_hiblend_enabled", "wfm_rds_enabled",
-    )
+        self._pending_overrides = {k: getattr(s, k) for k in self._OVERRIDE_KEYS}
+        self._update_ms_btn()
 
     def _read_form(self) -> Optional[Scene]:
         name = self._name_ctrl.GetValue().strip()
@@ -257,30 +270,29 @@ class ScenesPanel(wx.Panel):
         except ValueError:
             speech.output(_("Invalid numeric value."))
             return None
-        # Preserve mode overrides set via the Mode settings dialog.
-        existing = self._store.by_name(name)
-        if existing is not None:
-            for key in self._OVERRIDE_KEYS:
-                setattr(scene, key, getattr(existing, key))
+        # Carry the modulation overrides edited via the Settings… button.
+        for key, val in self._pending_overrides.items():
+            setattr(scene, key, val)
         return scene
 
     def _on_mode_settings(self, _event: wx.CommandEvent) -> None:
-        s = self._selected_scene()
-        if s is None:
-            speech.output(_("Select a band first."))
-            return
+        import types
         from config.mode_params import params_for
-        if not params_for(s.mode):
-            speech.output(_("No settings for {mode}.").format(mode=s.mode))
-            return
         from ui.dialogs.mode_settings_dialog import ModeSettingsDialog
+        mode = self._mode_ctrl.GetStringSelection()
+        params = params_for(mode)
+        if not params:
+            speech.output(_("No settings for {mode}.").format(mode=mode))
+            return
+        target = types.SimpleNamespace(**{p.key: self._pending_overrides.get(p.key) for p in params})
         dlg = ModeSettingsDialog(
-            self, s.mode, s, is_override=True,
-            title=_("{name} — {mode} settings").format(name=s.name, mode=s.mode),
+            self, mode, target, is_override=True,
+            title=_("{mode} settings").format(mode=mode),
         )
         if dlg.ShowModal() == wx.ID_OK:
-            self._notify_changed()
-            speech.output(_("Band settings saved."))
+            for p in params:
+                self._pending_overrides[p.key] = getattr(target, p.key)
+            speech.output(_("Modulation settings updated. Save the band to apply."))
         dlg.Destroy()
 
     def _on_save_scene(self, _event: wx.CommandEvent) -> None:
@@ -308,6 +320,8 @@ class ScenesPanel(wx.Panel):
             self._mode_ctrl.SetStringSelection(mode)
         self._refresh_bw_choices(mode, bandwidth)
         self._default_ctrl.SetValue(fmt_freq(freq_hz))
+        self._pending_overrides = {}
+        self._update_ms_btn()
         self._name_ctrl.SetFocus()
         speech.output(
             _("Storing {freq} as a band. Enter a name and edges, then save.").format(
