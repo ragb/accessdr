@@ -37,7 +37,6 @@ from core.signal_utils import s_meter
 from ui.cursor_controller import CursorController
 from ui.formatting import fmt_freq, freq_number, freq_unit, parse_freq
 from ui.panels.channels_panel import ChannelsPanel
-from ui.panels.scenes_panel import ScenesPanel
 from ui.radio_controller import RadioController
 from ui.spectrum_controller import SpectrumController
 from ui.spectrum_panel import SpectrumPanel
@@ -153,11 +152,13 @@ class MainWindow(wx.Frame):
         file_menu.Append(wx.ID_EXIT, _("E&xit\tAlt+F4"))
         mb.Append(file_menu, _("&File"))
 
-        # Radio (VFO / Channels / Scenes live as tabs in the main window)
+        # Radio (VFO / Channels are tabs; bands are managed in a dialog)
         radio_menu = wx.Menu()
         item_freq = radio_menu.Append(wx.ID_ANY, _("&Enter Frequency…\tCtrl+Q"))
+        item_bands = radio_menu.Append(wx.ID_ANY, _("&Bands…\tCtrl+Shift+B"))
         item_scanner = radio_menu.Append(wx.ID_ANY, _("Sca&nner…\tCtrl+N"))
         self.Bind(wx.EVT_MENU, self._on_enter_freq_menu, item_freq)
+        self.Bind(wx.EVT_MENU, lambda e: self._open_bands_dialog(), item_bands)
         self.Bind(wx.EVT_MENU, lambda e: self._open_scanner_dialog(), item_scanner)
         mb.Append(radio_menu, _("&Radio"))
 
@@ -201,7 +202,7 @@ class MainWindow(wx.Frame):
         panel.SetName("Main controls panel")
         outer = wx.BoxSizer(wx.VERTICAL)
 
-        # === Notebook: VFO / Channels / Scenes ===
+        # === Notebook: VFO / Channels ===  (bands are a VFO dropdown + modal)
         self._notebook = wx.Notebook(panel, name="Workspace")
         self._build_vfo_page(self._notebook)          # page 0
         self._memory_panel = ChannelsPanel(
@@ -211,13 +212,6 @@ class MainWindow(wx.Frame):
             on_changed=self._on_channels_changed,
         )
         self._notebook.AddPage(self._memory_panel, _("Channels"))   # page 1
-        self._scenes_panel = ScenesPanel(
-            self._notebook, self._scenes,
-            on_apply=self._on_scene_apply,
-            get_current=self._get_current_vfo,
-            on_changed=self._on_scenes_changed,
-        )
-        self._notebook.AddPage(self._scenes_panel, _("Scenes"))     # page 2
         self._notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self._on_tab_changed)
         outer.Add(self._notebook, 1, wx.EXPAND | wx.ALL, 8)
 
@@ -291,11 +285,11 @@ class MainWindow(wx.Frame):
         page.SetName("VFO panel")
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # Scene row
+        # Band row (a band is a VFO preset; managed via the Bands dialog)
         scene_row = wx.BoxSizer(wx.HORIZONTAL)
-        scene_label = wx.StaticText(page, label=_("Scene:"))
+        scene_label = wx.StaticText(page, label=_("Band:"))
         self._scene_choice = wx.Choice(
-            page, choices=[s.name for s in self._scenes.get_all()], name="Scene"
+            page, choices=[s.name for s in self._scenes.get_all()], name="Band"
         )
         self._scene_choice.SetStringSelection(self._opstate.scene.name)
         self._scene_choice.Bind(wx.EVT_CHOICE, self._on_scene_choice)
@@ -561,12 +555,12 @@ class MainWindow(wx.Frame):
             self._tune(landing)
         self._refresh_scene_choice()
         self._update_context_anchor()
-        speech.output(_("Scene {name}").format(name=scene.name))
+        speech.output(_("Band {name}").format(name=scene.name))
 
     def _cycle_scene(self, direction: int) -> None:
         """Select the next/previous scene (VFO mode only)."""
         if self._opstate.mode is not OpMode.VFO:
-            speech.output(_("Scenes are available in VFO mode."))
+            speech.output(_("Bands are available in VFO mode."))
             return
         scenes = self._scenes.get_all()
         if not scenes:
@@ -913,7 +907,7 @@ class MainWindow(wx.Frame):
             kb.OPEN_SPECTRUM_DIALOG: self._open_spectrum_dialog,
             kb.OPEN_SCANNER_DIALOG: self._open_scanner_dialog,
             kb.OPEN_CHANNELS_DIALOG: self._show_channels_tab,
-            kb.OPEN_SCENES_DIALOG:  self._show_scenes_tab,
+            kb.OPEN_BANDS_DIALOG:   self._open_bands_dialog,
             kb.OPEN_AUDIO_DIALOG:   self._open_audio_dialog,
             kb.OPEN_WFM_DIALOG:     self._open_wfm_dialog,
             kb.OPEN_NFM_DIALOG:     self._open_nfm_dialog,
@@ -1102,9 +1096,17 @@ class MainWindow(wx.Frame):
         self._notebook.SetSelection(1)          # Channels page
         self._memory_panel.SetFocus()
 
-    def _show_scenes_tab(self) -> None:
-        self._notebook.SetSelection(2)          # Scenes page
-        self._scenes_panel.SetFocus()
+    def _open_bands_dialog(self) -> None:
+        from ui.dialogs.bands_dialog import BandsDialog
+        self._open_or_raise(
+            "bands",
+            lambda: BandsDialog(
+                self, self._scenes,
+                on_apply=self._on_scene_apply,
+                get_current=self._get_current_vfo,
+                on_changed=self._on_scenes_changed,
+            ),
+        )
 
     def _on_tab_changed(self, event) -> None:  # noqa: ANN001
         """The active tab sets the operating mode (VFO / MR) and focus."""

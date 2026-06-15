@@ -43,7 +43,7 @@ class ScenesPanel(wx.Panel):
         on_changed: Optional[Callable[[], None]] = None,
     ) -> None:
         super().__init__(parent)
-        self.SetName("Scenes panel")
+        self.SetName("Bands panel")
         self._store = store
         self._on_apply_cb = on_apply
         self._get_current_cb = get_current
@@ -63,7 +63,7 @@ class ScenesPanel(wx.Panel):
         self._list = wx.ListCtrl(
             self,
             style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.BORDER_SUNKEN,
-            name="Scenes list",
+            name="Bands list",
         )
         self._list.InsertColumn(0, _("Name"), width=160)
         self._list.InsertColumn(1, _("Band"), width=180)
@@ -72,7 +72,7 @@ class ScenesPanel(wx.Panel):
         sizer.Add(self._list, 1, wx.EXPAND | wx.ALL, 8)
 
         # Edit form
-        form_box = wx.StaticBox(self, label=_("Scene"))
+        form_box = wx.StaticBox(self, label=_("Band"))
         form_sizer = wx.StaticBoxSizer(form_box, wx.VERTICAL)
         grid = wx.FlexGridSizer(cols=2, vgap=6, hgap=8)
         grid.AddGrowableCol(1)
@@ -81,7 +81,7 @@ class ScenesPanel(wx.Panel):
             grid.Add(wx.StaticText(self, label=label_text), 0, wx.ALIGN_CENTER_VERTICAL)
             grid.Add(ctrl, 1, wx.EXPAND)
 
-        self._name_ctrl = wx.TextCtrl(self, name="Scene name")
+        self._name_ctrl = wx.TextCtrl(self, name="Band name")
         _row(_("Name:"), self._name_ctrl)
 
         self._start_ctrl = wx.TextCtrl(self, name="Band start")
@@ -90,18 +90,18 @@ class ScenesPanel(wx.Panel):
         self._end_ctrl = wx.TextCtrl(self, name="Band end")
         _row(_("Band end (MHz, blank = unbounded):"), self._end_ctrl)
 
-        self._mode_ctrl = wx.Choice(self, choices=MODES, name="Scene mode")
+        self._mode_ctrl = wx.Choice(self, choices=MODES, name="Band mode")
         self._mode_ctrl.SetSelection(0)
         self._mode_ctrl.Bind(wx.EVT_CHOICE, self._on_mode_change)
         _row(_("Mode:"), self._mode_ctrl)
 
-        self._bw_ctrl = wx.Choice(self, name="Scene bandwidth")
+        self._bw_ctrl = wx.Choice(self, name="Band bandwidth")
         _row(_("Bandwidth:"), self._bw_ctrl)
 
         self._step_ctrl = wx.Choice(
             self,
             choices=[_("Follow tuning step")] + [_(s) for s in STEP_LABELS],
-            name="Scene step",
+            name="Band step",
         )
         self._step_ctrl.SetSelection(0)
         _row(_("Tuning step:"), self._step_ctrl)
@@ -138,8 +138,8 @@ class ScenesPanel(wx.Panel):
         form_sizer.Add(adv_sizer, 0, wx.EXPAND | wx.ALL, 4)
 
         form_btns = wx.BoxSizer(wx.HORIZONTAL)
-        save_btn = wx.Button(self, label=_("Save Scene"), name="Save scene")
-        vfo_btn = wx.Button(self, label=_("Store Current VFO"), name="Store current VFO as scene")
+        save_btn = wx.Button(self, label=_("Save Band"), name="Save band")
+        vfo_btn = wx.Button(self, label=_("Store Current VFO"), name="Store current VFO as band")
         save_btn.Bind(wx.EVT_BUTTON, self._on_save_scene)
         vfo_btn.Bind(wx.EVT_BUTTON, self._on_store_vfo)
         form_btns.Add(save_btn, 0, wx.RIGHT, 6)
@@ -149,8 +149,8 @@ class ScenesPanel(wx.Panel):
 
         # Action buttons (Apply / Delete / Import / Export)
         btn_row = wx.BoxSizer(wx.HORIZONTAL)
-        apply_btn = wx.Button(self, label=_("Apply Selected"), name="Apply selected scene")
-        del_btn = wx.Button(self, label=_("Delete Selected"), name="Delete selected scene")
+        apply_btn = wx.Button(self, label=_("Apply Selected"), name="Apply selected band")
+        del_btn = wx.Button(self, label=_("Delete Selected"), name="Delete selected band")
         imp_btn = wx.Button(self, label=_("Import…"), name="Import band plan")
         exp_btn = wx.Button(self, label=_("Export…"), name="Export band plan")
         apply_btn.Bind(wx.EVT_BUTTON, self._on_apply_selected)
@@ -252,7 +252,7 @@ class ScenesPanel(wx.Panel):
     def _read_form(self) -> Optional[Scene]:
         name = self._name_ctrl.GetValue().strip()
         if not name:
-            speech.output(_("Please enter a name."))
+            speech.output(_("Please enter a band name."))
             return None
         try:
             start = _parse_opt_freq(self._start_ctrl.GetValue()) or 0
@@ -293,7 +293,7 @@ class ScenesPanel(wx.Panel):
             self._store.add(scene)
         self._refresh_list()
         self._notify_changed()
-        speech.output(_("Saved scene {name}.").format(name=scene.name))
+        speech.output(_("Saved band {name}.").format(name=scene.name))
 
     def _on_store_vfo(self, _event: wx.CommandEvent) -> None:
         if self._get_current_cb is None:
@@ -308,7 +308,7 @@ class ScenesPanel(wx.Panel):
         self._default_ctrl.SetValue(fmt_freq(freq_hz))
         self._name_ctrl.SetFocus()
         speech.output(
-            _("Storing {freq} as a scene. Enter a name and band, then save.").format(
+            _("Storing {freq} as a band. Enter a name and edges, then save.").format(
                 freq=fmt_freq(freq_hz)
             )
         )
@@ -316,7 +316,7 @@ class ScenesPanel(wx.Panel):
     def _on_apply_selected(self, _event) -> None:  # noqa: ANN001
         s = self._selected_scene()
         if s is None:
-            speech.output(_("No scene selected."))
+            speech.output(_("No band selected."))
             return
         if self._on_apply_cb:
             self._on_apply_cb(s)
@@ -324,12 +324,12 @@ class ScenesPanel(wx.Panel):
     def _on_delete(self, _event) -> None:  # noqa: ANN001
         s = self._selected_scene()
         if s is None:
-            speech.output(_("No scene selected."))
+            speech.output(_("No band selected."))
             return
         self._store.scenes.remove(s)
         self._refresh_list()
         self._notify_changed()
-        speech.output(_("Deleted scene {name}.").format(name=s.name))
+        speech.output(_("Deleted band {name}.").format(name=s.name))
 
     # ------------------------------------------------------------------
     # Import / export (whole band plan)
