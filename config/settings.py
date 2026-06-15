@@ -75,6 +75,13 @@ class Settings:
     # VFO
     demod_follows_cursor: bool = False
 
+    # Operating mode (VFO / MR). active_scene is a scene name ("" = free
+    # scene); active_channel is the index within the active channel map
+    # (the map itself is persisted by ChannelMapStore).
+    op_mode: str = "VFO"
+    active_scene: str = ""
+    active_channel: int = 0
+
     # SDR buffer
     sdr_buffer_size: int = 65_536   # IQ samples per read (power of 2)
 

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: accessdr 0.5.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-25 12:32+0100\n"
+"POT-Creation-Date: 2026-06-15 09:41+0100\n"
 "PO-Revision-Date: 2026-05-24 18:23+0200\n"
 "Last-Translator: Michel Such <michel.such@free.fr>\n"
 "Language: fr\n"
@@ -108,392 +108,429 @@ msgstr "{freq}, {db:.0f} dBFS, {s_unit}"
 msgid "Cursor centred, offset cleared."
 msgstr "Curseur centré, décalage effacé."
 
-#: ui/main_window.py:127
+#: ui/main_window.py:147
 msgid "E&xit\tAlt+F4"
 msgstr "&Quitter\tAlt+F4"
 
-#: ui/main_window.py:128
+#: ui/main_window.py:148
 msgid "&File"
 msgstr "&Fichier"
 
-#: ui/main_window.py:136
+#: ui/main_window.py:156
 msgid "&Bands"
 msgstr "&Bandes"
 
-#: ui/main_window.py:137
+#: ui/main_window.py:157
 msgid "&Enter Frequency…\tCtrl+Q"
 msgstr "&Entrez la Fréquence…\tCtrl+Q"
 
-#: ui/main_window.py:139
+#: ui/main_window.py:159
 msgid "&Radio"
 msgstr "&Radio"
 
-#: ui/main_window.py:143
+#: ui/main_window.py:163
 msgid "Sca&nner…\tCtrl+N"
 msgstr "Sca&nner…\tCtrl+N"
 
-#: ui/main_window.py:144
-msgid "&Bookmarks…\tCtrl+B"
-msgstr "&Marque-pages…\tCtrl+B"
+#: ui/main_window.py:164
+msgid "&Channels…\tCtrl+B"
+msgstr ""
 
-#: ui/main_window.py:147
+#: ui/main_window.py:165
+msgid "&Scenes…\tCtrl+Shift+B"
+msgstr ""
+
+#: ui/main_window.py:169
 msgid "&Tools"
 msgstr "&Outils"
 
-#: ui/main_window.py:151
+#: ui/main_window.py:173
 msgid "&RF Settings…\tCtrl+R"
 msgstr "Paramètres &RF…\tCtrl+R"
 
-#: ui/main_window.py:152
+#: ui/main_window.py:174
 msgid "&Spectrum Settings…\tCtrl+S"
 msgstr "Paramètres du &Spectre…\tCtrl+S"
 
-#: ui/main_window.py:153
+#: ui/main_window.py:175
 msgid "&Audio Settings…\tCtrl+D"
 msgstr "Paramètres &Audio…\tCtrl+D"
 
-#: ui/main_window.py:154
+#: ui/main_window.py:176
 msgid "R&ecording Settings…\tCtrl+E"
 msgstr "Paramètres d'&Enregistrement…\tCtrl+E"
 
-#: ui/main_window.py:155
+#: ui/main_window.py:177
 msgid "&WFM Settings…\tCtrl+W"
 msgstr "Paramètres &WFM…\tCtrl+W"
 
-#: ui/main_window.py:156
+#: ui/main_window.py:178
 msgid "&NFM Settings…"
 msgstr "Paramètres &NFM…"
 
-#: ui/main_window.py:158
+#: ui/main_window.py:180
 msgid "Remote SD&R…\tCtrl+G"
 msgstr "SD&R Distant…\tCtrl+G"
 
-#: ui/main_window.py:166
+#: ui/main_window.py:188
 msgid "&Options"
 msgstr "&Options"
 
-#: ui/main_window.py:170
+#: ui/main_window.py:192
 msgid "&User Guide…\tCtrl+H"
 msgstr "Guide de l'&Utilisateur…\tCtrl+H"
 
-#: ui/main_window.py:171
+#: ui/main_window.py:193
 msgid "&Keyboard Shortcuts…\tF1"
 msgstr "Raccourcis &Clavier…\tF1"
 
-#: ui/main_window.py:173
+#: ui/main_window.py:195
 msgid "&About AccessDR"
 msgstr "&À propos d'&AccessDR"
 
-#: ui/main_window.py:175
+#: ui/main_window.py:197
 msgid "&Help"
 msgstr "&Aide"
 
-#: ui/main_window.py:191
+#: ui/main_window.py:213
 msgid "Frequency:"
 msgstr "Fréquence:"
 
-#: ui/main_window.py:214
+#: ui/main_window.py:236
 msgid "Step:"
 msgstr "Pas:"
 
-#: ui/dialogs/bookmarks_dialog.py:74 ui/main_window.py:227
+#: ui/dialogs/channels_dialog.py:123 ui/dialogs/scenes_dialog.py:122
+#: ui/main_window.py:249
 msgid "Mode:"
 msgstr "Mode:"
 
-#: ui/main_window.py:232
+#: ui/main_window.py:254
 msgid "BW:"
 msgstr "BW:"
 
-#: ui/main_window.py:242 ui/main_window.py:499
+#: ui/main_window.py:264 ui/main_window.py:618
 msgid "▶ Start"
 msgstr "▶ Démarrage"
 
-#: ui/main_window.py:245 ui/main_window.py:498
+#: ui/main_window.py:267 ui/main_window.py:617
 msgid "Signal: —"
 msgstr "Signal: —"
 
-#: ui/main_window.py:253
+#: ui/main_window.py:275
 msgid "Volume:"
 msgstr "Volume:"
 
-#: ui/main_window.py:262
+#: ui/main_window.py:284
 msgid "Mute (M)"
 msgstr "Muet (M)"
 
-#: ui/dialogs/scanner_dialog.py:65 ui/main_window.py:272
+#: ui/dialogs/scanner_dialog.py:65 ui/dialogs/scenes_dialog.py:161
+#: ui/main_window.py:294
 msgid "Squelch (dBm):"
 msgstr "Squelch (dBm):"
 
-#: ui/main_window.py:291 ui/main_window.py:655
+#: ui/main_window.py:313 ui/main_window.py:774
 msgid "Start Sweep (Ctrl+F5)"
 msgstr "Démarrer le Balayage (Ctrl+F5)"
 
-#: ui/main_window.py:328 ui/main_window.py:1028
+#: ui/main_window.py:350 ui/main_window.py:1195
 msgid "Ready — no device connected."
 msgstr "Prêt — Aucun périphérique connecté."
 
-#: ui/main_window.py:357
+#: ui/main_window.py:379
 #, python-brace-format
 msgid "Tuned to {freq}"
 msgstr "Accordé sur {freq}"
 
-#: ui/main_window.py:376
+#: ui/main_window.py:398
 #, python-brace-format
 msgid "Enter frequency ({unit}):"
 msgstr "Entrez la fréquence ({unit}):"
 
-#: ui/main_window.py:377
+#: ui/main_window.py:399
 msgid "Tune to Frequency"
 msgstr "Accorder à la Fréquence"
 
-#: ui/dialogs/bookmarks_dialog.py:126 ui/main_window.py:384
-#: ui/main_window.py:405
+#: ui/dialogs/channels_dialog.py:281 ui/dialogs/scenes_dialog.py:287
+#: ui/main_window.py:406 ui/main_window.py:427
 msgid "Invalid frequency."
 msgstr "Fréquence invalide."
 
-#: ui/main_window.py:397
+#: ui/main_window.py:419
 #, python-brace-format
 msgid "Enter listening frequency ({unit}):"
 msgstr "Entrez l fréquence d'écoute ({unit}):"
 
-#: ui/main_window.py:398
+#: ui/main_window.py:420
 msgid "Set Listening Frequency"
 msgstr "Définir la fréquence d'écoute"
 
-#: ui/main_window.py:410 ui/main_window.py:724 ui/main_window.py:843
+#: ui/main_window.py:432 ui/main_window.py:843 ui/main_window.py:969
 #, python-brace-format
 msgid "Listening {freq}"
 msgstr "À l'écoute de {freq}"
 
-#: ui/main_window.py:416 ui/main_window.py:422
+#: ui/main_window.py:438 ui/main_window.py:444
 #, python-brace-format
 msgid "Step {step}"
 msgstr "Pas {step}"
 
-#: ui/main_window.py:444 ui/main_window.py:463
+#: ui/main_window.py:466 ui/main_window.py:485
 #, python-brace-format
 msgid "Mode {mode}"
 msgstr "Mode {mode}"
 
-#: ui/main_window.py:452
+#: ui/main_window.py:474
 #, python-brace-format
 msgid "Bandwidth {bw}"
 msgstr "Largeur de bande {bw}"
 
-#: ui/main_window.py:484
+#: ui/main_window.py:515
+msgid "Band edge"
+msgstr ""
+
+#: ui/main_window.py:517
+msgid "No channels in this map."
+msgstr ""
+
+#: ui/main_window.py:528
+#, python-brace-format
+msgid "Channel {n}, {label}, {freq}"
+msgstr ""
+
+#: ui/main_window.py:539
+msgid "Memory mode. No channels."
+msgstr ""
+
+#: ui/main_window.py:544
+#, python-brace-format
+msgid "VFO mode. {scene}"
+msgstr ""
+
+#: ui/main_window.py:567
+#, python-brace-format
+msgid "Scene {name}"
+msgstr ""
+
+#: ui/main_window.py:572
+msgid "Scenes are available in VFO mode."
+msgstr ""
+
+#: ui/main_window.py:603
 msgid "Could not open SDR device."
 msgstr "Impossible d'ouvrir le périphérique SDR."
 
-#: ui/main_window.py:487 ui/main_window.py:518
+#: ui/main_window.py:606 ui/main_window.py:637
 msgid "■ Stop"
 msgstr "■ Stop"
 
-#: ui/main_window.py:488 ui/main_window.py:520
+#: ui/main_window.py:607 ui/main_window.py:639
 #, python-brace-format
 msgid "Receiving — {freq}"
 msgstr "Réception sur — {freq}"
 
-#: ui/main_window.py:491
+#: ui/main_window.py:610
 #, python-brace-format
 msgid " [Remote: {name}]"
 msgstr " [Distant : {name}]"
 
-#: ui/main_window.py:493
+#: ui/main_window.py:612
 msgid "Radio started."
 msgstr "Radio démarrée."
 
-#: ui/dialogs/scanner_dialog.py:139 ui/main_window.py:500
+#: ui/dialogs/scanner_dialog.py:139 ui/main_window.py:619
 msgid "Stopped."
 msgstr "Arrêtée."
 
-#: ui/main_window.py:501
+#: ui/main_window.py:620
 msgid "Radio stopped."
 msgstr "Radio arrêtée."
 
-#: ui/main_window.py:510
+#: ui/main_window.py:629
 msgid "▶ Resume"
 msgstr "Reprendre"
 
-#: ui/main_window.py:512
+#: ui/main_window.py:631
 #, python-brace-format
 msgid "Paused — {freq}"
 msgstr "En pause — {freq}"
 
-#: ui/main_window.py:514
+#: ui/main_window.py:633
 msgid "Paused."
 msgstr "En pause."
 
-#: ui/main_window.py:522
+#: ui/main_window.py:641
 msgid "Resumed."
 msgstr "Redémarré."
 
-#: ui/main_window.py:530 ui/main_window.py:819
+#: ui/main_window.py:649 ui/main_window.py:945
 msgid "Stereo"
 msgstr "Stéréo"
 
-#: ui/main_window.py:530 ui/main_window.py:819
+#: ui/main_window.py:649 ui/main_window.py:945
 msgid "Mono"
 msgstr "Mono"
 
-#: ui/main_window.py:533
+#: ui/main_window.py:652
 #, python-brace-format
 msgid "Receiving — {freq} [{label}]"
 msgstr "Réception de — {freq} [{label}]"
 
-#: ui/main_window.py:540 ui/main_window.py:822
+#: ui/main_window.py:659 ui/main_window.py:948
 #, python-brace-format
 msgid "RDS: {name}"
 msgstr "RDS: {name}"
 
-#: ui/main_window.py:550
+#: ui/main_window.py:669
 #, python-brace-format
 msgid "Signal: {db:.1f} dBFS  [{s_unit}]"
 msgstr "Signal: {db:.1f} dBFS  [{s_unit}]"
 
-#: ui/main_window.py:571
+#: ui/main_window.py:690
 #, python-brace-format
 msgid "Spectrum {start} to {end}"
 msgstr "Spectre de {start} à {end}"
 
-#: ui/main_window.py:582
+#: ui/main_window.py:701
 #, python-brace-format
 msgid "Signal {s_unit}, {db:.0f} dBFS"
 msgstr "Signal {s_unit}, {db:.0f} dBFS"
 
-#: ui/main_window.py:597 ui/main_window.py:619
+#: ui/main_window.py:716 ui/main_window.py:738
 #, python-brace-format
 msgid "Volume {v} percent"
 msgstr "Volume {v} pourcent"
 
-#: ui/main_window.py:603 ui/main_window.py:785 ui/main_window.py:838
+#: ui/main_window.py:722 ui/main_window.py:911 ui/main_window.py:964
 msgid "Muted"
 msgstr "Son désactivé"
 
-#: ui/main_window.py:603 ui/main_window.py:785
+#: ui/main_window.py:722 ui/main_window.py:911
 msgid "Unmuted"
 msgstr "Son activé"
 
-#: ui/main_window.py:610 ui/main_window.py:628
+#: ui/main_window.py:729 ui/main_window.py:747
 #, python-brace-format
 msgid "Squelch {val:.0f} dBm"
 msgstr "Squelch {val:.0f} dBm"
 
-#: ui/main_window.py:638
+#: ui/main_window.py:757
 msgid "Noise blanker on"
 msgstr "Atténuateur de bruit activé"
 
-#: ui/main_window.py:639
+#: ui/main_window.py:758
 msgid "Noise blanker off"
 msgstr "Atténuateur de bruit désactivé"
 
-#: ui/main_window.py:656
+#: ui/main_window.py:775
 msgid "Continuous sweep stopped."
 msgstr "Balayage en continu arrêté."
 
-#: ui/main_window.py:663
+#: ui/main_window.py:782
 msgid "Stop Sweep (Ctrl+F5)"
 msgstr "Arrêter le Balayage (Ctrl+F5)"
 
-#: ui/main_window.py:664
+#: ui/main_window.py:783
 msgid "Continuous sweep started."
 msgstr "Balayage en continu démarré."
 
-#: ui/main_window.py:703
+#: ui/main_window.py:822
 msgid "Modulation selection cancelled."
 msgstr "Sélection de la modulation annulée."
 
-#: ui/main_window.py:723
+#: ui/main_window.py:842
 #, python-brace-format
 msgid "LO {freq}"
 msgstr "LO {freq}"
 
-#: ui/main_window.py:789
+#: ui/main_window.py:915
 msgid "Select modulation."
 msgstr "Choisir la modulation."
 
-#: ui/main_window.py:796
+#: ui/main_window.py:922
 msgid "Sonification snapshot."
 msgstr "Instantané du rendu sonore."
 
-#: ui/main_window.py:800
+#: ui/main_window.py:926
 msgid "on"
 msgstr "activé"
 
-#: ui/main_window.py:800
+#: ui/main_window.py:926
 msgid "off"
 msgstr "désactivé"
 
-#: ui/main_window.py:801
+#: ui/main_window.py:927
 #, python-brace-format
 msgid "Demod follows cursor {state}"
 msgstr "La démodulation suit le curseur {state}"
 
-#: ui/main_window.py:808
+#: ui/main_window.py:934
 msgid "Radio not running."
 msgstr "La radio n'est pas active."
 
-#: ui/main_window.py:812
+#: ui/main_window.py:938
 #, python-brace-format
 msgid "Signal {db:.1f} dBFS, {s_unit}"
 msgstr "Signal {db:.1f} dBFS, {s_unit}"
 
-#: ui/main_window.py:832
+#: ui/main_window.py:958
 #, python-brace-format
 msgid "CTCSS {tone:.1f} Hz"
 msgstr "CTCSS {tone:.1f} Hz"
 
-#: ui/main_window.py:835
+#: ui/main_window.py:961
 msgid "Squelch open"
 msgstr "Squelch ouvert"
 
-#: ui/main_window.py:835
+#: ui/main_window.py:961
 msgid "Squelch closed"
 msgstr "Squelch fermé"
 
-#: ui/main_window.py:840
+#: ui/main_window.py:966
 #, python-brace-format
 msgid "Offset {khz:+.1f} kHz"
 msgstr "Décalage {khz:+.1f} kHz"
 
-#: ui/main_window.py:872
+#: ui/main_window.py:998
 #, python-brace-format
 msgid "Recording started: {filename}"
 msgstr "Enregistrement démarré : {filename}"
 
-#: ui/main_window.py:876
+#: ui/main_window.py:1002
 msgid "Could not start recording."
 msgstr "Impossible de démarrer l'enregistrement."
 
-#: ui/main_window.py:883
+#: ui/main_window.py:1009
 #, python-brace-format
 msgid "Recording stopped: {filename}"
 msgstr "Enregistrement arrêté : {filename}"
 
-#: ui/main_window.py:896
+#: ui/main_window.py:1022
 #, python-brace-format
 msgid " [REC: {filename}]"
 msgstr " [REC : {filename}]"
 
-#: ui/main_window.py:910
+#: ui/main_window.py:1036
 #, python-brace-format
 msgid "Band: {name}, {freq}, mode {mode}"
 msgstr "Bande: {name}, {freq}, mode {mode}"
 
-#: ui/main_window.py:1021
+#: ui/main_window.py:1188
 #, python-brace-format
 msgid "Remote: {name} ({host}:{port})"
 msgstr "Distant : {name} ({host}:{port})"
 
-#: ui/dialogs/help_dialog.py:158 ui/main_window.py:1041
+#: ui/dialogs/help_dialog.py:165 ui/main_window.py:1208
 msgid "User guide not found. Run 'invoke build-help' first."
 msgstr "Guide utilisateur non trouvé. Exécutez d'abord 'invoke build-help'."
 
-#: ui/main_window.py:1103
+#: ui/main_window.py:1266
 #, python-brace-format
 msgid "SDR error: {msg}"
 msgstr "Erreur SDR: {msg}"
 
-#: ui/main_window.py:1106
+#: ui/main_window.py:1269
 #, python-brace-format
 msgid "Error: {msg}"
 msgstr "Erreur: {msg}"
@@ -569,7 +606,7 @@ msgstr "Projet"
 msgid "Dependencies"
 msgstr "Dépendances"
 
-#: ui/dialogs/audio_dialog.py:27 ui/dialogs/help_dialog.py:71
+#: ui/dialogs/audio_dialog.py:27 ui/dialogs/help_dialog.py:79
 msgid "Audio Settings"
 msgstr "Paramètres Audio"
 
@@ -585,73 +622,175 @@ msgstr "Périphérique de Sortie:"
 msgid "Audio Buffer (samples):"
 msgstr "Tampon Audio (samples):"
 
-#: ui/dialogs/bookmarks_dialog.py:29 ui/dialogs/help_dialog.py:70
-msgid "Bookmarks"
-msgstr "Marque-pages"
+#: ui/dialogs/channels_dialog.py:48 ui/dialogs/help_dialog.py:77
+msgid "Channels"
+msgstr ""
 
-#: ui/dialogs/bookmarks_dialog.py:39
-msgid "Bookmarks dialog opened."
-msgstr "Dialogue des marque-pages ouvert."
+#: ui/dialogs/channels_dialog.py:61
+msgid "Channels dialog opened."
+msgstr ""
 
-#: ui/dialogs/bookmarks_dialog.py:53
+#: ui/dialogs/channels_dialog.py:72
+msgid "Channel Map"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:76
+msgid "New Map"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:77
+msgid "Delete Map"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:78 ui/dialogs/scenes_dialog.py:80
+msgid "Import…"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:79 ui/dialogs/scenes_dialog.py:81
+msgid "Export…"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:95
+msgid "Ch"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:96
 msgid "Label"
 msgstr "Étiquette"
 
-#: ui/dialogs/bookmarks_dialog.py:54 ui/dialogs/scanner_dialog.py:92
+#: ui/dialogs/channels_dialog.py:97 ui/dialogs/scanner_dialog.py:92
 msgid "Frequency"
 msgstr "Fréquence"
 
-#: ui/dialogs/bookmarks_dialog.py:55
+#: ui/dialogs/channels_dialog.py:98 ui/dialogs/scenes_dialog.py:96
 msgid "Mode"
 msgstr "Mode"
 
-#: ui/dialogs/bookmarks_dialog.py:59 ui/dialogs/bookmarks_dialog.py:85
-msgid "Add Bookmark"
-msgstr "Ajouter un marque-page"
+#: ui/dialogs/channels_dialog.py:99
+msgid "Bandwidth"
+msgstr ""
 
-#: ui/dialogs/bookmarks_dialog.py:64
+#: ui/dialogs/channels_dialog.py:103
+msgid "Channel"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:108
+msgid "Number:"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:112
 msgid "Label:"
 msgstr "Étiquette:"
 
-#: ui/dialogs/bookmarks_dialog.py:69
+#: ui/dialogs/channels_dialog.py:117
 msgid "Frequency (MHz or kHz):"
 msgstr "Fréquence (MHz ou kHz):"
 
-#: ui/dialogs/bookmarks_dialog.py:92
+#: ui/dialogs/channels_dialog.py:129 ui/dialogs/scenes_dialog.py:125
+msgid "Bandwidth:"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:136
+msgid "Save Channel"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:137 ui/dialogs/scenes_dialog.py:168
+msgid "Store Current VFO"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:147
 msgid "Load Selected"
 msgstr "Charger l'élément sélectionné"
 
-#: ui/dialogs/bookmarks_dialog.py:93
+#: ui/dialogs/channels_dialog.py:148 ui/dialogs/scenes_dialog.py:179
 msgid "Delete Selected"
 msgstr "Effacer l'élément sélectionné"
 
-#: ui/dialogs/bookmarks_dialog.py:94 ui/dialogs/help_dialog.py:137
-#: ui/dialogs/rtl_tcp_dialog.py:146
+#: ui/dialogs/channels_dialog.py:149 ui/dialogs/help_dialog.py:144
+#: ui/dialogs/rtl_tcp_dialog.py:146 ui/dialogs/scenes_dialog.py:180
 msgid "Close"
 msgstr "Fermer"
 
-#: ui/dialogs/bookmarks_dialog.py:121
+#: ui/dialogs/channels_dialog.py:225
+#, python-brace-format
+msgid "Map {name}"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:228
+msgid "Map name:"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:228
+msgid "New Channel Map"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:237
+#, python-brace-format
+msgid "Map {name} created."
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:242
+msgid "Cannot delete the last map."
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:251
+#, python-brace-format
+msgid "Map {name} deleted."
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:276
 msgid "Please enter a label."
 msgstr "Veuillez saisir une étiquette."
 
-#: ui/dialogs/bookmarks_dialog.py:135
+#: ui/dialogs/channels_dialog.py:298
 #, python-brace-format
-msgid "Bookmark added: {label}, {freq}, {mode}."
-msgstr "Marque-page ajouté: {label}, {freq}, {mode}."
+msgid "Saved channel {n}, {label}."
+msgstr ""
 
-#: ui/dialogs/bookmarks_dialog.py:143 ui/dialogs/bookmarks_dialog.py:157
-msgid "No bookmark selected."
-msgstr "Aucun marque-page sélectionné."
-
-#: ui/dialogs/bookmarks_dialog.py:149
+#: ui/dialogs/channels_dialog.py:315
 #, python-brace-format
-msgid "Loaded bookmark: {label}, {freq}, {mode}."
-msgstr "Marque-page chargé: {label}, {freq}, {mode}."
+msgid "Storing {freq} to channel {n}. Enter a label and save."
+msgstr ""
 
-#: ui/dialogs/bookmarks_dialog.py:163
+#: ui/dialogs/channels_dialog.py:323 ui/dialogs/channels_dialog.py:332
+msgid "No channel selected."
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:337
 #, python-brace-format
-msgid "Deleted bookmark: {label}."
-msgstr "Marque-page effacé: {label}."
+msgid "Deleted channel {n}."
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:348
+msgid "Export channel map"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:361
+msgid "Map exported."
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:363 ui/dialogs/scenes_dialog.py:375
+#, python-brace-format
+msgid "Export failed: {err}"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:367
+msgid "Import channel map"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:377
+msgid "Imported"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:381 ui/dialogs/scenes_dialog.py:390
+#, python-brace-format
+msgid "Import failed: {err}"
+msgstr ""
+
+#: ui/dialogs/channels_dialog.py:388
+#, python-brace-format
+msgid "Map {name} imported."
+msgstr ""
 
 #: ui/dialogs/help_dialog.py:18
 msgid "--- Main Window ---"
@@ -730,170 +869,194 @@ msgid "Read signal strength"
 msgstr "Lire la force du signal"
 
 #: ui/dialogs/help_dialog.py:38
+msgid "--- Channels / Scenes (VFO / MR) ---"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:39
+msgid "Channel up (MR) / frequency step up (VFO)"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:40
+msgid "Channel down (MR) / frequency step down (VFO)"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:41
+msgid "Toggle VFO / Memory mode"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:42
+msgid "Previous scene (VFO)"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:43
+msgid "Next scene (VFO)"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:45
 msgid "--- Modulation (press M, then letter) ---"
 msgstr "--- Modulation (pressez M, puis une lettre) ---"
 
-#: ui/dialogs/help_dialog.py:39
+#: ui/dialogs/help_dialog.py:46
 msgid "Wide FM"
 msgstr "FM large"
 
-#: ui/dialogs/help_dialog.py:40
+#: ui/dialogs/help_dialog.py:47
 msgid "Narrow FM"
 msgstr "FM étroite"
 
-#: ui/dialogs/help_dialog.py:47
+#: ui/dialogs/help_dialog.py:54
 msgid "--- Spectrum / Sonification ---"
 msgstr "--- Spectre / Sonification ---"
 
-#: ui/dialogs/help_dialog.py:48
+#: ui/dialogs/help_dialog.py:55
 msgid "Speak top peaks"
 msgstr "Annoncer les pics supérieurs"
 
-#: ui/dialogs/help_dialog.py:49
+#: ui/dialogs/help_dialog.py:56
 msgid "Describe spectrum"
 msgstr "Décrire le spectre"
 
-#: ui/dialogs/help_dialog.py:50
+#: ui/dialogs/help_dialog.py:57
 msgid "Zoom in spectrum"
 msgstr "Zoomer dans le spectre"
 
-#: ui/dialogs/help_dialog.py:51
+#: ui/dialogs/help_dialog.py:58
 msgid "Zoom out spectrum"
 msgstr "Zoomer hors du spectre"
 
-#: ui/dialogs/help_dialog.py:52
+#: ui/dialogs/help_dialog.py:59
 msgid "Reset zoom"
 msgstr "Réinitialiser le zoom"
 
-#: ui/dialogs/help_dialog.py:53
+#: ui/dialogs/help_dialog.py:60
 msgid "Sonification snapshot sweep"
 msgstr "Balayage instantané de sonification"
 
-#: ui/dialogs/help_dialog.py:54
+#: ui/dialogs/help_dialog.py:61
 msgid "Toggle continuous sweep"
 msgstr "Activer/désactiver le balayage en continu"
 
-#: ui/dialogs/help_dialog.py:56
+#: ui/dialogs/help_dialog.py:63
 msgid "--- Spectrum Cursor ---"
 msgstr "--- Curseur du Spectre ---"
 
-#: ui/dialogs/help_dialog.py:57
+#: ui/dialogs/help_dialog.py:64
 msgid "Probe tone at cursor"
 msgstr "Tonalité de sonde au niveau du curseur"
 
-#: ui/dialogs/help_dialog.py:58
+#: ui/dialogs/help_dialog.py:65
 msgid "Move cursor while probing"
 msgstr "Déplacer le curseur durant le sondage"
 
-#: ui/dialogs/help_dialog.py:59
+#: ui/dialogs/help_dialog.py:66
 msgid "Step cursor left"
 msgstr "Déplacer le curseur vers la gauche"
 
-#: ui/dialogs/help_dialog.py:60
+#: ui/dialogs/help_dialog.py:67
 msgid "Step cursor right"
 msgstr "Déplacer le curseur vers la droite"
 
-#: ui/dialogs/help_dialog.py:61
+#: ui/dialogs/help_dialog.py:68
 msgid "Reset cursor to centre, clear offset"
 msgstr "Remettre le curseur au centre, supprimer le décalage"
 
-#: ui/dialogs/help_dialog.py:62
+#: ui/dialogs/help_dialog.py:69
 msgid "Speak cursor frequency and power"
 msgstr "Annoncer la fréquence et la puissance du curseur"
 
-#: ui/dialogs/help_dialog.py:63
+#: ui/dialogs/help_dialog.py:70
 msgid "Tune LO to cursor, clear offset"
 msgstr "Accorder LO au curseur, effacer le décalage"
 
-#: ui/dialogs/help_dialog.py:64
+#: ui/dialogs/help_dialog.py:71
 msgid "Toggle demod follows cursor"
 msgstr "Activer/désactiver démodulation suit curseur"
 
-#: ui/dialogs/help_dialog.py:66
+#: ui/dialogs/help_dialog.py:73
 msgid "--- Dialogs ---"
 msgstr "--- Dialogues ---"
 
-#: ui/dialogs/help_dialog.py:67 ui/dialogs/rf_dialog.py:45
+#: ui/dialogs/help_dialog.py:74 ui/dialogs/rf_dialog.py:45
 msgid "RF Settings"
 msgstr "Paramètres RF"
 
-#: ui/dialogs/help_dialog.py:68 ui/dialogs/spectrum_dialog.py:27
+#: ui/dialogs/help_dialog.py:75 ui/dialogs/spectrum_dialog.py:27
 msgid "Spectrum Settings"
 msgstr "Paramètres du Spectre"
 
-#: ui/dialogs/help_dialog.py:69
+#: ui/dialogs/help_dialog.py:76
 msgid "Scanner"
 msgstr "Scanner"
 
-#: ui/dialogs/help_dialog.py:72 ui/dialogs/recording_dialog.py:21
+#: ui/dialogs/help_dialog.py:78 ui/dialogs/scenes_dialog.py:55
+msgid "Scenes"
+msgstr ""
+
+#: ui/dialogs/help_dialog.py:80 ui/dialogs/recording_dialog.py:21
 msgid "Recording Settings"
 msgstr "Paramètres d'enregistrement"
 
-#: ui/dialogs/help_dialog.py:73 ui/dialogs/wfm_dialog.py:32
+#: ui/dialogs/help_dialog.py:81 ui/dialogs/wfm_dialog.py:32
 msgid "WFM Settings"
 msgstr "Paramètres WFM"
 
-#: ui/dialogs/help_dialog.py:74
+#: ui/dialogs/help_dialog.py:82
 msgid "Remote SDR settings"
 msgstr "Paramètres SDR distant"
 
-#: ui/dialogs/help_dialog.py:75
+#: ui/dialogs/help_dialog.py:83
 msgid "Help (this window)"
 msgstr "Aide (cette fenêtre)"
 
-#: ui/dialogs/help_dialog.py:77
+#: ui/dialogs/help_dialog.py:85
 msgid "--- Scanner (when open) ---"
 msgstr "--- Scanner (si ouvert) ---"
 
-#: ui/dialogs/help_dialog.py:78
+#: ui/dialogs/help_dialog.py:86
 msgid "Hold on frequency"
 msgstr "Garder la fréquence"
 
-#: ui/dialogs/help_dialog.py:79
+#: ui/dialogs/help_dialog.py:87
 msgid "Skip to next"
 msgstr "Aller au suivant"
 
-#: ui/dialogs/help_dialog.py:80
+#: ui/dialogs/help_dialog.py:88
 msgid "Stop scan"
 msgstr "Arrêter le balayage"
 
-#: ui/dialogs/help_dialog.py:82
+#: ui/dialogs/help_dialog.py:90
 msgid "--- General ---"
 msgstr "--- Général ---"
 
-#: ui/dialogs/help_dialog.py:83
+#: ui/dialogs/help_dialog.py:91
 msgid "Open Bands menu"
 msgstr "Ouvrir le menu des bandes"
 
-#: ui/dialogs/help_dialog.py:84
-msgid "Save bookmark"
-msgstr "Sauvegarder les marque-pages"
-
-#: ui/dialogs/help_dialog.py:85
+#: ui/dialogs/help_dialog.py:92
 msgid "Quit"
 msgstr "Quitter"
 
-#: ui/dialogs/help_dialog.py:95
+#: ui/dialogs/help_dialog.py:102
 msgid "Keyboard Shortcuts — AccessDR"
 msgstr "Raccourcis clavier — AccessDR"
 
-#: ui/dialogs/help_dialog.py:112
+#: ui/dialogs/help_dialog.py:119
 msgid "AccessDR Keyboard Shortcuts"
 msgstr "Raccourcis clavier d'AccessDR"
 
-#: ui/dialogs/help_dialog.py:122
+#: ui/dialogs/help_dialog.py:129
 msgid "Action"
 msgstr "Action"
 
-#: ui/dialogs/help_dialog.py:123
+#: ui/dialogs/help_dialog.py:130
 msgid "Key(s)"
 msgstr "Touche(s)"
 
-#: ui/dialogs/help_dialog.py:132
+#: ui/dialogs/help_dialog.py:139
 msgid "Open User Guide"
 msgstr "Ouvrir le Guide de l'Utilisateur"
 
-#: ui/dialogs/help_dialog.py:161
+#: ui/dialogs/help_dialog.py:168
 msgid "Keyboard Shortcuts for AccessDR."
 msgstr "Raccourcis clavier pour AccessDR."
 
@@ -1017,7 +1180,7 @@ msgstr ""
 msgid "Bias Tee — Danger"
 msgstr "Bias Tee — Danger"
 
-#: ui/dialogs/rtl_tcp_dialog.py:42
+#: ui/dialogs/rtl_tcp_dialog.py:42 ui/dialogs/scenes_dialog.py:111
 msgid "Name:"
 msgstr "Nom :"
 
@@ -1037,7 +1200,7 @@ msgstr "Veuillez saisir une adresse d'hôte."
 msgid "Remote SDR Servers"
 msgstr "Serveurs SDR distants"
 
-#: ui/dialogs/rtl_tcp_dialog.py:116
+#: ui/dialogs/rtl_tcp_dialog.py:116 ui/dialogs/scenes_dialog.py:94
 msgid "Name"
 msgstr "Nom"
 
@@ -1181,6 +1344,117 @@ msgstr "Terminé — {count} signaux trouvés."
 msgid "Scan complete. {count} signal found."
 msgstr "Balayage terminé. {count} signaux trouvés."
 
+#: ui/dialogs/scenes_dialog.py:31
+msgid "(no override)"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:68
+msgid "Scenes dialog opened."
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:95
+msgid "Band"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:97
+msgid "Step"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:101
+msgid "Scene"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:114
+msgid "Band start (MHz, blank = unbounded):"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:117
+msgid "Band end (MHz, blank = unbounded):"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:129
+msgid "Follow tuning step"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:133
+msgid "Tuning step:"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:136
+msgid "Default frequency (MHz, optional):"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:141
+msgid "Advanced overrides (optional)"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:151
+msgid "NFM deviation (Hz):"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:158
+msgid "WFM de-emphasis:"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:167
+msgid "Save Scene"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:178
+msgid "Apply Selected"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:199
+msgid "Full range"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:204
+msgid "(follow)"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:280
+msgid "Please enter a name."
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:306
+msgid "Invalid numeric override."
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:321
+#, python-brace-format
+msgid "Saved scene {name}."
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:336
+#, python-brace-format
+msgid "Storing {freq} as a scene. Enter a name and band, then save."
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:344 ui/dialogs/scenes_dialog.py:352
+msgid "No scene selected."
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:357
+#, python-brace-format
+msgid "Deleted scene {name}."
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:365
+msgid "Export band plan"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:373
+msgid "Band plan exported."
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:379
+msgid "Import band plan"
+msgstr ""
+
+#: ui/dialogs/scenes_dialog.py:399
+msgid "Band plan imported."
+msgstr ""
+
 #: ui/dialogs/spectrum_dialog.py:45
 msgid "FFT Settings"
 msgstr "Paramètres FFT"
@@ -1299,4 +1573,31 @@ msgstr "D2coder les infos RDS de la station"
 
 #~ msgid "Recording stopped."
 #~ msgstr "Enregistrement arrêté."
+
+#~ msgid "&Bookmarks…\tCtrl+B"
+#~ msgstr "&Marque-pages…\tCtrl+B"
+
+#~ msgid "Bookmarks"
+#~ msgstr "Marque-pages"
+
+#~ msgid "Bookmarks dialog opened."
+#~ msgstr "Dialogue des marque-pages ouvert."
+
+#~ msgid "Add Bookmark"
+#~ msgstr "Ajouter un marque-page"
+
+#~ msgid "Bookmark added: {label}, {freq}, {mode}."
+#~ msgstr "Marque-page ajouté: {label}, {freq}, {mode}."
+
+#~ msgid "No bookmark selected."
+#~ msgstr "Aucun marque-page sélectionné."
+
+#~ msgid "Loaded bookmark: {label}, {freq}, {mode}."
+#~ msgstr "Marque-page chargé: {label}, {freq}, {mode}."
+
+#~ msgid "Deleted bookmark: {label}."
+#~ msgstr "Marque-page effacé: {label}."
+
+#~ msgid "Save bookmark"
+#~ msgstr "Sauvegarder les marque-pages"
 

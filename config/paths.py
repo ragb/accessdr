@@ -43,7 +43,7 @@ def help_dir() -> str:
 
 
 def app_data_dir() -> str:
-    """Return the directory for user-writable data (settings, bookmarks).
+    """Return the directory for user-writable data (settings, channels).
 
     Frozen: ``%APPDATA%/AccessDR/`` (created if missing).
     Dev:    the project root.

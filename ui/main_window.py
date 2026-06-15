@@ -21,7 +21,6 @@ import wx
 from accessibility import speech
 from accessibility.sonification import Sonification
 from config.bands import BAND_NAMES, centre_frequency, get_band
-from config.bookmarks import Bookmark, BookmarkStore
 from config.channels import Channel, ChannelMapStore
 from config.modes import (
     AUDIO_RATE, BW_OPTIONS, MODE_KEYS, MODES,
@@ -84,20 +83,26 @@ class MainWindow(wx.Frame):
             get_signal_db_cb=lambda: self._audio.signal_db,
             dispatcher=wx.CallAfter,
         )
-        self._bookmarks = BookmarkStore()
-        self._bookmarks.load()
         self._scenes = SceneStore()
         self._scenes.load()
         self._channels = ChannelMapStore()
         self._channels.load()
 
-        # Operating mode (VFO/MR). Active scene defaults to the free scene;
-        # active channel map is the store's active map. Restored op-state
-        # across restarts arrives in a later step.
+        # Operating mode (VFO/MR), restored from persisted settings.
+        restored_scene = (
+            self._scenes.by_name(self._settings.active_scene)
+            if self._settings.active_scene else None
+        ) or self._scenes.free_scene()
+        try:
+            restored_mode = OpMode(self._settings.op_mode)
+        except ValueError:
+            restored_mode = OpMode.VFO
         self._opstate = OperatingState(
-            scene=self._scenes.free_scene(),
+            scene=restored_scene,
             channel_map=self._channels.active_map(),
+            mode=restored_mode,
         )
+        self._opstate.channel_index = self._settings.active_channel
 
         # Runtime state
         self._step_idx = STEPS.index(self._settings.step) if self._settings.step in STEPS else 3
@@ -1218,10 +1223,6 @@ class MainWindow(wx.Frame):
     # Callbacks
     # ==================================================================
 
-    def _on_bookmark_load(self, bm: Bookmark) -> None:
-        self._tune(bm.frequency)
-        self._set_mode(bm.mode)
-
     def _on_wfm_settings_changed(self) -> None:
         """Apply WFM settings changes — rebuild demodulator if in WFM mode."""
         self._radio.rebuild_wfm()
@@ -1279,8 +1280,10 @@ class MainWindow(wx.Frame):
         self._cursor.stop()
         self._stop_recording()
         self._stop_radio()
+        self._settings.op_mode = self._opstate.mode.value
+        self._settings.active_scene = self._opstate.scene.name
+        self._settings.active_channel = self._opstate.channel_index
         self._settings.save()
-        self._bookmarks.save()
         self._scenes.save()
         self._channels.save()
         for dlg in self._dialogs.values():
