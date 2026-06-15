@@ -1,10 +1,12 @@
 """
-ui/panels/scenes_panel.py — Scene Manager content panel (VFO band presets).
+ui/panels/scenes_panel.py — Bands manager content panel (VFO band presets).
 
-Holds the working UI for managing the band plan: add/edit (upsert by
-name)/delete scenes, store the current VFO as a scene, apply a scene, and
-import/export the whole band plan as JSON.  Hostable in a dialog or a
-notebook tab.
+A *band* is a VFO preset (frequency range + demod setup). Bands are shown
+in a tree grouped by service category (Broadcast, Shortwave, Amateur, …),
+which keeps a large band plan navigable — and tree controls are read
+naturally by screen readers (level, expand/collapse).
+
+Hostable in a dialog (the Bands manager) or, in principle, a tab.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ from ui.formatting import fmt_freq, parse_freq
 # Step choice: a leading "follow tuning step" entry maps to step == 0.
 _STEP_VALUES = [0] + STEPS
 _DEEMPH_CHOICES = [("", N_("(no override)")), ("50", "50 µs"), ("75", "75 µs")]
+_UNGROUPED = N_("General")
 
 
 def _parse_opt_freq(text: str) -> Optional[int]:
@@ -31,8 +34,14 @@ def _parse_opt_freq(text: str) -> Optional[int]:
     return parse_freq(text, default_unit="mhz")
 
 
+def _group_order() -> list:
+    """Display order for band groups: General, then the service order."""
+    from config.bands import GROUP_ORDER
+    return [_UNGROUPED] + list(GROUP_ORDER)
+
+
 class ScenesPanel(wx.Panel):
-    """Band-scene management controls (no frame chrome)."""
+    """Band-preset management controls (tree + edit form), no frame chrome."""
 
     def __init__(
         self,
@@ -49,7 +58,7 @@ class ScenesPanel(wx.Panel):
         self._get_current_cb = get_current
         self._on_changed_cb = on_changed
         self._build_ui()
-        self._refresh_list()
+        self._refresh_tree()
         self._refresh_bw_choices("WFM")
 
     # ------------------------------------------------------------------
@@ -59,17 +68,15 @@ class ScenesPanel(wx.Panel):
     def _build_ui(self) -> None:
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # Scene list
-        self._list = wx.ListCtrl(
+        # Band tree (grouped by service)
+        self._tree = wx.TreeCtrl(
             self,
-            style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.BORDER_SUNKEN,
-            name="Bands list",
+            style=wx.TR_HIDE_ROOT | wx.TR_HAS_BUTTONS | wx.TR_SINGLE
+            | wx.TR_FULL_ROW_HIGHLIGHT | wx.BORDER_SUNKEN,
+            name="Bands tree",
         )
-        self._list.InsertColumn(0, _("Name"), width=160)
-        self._list.InsertColumn(1, _("Band"), width=180)
-        self._list.InsertColumn(2, _("Mode"), width=70)
-        self._list.InsertColumn(3, _("Step"), width=90)
-        sizer.Add(self._list, 1, wx.EXPAND | wx.ALL, 8)
+        self._root = self._tree.AddRoot("bands")
+        sizer.Add(self._tree, 1, wx.EXPAND | wx.ALL, 8)
 
         # Edit form
         form_box = wx.StaticBox(self, label=_("Band"))
@@ -83,6 +90,9 @@ class ScenesPanel(wx.Panel):
 
         self._name_ctrl = wx.TextCtrl(self, name="Band name")
         _row(_("Name:"), self._name_ctrl)
+
+        self._group_ctrl = wx.ComboBox(self, choices=_group_order(), name="Band group")
+        _row(_("Group:"), self._group_ctrl)
 
         self._start_ctrl = wx.TextCtrl(self, name="Band start")
         _row(_("Band start (MHz, blank = unbounded):"), self._start_ctrl)
@@ -162,33 +172,40 @@ class ScenesPanel(wx.Panel):
         sizer.Add(btn_row, 0, wx.ALL, 8)
 
         self.SetSizer(sizer)
-        self._list.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self._on_apply_selected)
-        self._list.Bind(wx.EVT_LIST_ITEM_SELECTED, self._on_select)
+        self._tree.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_apply_selected)
+        self._tree.Bind(wx.EVT_TREE_SEL_CHANGED, self._on_select)
 
     # ------------------------------------------------------------------
-    # Refresh helpers
+    # Tree
     # ------------------------------------------------------------------
 
-    def _band_text(self, s: Scene) -> str:
+    def _band_summary(self, s: Scene) -> str:
         if s.unbounded:
-            return _("Full range")
-        return f"{fmt_freq(s.freq_start)} – {fmt_freq(s.freq_end)}"
+            return s.name
+        return f"{s.name}  ({fmt_freq(s.freq_start)}–{fmt_freq(s.freq_end)}, {s.mode})"
 
-    def _step_text(self, s: Scene) -> str:
-        if s.step <= 0:
-            return _("(follow)")
-        try:
-            return _(STEP_LABELS[STEPS.index(s.step)])
-        except ValueError:
-            return f"{s.step} Hz"
-
-    def _refresh_list(self) -> None:
-        self._list.DeleteAllItems()
+    def _refresh_tree(self) -> None:
+        self._tree.DeleteChildren(self._root)
+        # Group scenes by their group (blank → General).
+        groups: dict = {}
         for s in self._store.get_all():
-            idx = self._list.InsertItem(self._list.GetItemCount(), s.name)
-            self._list.SetItem(idx, 1, self._band_text(s))
-            self._list.SetItem(idx, 2, s.mode)
-            self._list.SetItem(idx, 3, self._step_text(s))
+            groups.setdefault(s.group or _UNGROUPED, []).append(s)
+        ordered = [g for g in _group_order() if g in groups]
+        ordered += [g for g in groups if g not in ordered]
+        for g in ordered:
+            node = self._tree.AppendItem(self._root, g)
+            for s in groups[g]:
+                leaf = self._tree.AppendItem(node, self._band_summary(s))
+                self._tree.SetItemData(leaf, s)
+            self._tree.Expand(node)
+        # Keep the group combo in sync with known groups.
+        self._group_ctrl.Set(ordered or _group_order())
+
+    def _selected_scene(self) -> Optional[Scene]:
+        item = self._tree.GetSelection()
+        if not item.IsOk():
+            return None
+        return self._tree.GetItemData(item)   # None for a group node
 
     def _refresh_bw_choices(self, mode: str, select_value: Optional[int] = None) -> None:
         options = BW_OPTIONS.get(mode, [])
@@ -201,13 +218,6 @@ class ScenesPanel(wx.Panel):
                         sel = i
                         break
             self._bw_ctrl.SetSelection(sel)
-
-    def _selected_scene(self) -> Optional[Scene]:
-        idx = self._list.GetFirstSelected()
-        scenes = self._store.get_all()
-        if 0 <= idx < len(scenes):
-            return scenes[idx]
-        return None
 
     def _form_bandwidth(self) -> int:
         mode = self._mode_ctrl.GetStringSelection()
@@ -223,7 +233,7 @@ class ScenesPanel(wx.Panel):
             self._on_changed_cb()
 
     # ------------------------------------------------------------------
-    # Form <-> scene
+    # Form <-> band
     # ------------------------------------------------------------------
 
     def _on_mode_change(self, _event: wx.CommandEvent) -> None:
@@ -234,6 +244,7 @@ class ScenesPanel(wx.Panel):
         if s is None:
             return
         self._name_ctrl.SetValue(s.name)
+        self._group_ctrl.SetValue(s.group)
         self._start_ctrl.SetValue("" if s.freq_start == 0 else fmt_freq(s.freq_start))
         self._end_ctrl.SetValue("" if s.freq_end == 0 else fmt_freq(s.freq_end))
         self._mode_ctrl.SetStringSelection(s.mode)
@@ -264,6 +275,7 @@ class ScenesPanel(wx.Panel):
         nfm_dev = self._nfm_dev_ctrl.GetValue().strip()
         squelch = self._squelch_ctrl.GetValue().strip()
         deemph = _DEEMPH_CHOICES[self._deemph_ctrl.GetSelection()][0]
+        group = self._group_ctrl.GetValue().strip()
         try:
             return Scene(
                 name=name,
@@ -276,6 +288,7 @@ class ScenesPanel(wx.Panel):
                 nfm_deviation=int(nfm_dev) if nfm_dev else None,
                 wfm_deemphasis=deemph or None,
                 squelch=float(squelch) if squelch else None,
+                group=group,
             )
         except ValueError:
             speech.output(_("Invalid numeric override."))
@@ -291,7 +304,7 @@ class ScenesPanel(wx.Panel):
             self._store.scenes[idx] = scene
         else:
             self._store.add(scene)
-        self._refresh_list()
+        self._refresh_tree()
         self._notify_changed()
         speech.output(_("Saved band {name}.").format(name=scene.name))
 
@@ -327,7 +340,7 @@ class ScenesPanel(wx.Panel):
             speech.output(_("No band selected."))
             return
         self._store.scenes.remove(s)
-        self._refresh_list()
+        self._refresh_tree()
         self._notify_changed()
         speech.output(_("Deleted band {name}.").format(name=s.name))
 
@@ -364,11 +377,10 @@ class ScenesPanel(wx.Panel):
             except (OSError, json.JSONDecodeError, TypeError, KeyError) as exc:
                 speech.output(_("Import failed: {err}").format(err=exc))
                 return
-        # Merge by name (imported wins), keeping existing order then new ones.
         by_name = {s.name: s for s in self._store.scenes}
         for s in imported:
             by_name[s.name] = s
         self._store.scenes = list(by_name.values())
-        self._refresh_list()
+        self._refresh_tree()
         self._notify_changed()
         speech.output(_("Band plan imported."))

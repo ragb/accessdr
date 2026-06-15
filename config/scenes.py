@@ -37,6 +37,8 @@ class Scene:
     nfm_deviation: Optional[int] = None
     wfm_deemphasis: Optional[str] = None
     squelch: Optional[float] = None
+    # Service category, used to group bands in the Bands tree.
+    group: str = ""
 
     @property
     def unbounded(self) -> bool:
@@ -63,11 +65,11 @@ def default_scenes() -> List[Scene]:
     # the defaults.
     from config.bands import BANDS
 
-    scenes: List[Scene] = [Scene(FREE_SCENE_NAME)]
+    scenes: List[Scene] = [Scene(FREE_SCENE_NAME, group="General")]
     for name, entry in BANDS.items():
-        # entry is (lo, hi, mode, bandwidth, step) with an optional trailing
-        # dict of per-mode overrides (nfm_deviation / wfm_deemphasis / squelch).
-        lo, hi, mode, bandwidth, step, *rest = entry
+        # entry is (lo, hi, mode, bandwidth, step, group) with an optional
+        # trailing dict of per-mode overrides.
+        lo, hi, mode, bandwidth, step, group, *rest = entry
         overrides = rest[0] if rest else {}
         scenes.append(Scene(
             name=name,
@@ -77,6 +79,7 @@ def default_scenes() -> List[Scene]:
             bandwidth=bandwidth,
             step=step,
             default_freq=(lo + hi) // 2,
+            group=group,
             **overrides,
         ))
     return scenes
@@ -144,6 +147,6 @@ class SceneStore:
         """Return the free/unbounded scene, creating one if absent."""
         s = self.by_name(FREE_SCENE_NAME)
         if s is None:
-            s = Scene(FREE_SCENE_NAME)
+            s = Scene(FREE_SCENE_NAME, group="General")
             self.scenes.insert(0, s)
         return s

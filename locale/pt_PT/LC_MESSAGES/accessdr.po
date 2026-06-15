@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AccessDR 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-15 15:26+0100\n"
+"POT-Creation-Date: 2026-06-15 15:32+0100\n"
 "PO-Revision-Date: 2026-02-19 11:40+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: pt_PT\n"
@@ -23,139 +23,163 @@ msgstr ""
 msgid "AccessDR v{version}"
 msgstr "AccessDR v{version}"
 
-#: config/bands.py:25
-msgid "AM Radio"
+#: config/bands.py:26 config/bands.py:34
+msgid "Broadcast"
 msgstr ""
 
-#: config/bands.py:27
-msgid "160m Ham"
+#: config/bands.py:27 config/bands.py:35
+msgid "Shortwave"
 msgstr ""
 
-#: config/bands.py:28
-msgid "90m SW"
+#: config/bands.py:28 config/bands.py:36
+msgid "Amateur"
 msgstr ""
 
-#: config/bands.py:29
-msgid "80m Ham"
+#: config/bands.py:29 config/bands.py:37
+msgid "Aircraft / Marine"
 msgstr ""
 
-#: config/bands.py:30
-msgid "75m SW"
+#: config/bands.py:30 config/bands.py:38
+msgid "PMR / CB"
 msgstr ""
 
-#: config/bands.py:31
-msgid "60m SW"
-msgstr ""
-
-#: config/bands.py:32
-msgid "49m SW"
-msgstr ""
-
-#: config/bands.py:33
-msgid "40m Ham"
-msgstr ""
-
-#: config/bands.py:34
-msgid "41m SW"
-msgstr ""
-
-#: config/bands.py:35
-msgid "31m SW"
-msgstr ""
-
-#: config/bands.py:36
-msgid "30m Ham"
-msgstr ""
-
-#: config/bands.py:37
-msgid "25m SW"
-msgstr ""
-
-#: config/bands.py:38
-msgid "22m SW"
-msgstr ""
-
-#: config/bands.py:39
-msgid "20m Ham"
-msgstr ""
-
-#: config/bands.py:40
-msgid "19m SW"
-msgstr ""
-
-#: config/bands.py:41
-msgid "16m SW"
-msgstr ""
-
-#: config/bands.py:42
-msgid "17m Ham"
+#: config/bands.py:31 config/bands.py:39
+msgid "Weather / Other"
 msgstr ""
 
 #: config/bands.py:43
-msgid "15m Ham"
-msgstr ""
-
-#: config/bands.py:44
-msgid "13m SW"
+msgid "AM Radio"
 msgstr ""
 
 #: config/bands.py:45
-msgid "12m Ham"
+msgid "160m Ham"
 msgstr ""
 
 #: config/bands.py:46
-msgid "CB 27m"
+msgid "90m SW"
 msgstr ""
 
 #: config/bands.py:47
-msgid "10m Ham"
+msgid "80m Ham"
+msgstr ""
+
+#: config/bands.py:48
+msgid "75m SW"
 msgstr ""
 
 #: config/bands.py:49
-msgid "6m Ham"
+msgid "60m SW"
 msgstr ""
 
 #: config/bands.py:50
-msgid "FM Radio"
+msgid "49m SW"
 msgstr ""
 
 #: config/bands.py:51
-msgid "Airband"
+msgid "40m Ham"
 msgstr ""
 
 #: config/bands.py:52
-msgid "2m Ham"
+msgid "41m SW"
 msgstr ""
 
 #: config/bands.py:53
-msgid "Marine"
+msgid "31m SW"
 msgstr ""
 
 #: config/bands.py:54
-msgid "NOAA WX"
+msgid "30m Ham"
 msgstr ""
 
 #: config/bands.py:55
-msgid "70cm Ham"
+msgid "25m SW"
 msgstr ""
 
 #: config/bands.py:56
-msgid "PMR446"
-msgstr "PMR446"
+msgid "22m SW"
+msgstr ""
+
+#: config/bands.py:57
+msgid "20m Ham"
+msgstr ""
 
 #: config/bands.py:58
-msgid "UHF CB"
-msgstr "CB UHF"
+msgid "19m SW"
+msgstr ""
 
 #: config/bands.py:59
-msgid "GSM Up"
+msgid "16m SW"
 msgstr ""
 
 #: config/bands.py:60
-msgid "GSM Down"
+msgid "17m Ham"
 msgstr ""
 
 #: config/bands.py:61
+msgid "15m Ham"
+msgstr ""
+
+#: config/bands.py:62
+msgid "13m SW"
+msgstr ""
+
+#: config/bands.py:63
+msgid "12m Ham"
+msgstr ""
+
+#: config/bands.py:64
+msgid "CB 27m"
+msgstr ""
+
+#: config/bands.py:65
+msgid "10m Ham"
+msgstr ""
+
+#: config/bands.py:67
+msgid "6m Ham"
+msgstr ""
+
+#: config/bands.py:68
+msgid "FM Radio"
+msgstr ""
+
+#: config/bands.py:69
+msgid "Airband"
+msgstr ""
+
+#: config/bands.py:70
+msgid "2m Ham"
+msgstr ""
+
+#: config/bands.py:71
+msgid "Marine"
+msgstr ""
+
+#: config/bands.py:72
+msgid "NOAA WX"
+msgstr ""
+
+#: config/bands.py:73
+msgid "70cm Ham"
+msgstr ""
+
+#: config/bands.py:74
+msgid "PMR446"
+msgstr "PMR446"
+
+#: config/bands.py:76
+msgid "UHF CB"
+msgstr "CB UHF"
+
+#: config/bands.py:77
+msgid "GSM Up"
+msgstr ""
+
+#: config/bands.py:78
+msgid "GSM Down"
+msgstr ""
+
+#: config/bands.py:79
 msgid "DECT"
 msgstr "DECT"
 
@@ -289,7 +313,7 @@ msgid "Mute (M)"
 msgstr "Silenciar (M)"
 
 #: ui/dialogs/scanner_dialog.py:65 ui/main_window.py:250
-#: ui/panels/scenes_panel.py:135
+#: ui/panels/scenes_panel.py:145
 msgid "Squelch (dBm):"
 msgstr "Squelch (dBm):"
 
@@ -310,7 +334,7 @@ msgid "Step:"
 msgstr "Passo:"
 
 #: ui/main_window.py:335 ui/panels/channels_panel.py:107
-#: ui/panels/scenes_panel.py:96
+#: ui/panels/scenes_panel.py:106
 msgid "Mode:"
 msgstr "Modo:"
 
@@ -336,7 +360,7 @@ msgid "Tune to Frequency"
 msgstr "Sintonizar Frequência"
 
 #: ui/main_window.py:404 ui/main_window.py:425 ui/panels/channels_panel.py:266
-#: ui/panels/scenes_panel.py:262
+#: ui/panels/scenes_panel.py:273
 msgid "Invalid frequency."
 msgstr "Frequência inválida."
 
@@ -1126,7 +1150,7 @@ msgstr ""
 msgid "Bias Tee — Danger"
 msgstr "Bias Tee — Perigo"
 
-#: ui/dialogs/rtl_tcp_dialog.py:42 ui/panels/scenes_panel.py:85
+#: ui/dialogs/rtl_tcp_dialog.py:42 ui/panels/scenes_panel.py:92
 msgid "Name:"
 msgstr "Nome:"
 
@@ -1146,7 +1170,7 @@ msgstr "Por favor, introduza um endereço de servidor."
 msgid "Remote SDR Servers"
 msgstr "Servidores SDR Remotos"
 
-#: ui/dialogs/rtl_tcp_dialog.py:116 ui/panels/scenes_panel.py:68
+#: ui/dialogs/rtl_tcp_dialog.py:116
 msgid "Name"
 msgstr "Nome"
 
@@ -1418,7 +1442,7 @@ msgstr ""
 msgid "Label"
 msgstr "Etiqueta"
 
-#: ui/panels/channels_panel.py:82 ui/panels/scenes_panel.py:70
+#: ui/panels/channels_panel.py:82
 msgid "Mode"
 msgstr "Modo"
 
@@ -1442,7 +1466,7 @@ msgstr "Etiqueta:"
 msgid "Frequency (MHz or kHz):"
 msgstr "Frequência (MHz ou kHz):"
 
-#: ui/panels/channels_panel.py:113 ui/panels/scenes_panel.py:99
+#: ui/panels/channels_panel.py:113 ui/panels/scenes_panel.py:109
 msgid "Bandwidth:"
 msgstr ""
 
@@ -1450,7 +1474,7 @@ msgstr ""
 msgid "Save Channel"
 msgstr ""
 
-#: ui/panels/channels_panel.py:121 ui/panels/scenes_panel.py:142
+#: ui/panels/channels_panel.py:121 ui/panels/scenes_panel.py:152
 msgid "Store Current VFO"
 msgstr ""
 
@@ -1458,15 +1482,15 @@ msgstr ""
 msgid "Load Selected"
 msgstr "Carregar Selecionado"
 
-#: ui/panels/channels_panel.py:132 ui/panels/scenes_panel.py:153
+#: ui/panels/channels_panel.py:132 ui/panels/scenes_panel.py:163
 msgid "Delete Selected"
 msgstr "Apagar Selecionado"
 
-#: ui/panels/channels_panel.py:133 ui/panels/scenes_panel.py:154
+#: ui/panels/channels_panel.py:133 ui/panels/scenes_panel.py:164
 msgid "Import…"
 msgstr ""
 
-#: ui/panels/channels_panel.py:134 ui/panels/scenes_panel.py:155
+#: ui/panels/channels_panel.py:134 ui/panels/scenes_panel.py:165
 msgid "Export…"
 msgstr ""
 
@@ -1528,7 +1552,7 @@ msgstr ""
 msgid "Map exported."
 msgstr ""
 
-#: ui/panels/channels_panel.py:348 ui/panels/scenes_panel.py:350
+#: ui/panels/channels_panel.py:348 ui/panels/scenes_panel.py:363
 #, python-brace-format
 msgid "Export failed: {err}"
 msgstr ""
@@ -1541,7 +1565,7 @@ msgstr ""
 msgid "Imported"
 msgstr ""
 
-#: ui/panels/channels_panel.py:366 ui/panels/scenes_panel.py:365
+#: ui/panels/channels_panel.py:366 ui/panels/scenes_panel.py:378
 #, python-brace-format
 msgid "Import failed: {err}"
 msgstr ""
@@ -1551,106 +1575,102 @@ msgstr ""
 msgid "Map {name} imported."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:23
+#: ui/panels/scenes_panel.py:25
 msgid "(no override)"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:69 ui/panels/scenes_panel.py:75
+#: ui/panels/scenes_panel.py:26
+msgid "General"
+msgstr ""
+
+#: ui/panels/scenes_panel.py:82
 msgid "Band"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:71
-msgid "Step"
+#: ui/panels/scenes_panel.py:95
+msgid "Group:"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:88
+#: ui/panels/scenes_panel.py:98
 msgid "Band start (MHz, blank = unbounded):"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:91
+#: ui/panels/scenes_panel.py:101
 msgid "Band end (MHz, blank = unbounded):"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:103
+#: ui/panels/scenes_panel.py:113
 msgid "Follow tuning step"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:107
+#: ui/panels/scenes_panel.py:117
 msgid "Tuning step:"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:110
+#: ui/panels/scenes_panel.py:120
 msgid "Default frequency (MHz, optional):"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:115
+#: ui/panels/scenes_panel.py:125
 msgid "Advanced overrides (optional)"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:125
+#: ui/panels/scenes_panel.py:135
 msgid "NFM deviation (Hz):"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:132
+#: ui/panels/scenes_panel.py:142
 msgid "WFM de-emphasis:"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:141
+#: ui/panels/scenes_panel.py:151
 msgid "Save Band"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:152
+#: ui/panels/scenes_panel.py:162
 msgid "Apply Selected"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:174
-msgid "Full range"
-msgstr ""
-
-#: ui/panels/scenes_panel.py:179
-msgid "(follow)"
-msgstr ""
-
-#: ui/panels/scenes_panel.py:255
+#: ui/panels/scenes_panel.py:266
 msgid "Please enter a band name."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:281
+#: ui/panels/scenes_panel.py:294
 msgid "Invalid numeric override."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:296
+#: ui/panels/scenes_panel.py:309
 #, python-brace-format
 msgid "Saved band {name}."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:311
+#: ui/panels/scenes_panel.py:324
 #, python-brace-format
 msgid "Storing {freq} as a band. Enter a name and edges, then save."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:319 ui/panels/scenes_panel.py:327
+#: ui/panels/scenes_panel.py:332 ui/panels/scenes_panel.py:340
 msgid "No band selected."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:332
+#: ui/panels/scenes_panel.py:345
 #, python-brace-format
 msgid "Deleted band {name}."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:340
+#: ui/panels/scenes_panel.py:353
 msgid "Export band plan"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:348
+#: ui/panels/scenes_panel.py:361
 msgid "Band plan exported."
 msgstr ""
 
-#: ui/panels/scenes_panel.py:354
+#: ui/panels/scenes_panel.py:367
 msgid "Import band plan"
 msgstr ""
 
-#: ui/panels/scenes_panel.py:374
+#: ui/panels/scenes_panel.py:386
 msgid "Band plan imported."
 msgstr ""
 
@@ -1986,4 +2006,13 @@ msgstr ""
 
 #~ msgid "GSM 900 Downlink"
 #~ msgstr "GSM 900 Downlink"
+
+#~ msgid "Step"
+#~ msgstr ""
+
+#~ msgid "Full range"
+#~ msgstr ""
+
+#~ msgid "(follow)"
+#~ msgstr ""
 

@@ -46,6 +46,15 @@ def test_default_scenes_include_hf_and_shortwave():
     assert by_name["PMR446"].nfm_deviation == 2_500  # per-mode override
 
 
+def test_default_scenes_have_groups():
+    by_name = {s.name: s for s in default_scenes()}
+    assert by_name[FREE_SCENE_NAME].group == "General"
+    assert by_name["40m Ham"].group == "Amateur"
+    assert by_name["49m SW"].group == "Shortwave"
+    assert by_name["FM Radio"].group == "Broadcast"
+    assert by_name["PMR446"].group == "PMR / CB"
+
+
 def test_load_merges_new_default_bands(tmp_path):
     # A saved plan with only the free scene should gain the default bands.
     path = os.path.join(tmp_path, "scenes.json")
