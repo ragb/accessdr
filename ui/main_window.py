@@ -156,9 +156,9 @@ class MainWindow(wx.Frame):
         # Tools
         tools_menu = wx.Menu()
         item_scanner = tools_menu.Append(wx.ID_ANY, _("Sca&nner…\tCtrl+N"))
-        item_bookmarks = tools_menu.Append(wx.ID_ANY, _("&Bookmarks…\tCtrl+B"))
+        item_channels = tools_menu.Append(wx.ID_ANY, _("&Channels…\tCtrl+B"))
         self.Bind(wx.EVT_MENU, lambda e: self._open_scanner_dialog(), item_scanner)
-        self.Bind(wx.EVT_MENU, lambda e: self._open_bookmarks_dialog(), item_bookmarks)
+        self.Bind(wx.EVT_MENU, lambda e: self._open_channels_dialog(), item_channels)
         mb.Append(tools_menu, _("&Tools"))
 
         # Options
@@ -879,7 +879,7 @@ class MainWindow(wx.Frame):
             kb.OPEN_RF_DIALOG:      self._open_rf_dialog,
             kb.OPEN_SPECTRUM_DIALOG: self._open_spectrum_dialog,
             kb.OPEN_SCANNER_DIALOG: self._open_scanner_dialog,
-            kb.OPEN_BOOKMARKS_DIALOG: self._open_bookmarks_dialog,
+            kb.OPEN_CHANNELS_DIALOG: self._open_channels_dialog,
             kb.OPEN_AUDIO_DIALOG:   self._open_audio_dialog,
             kb.OPEN_WFM_DIALOG:     self._open_wfm_dialog,
             kb.OPEN_NFM_DIALOG:     self._open_nfm_dialog,
@@ -1081,12 +1081,37 @@ class MainWindow(wx.Frame):
         from ui.dialogs.scanner_dialog import ScannerDialog
         self._open_or_raise("scanner", lambda: ScannerDialog(self, self._scanner))
 
-    def _open_bookmarks_dialog(self) -> None:
-        from ui.dialogs.bookmarks_dialog import BookmarksDialog
+    def _open_channels_dialog(self) -> None:
+        from ui.dialogs.channels_dialog import ChannelsDialog
         self._open_or_raise(
-            "bookmarks",
-            lambda: BookmarksDialog(self, self._bookmarks, on_load=self._on_bookmark_load),
+            "channels",
+            lambda: ChannelsDialog(
+                self, self._channels,
+                on_load=self._on_channel_load,
+                get_current=self._get_current_vfo,
+                on_changed=self._on_channels_changed,
+            ),
         )
+
+    def _get_current_vfo(self) -> tuple[int, str, int]:
+        """Current (frequency, mode, bandwidth) for storing to a channel."""
+        return (self._settings.frequency, self._settings.mode, self._settings.bandwidth)
+
+    def _on_channels_changed(self) -> None:
+        """Keep the operating state's channel map in sync after edits."""
+        self._opstate.set_channel_map(self._channels.active_map())
+
+    def _on_channel_load(self, ch: Channel) -> None:
+        """Load a channel from the dialog: enter MR mode and tune to it."""
+        cmap = self._channels.active_map()
+        self._opstate.set_channel_map(cmap)
+        self._opstate.mode = OpMode.MR
+        if cmap is not None:
+            for i, c in enumerate(cmap.sorted_channels()):
+                if c.number == ch.number:
+                    self._opstate.channel_index = i
+                    break
+        self._load_channel(ch)
 
     def _open_audio_dialog(self) -> None:
         from ui.dialogs.audio_dialog import AudioDialog

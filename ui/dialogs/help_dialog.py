@@ -74,7 +74,7 @@ SHORTCUTS = [
     (N_("RF Settings"), "Ctrl+R"),
     (N_("Spectrum Settings"), "Ctrl+S"),
     (N_("Scanner"), "Ctrl+N"),
-    (N_("Bookmarks"), "Ctrl+B"),
+    (N_("Channels"), "Ctrl+B"),
     (N_("Audio Settings"), "Ctrl+D"),
     (N_("Recording Settings"), "Ctrl+E"),
     (N_("WFM Settings"), "Ctrl+W"),
@@ -88,7 +88,6 @@ SHORTCUTS = [
     ("", ""),
     (N_("--- General ---"), ""),
     (N_("Open Bands menu"), "Alt+R  (Radio menu)"),
-    (N_("Save bookmark"), "Ctrl+Shift+B"),
     (N_("Quit"), "Alt+F4"),
 ]
 

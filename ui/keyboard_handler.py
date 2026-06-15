@@ -75,7 +75,7 @@ OPEN_HELP = "open_help"
 OPEN_RF_DIALOG = "open_rf_dialog"
 OPEN_SPECTRUM_DIALOG = "open_spectrum_dialog"
 OPEN_SCANNER_DIALOG = "open_scanner_dialog"
-OPEN_BOOKMARKS_DIALOG = "open_bookmarks_dialog"
+OPEN_CHANNELS_DIALOG = "open_channels_dialog"
 OPEN_AUDIO_DIALOG = "open_audio_dialog"
 OPEN_WFM_DIALOG = "open_wfm_dialog"
 OPEN_NFM_DIALOG = "open_nfm_dialog"
@@ -164,7 +164,7 @@ def _build_keymap() -> dict[tuple[int, int], str]:
         (ord("R"), M):               OPEN_RF_DIALOG,
         (ord("S"), M):               OPEN_SPECTRUM_DIALOG,
         (ord("N"), M):               OPEN_SCANNER_DIALOG,
-        (ord("B"), M):               OPEN_BOOKMARKS_DIALOG,
+        (ord("B"), M):               OPEN_CHANNELS_DIALOG,
         (ord("D"), M):               OPEN_AUDIO_DIALOG,
         (ord("W"), M):               OPEN_WFM_DIALOG,
         (ord("N"), M | S):           OPEN_NFM_DIALOG,
