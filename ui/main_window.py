@@ -53,6 +53,7 @@ class MainWindow(wx.Frame):
     def __init__(self, parent, title: str) -> None:
         super().__init__(parent, title=title, size=(700, 780))
         self.SetName("AccessDR Main Window")
+        self._base_title = title
 
         # Load persisted settings
         self._settings = Settings.load()
@@ -130,6 +131,10 @@ class MainWindow(wx.Frame):
         )
         self._spectrum_panel.set_cursor_click_callback(self._cursor.on_spectrum_click)
         self._action_table = self._build_dispatch_table()
+        # Align the initial tab with the restored operating mode (without
+        # firing a page-changed event), then show the context anchor.
+        self._notebook.ChangeSelection(1 if self._opstate.mode is OpMode.MR else 0)
+        self._update_context_anchor()
 
         self.Bind(wx.EVT_CLOSE, self._on_close)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
@@ -376,10 +381,7 @@ class MainWindow(wx.Frame):
         listen = int(freq_hz + self._cursor.demod_offset)
         wx.CallAfter(self._freq_ctrl.SetValue, fmt_freq(listen))
         wx.CallAfter(speech.output, fmt_freq(listen))
-        wx.CallAfter(
-            self._statusbar.SetStatusText,
-            _("Tuned to {freq}").format(freq=fmt_freq(listen)),
-        )
+        wx.CallAfter(self._update_context_anchor)
         wx.CallAfter(self._cursor._update_demod_marker)
 
     def _step_frequency(self, direction: int) -> None:
@@ -533,18 +535,9 @@ class MainWindow(wx.Frame):
         )
 
     def _toggle_vfo_mr(self) -> None:
-        """Toggle between VFO (free/scene) and MR (channel memory)."""
-        mode = self._opstate.toggle_mode()
-        if mode is OpMode.MR:
-            ch = self._opstate.current_channel()
-            if ch is None:
-                speech.output(_("Memory mode. No channels."))
-            else:
-                self._load_channel(ch)
-        else:
-            speech.output(
-                _("VFO mode. {scene}").format(scene=self._opstate.scene.name)
-            )
+        """Toggle VFO <-> Memory by switching tab (which sets the mode)."""
+        sel = self._notebook.GetSelection()
+        self._notebook.SetSelection(0 if sel == 1 else 1)  # VFO <-> Channels
 
     def _apply_scene(self, scene: Scene) -> None:
         """Apply a scene's demod setup and tune into its band."""
@@ -567,6 +560,7 @@ class MainWindow(wx.Frame):
             self._cursor.reset_offset()
             self._tune(landing)
         self._refresh_scene_choice()
+        self._update_context_anchor()
         speech.output(_("Scene {name}").format(name=scene.name))
 
     def _cycle_scene(self, direction: int) -> None:
@@ -1113,11 +1107,40 @@ class MainWindow(wx.Frame):
         self._scenes_panel.SetFocus()
 
     def _on_tab_changed(self, event) -> None:  # noqa: ANN001
-        """Move focus into the newly selected page (screen-reader landing)."""
+        """The active tab sets the operating mode (VFO / MR) and focus."""
+        sel = self._notebook.GetSelection()
+        self._opstate.mode = OpMode.MR if sel == 1 else OpMode.VFO  # 1 == Channels
+        self._update_context_anchor()
         page = self._notebook.GetCurrentPage()
         if page is not None:
             page.SetFocus()
         event.Skip()
+
+    def _update_context_anchor(self) -> None:
+        """Reflect the live operating context in the title bar and status bar.
+
+        VFO:  "<title> — VFO · <scene> · <freq>"
+        MR:   "<title> — MR · <map> · CH05 <label>"
+        """
+        if not hasattr(self, "_statusbar"):
+            return
+        st = self._opstate
+        if st.mode is OpMode.MR:
+            cmap = self._channels.active_map()
+            scope = cmap.name if cmap is not None else _("no map")
+            ch = st.current_channel()
+            if ch is not None:
+                ctx = _("Memory, {scope}, channel {n}, {label}").format(
+                    scope=scope, n=ch.number, label=ch.label
+                )
+            else:
+                ctx = _("Memory, {scope}").format(scope=scope)
+        else:
+            ctx = _("VFO, {scene}, {freq}").format(
+                scene=st.scene.name, freq=fmt_freq(self._settings.frequency)
+            )
+        self.SetTitle("{base} - {ctx}".format(base=self._base_title, ctx=ctx))
+        self._statusbar.SetStatusText(ctx)
 
     def _on_scene_choice(self, _event: wx.CommandEvent) -> None:
         """Apply the scene picked from the VFO-tab dropdown."""
@@ -1137,8 +1160,9 @@ class MainWindow(wx.Frame):
                 self._scene_choice.SetSelection(0)
 
     def _on_scene_apply(self, scene: Scene) -> None:
-        """Apply a scene: enter VFO mode and load the band."""
+        """Apply a scene: switch to the VFO tab (-> VFO mode) and load the band."""
         self._opstate.mode = OpMode.VFO
+        self._notebook.SetSelection(0)   # VFO tab
         self._apply_scene(scene)
 
     def _get_current_vfo(self) -> tuple[int, str, int]:
