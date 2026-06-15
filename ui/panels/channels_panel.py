@@ -79,7 +79,7 @@ class ChannelsPanel(wx.Panel):
         self._list.InsertColumn(0, _("Ch"), width=50)
         self._list.InsertColumn(1, _("Label"), width=200)
         self._list.InsertColumn(2, _("Frequency"), width=130)
-        self._list.InsertColumn(3, _("Mode"), width=70)
+        self._list.InsertColumn(3, _("Modulation"), width=80)
         self._list.InsertColumn(4, _("Bandwidth"), width=90)
         sizer.Add(self._list, 1, wx.EXPAND | wx.ALL, 8)
 
@@ -104,8 +104,8 @@ class ChannelsPanel(wx.Panel):
         self._freq_ctrl = wx.TextCtrl(self, name="Channel frequency")
         grid.Add(self._freq_ctrl, 1, wx.EXPAND)
 
-        grid.Add(wx.StaticText(self, label=_("Mode:")), 0, wx.ALIGN_CENTER_VERTICAL)
-        self._mode_ctrl = wx.Choice(self, choices=MODES, name="Channel mode")
+        grid.Add(wx.StaticText(self, label=_("Modulation:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._mode_ctrl = wx.Choice(self, choices=MODES, name="Channel modulation")
         self._mode_ctrl.SetSelection(0)
         self._mode_ctrl.Bind(wx.EVT_CHOICE, self._on_mode_change)
         grid.Add(self._mode_ctrl, 0)
@@ -119,7 +119,7 @@ class ChannelsPanel(wx.Panel):
         form_btns = wx.BoxSizer(wx.HORIZONTAL)
         save_btn = wx.Button(self, label=_("Save Channel"), name="Save channel")
         vfo_btn = wx.Button(self, label=_("Store Current VFO"), name="Store current VFO")
-        ms_btn = wx.Button(self, label=_("Mode settings…"), name="Channel mode settings")
+        ms_btn = wx.Button(self, label=_("Modulation settings…"), name="Channel modulation settings")
         save_btn.Bind(wx.EVT_BUTTON, self._on_save_channel)
         vfo_btn.Bind(wx.EVT_BUTTON, self._on_store_vfo)
         ms_btn.Bind(wx.EVT_BUTTON, self._on_mode_settings)

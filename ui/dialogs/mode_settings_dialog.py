@@ -15,7 +15,7 @@ import wx
 from accessibility import speech
 from config.mode_params import params_for
 
-_INHERIT = N_("(inherit)")
+_INHERIT = N_("(default)")
 
 
 class ModeSettingsDialog(wx.Dialog):
@@ -28,7 +28,7 @@ class ModeSettingsDialog(wx.Dialog):
             title=title or _("{mode} settings").format(mode=mode),
             style=wx.DEFAULT_DIALOG_STYLE,
         )
-        self.SetName("Mode settings")
+        self.SetName("Modulation settings")
         self._mode = mode
         self._target = target
         self._is_override = is_override
@@ -53,7 +53,7 @@ class ModeSettingsDialog(wx.Dialog):
         outer = wx.BoxSizer(wx.VERTICAL)
         if self._is_override:
             outer.Add(
-                wx.StaticText(panel, label=_("Leave as “(inherit)” to use the global setting.")),
+                wx.StaticText(panel, label=_("Leave as “(default)” to use the built-in default.")),
                 0, wx.ALL, 8,
             )
         outer.Add(grid, 1, wx.EXPAND | wx.ALL, 12)

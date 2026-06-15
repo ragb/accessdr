@@ -283,18 +283,14 @@ class MainWindow(wx.Frame):
         page.SetName("VFO panel")
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # Band tree (grouped by service; Enter/activate applies a band)
-        sizer.Add(wx.StaticText(page, label=_("Band:")), 0, wx.LEFT | wx.TOP, 6)
-        self._band_tree = wx.TreeCtrl(
-            page,
-            style=wx.TR_HIDE_ROOT | wx.TR_HAS_BUTTONS | wx.TR_SINGLE
-            | wx.TR_FULL_ROW_HIGHLIGHT | wx.BORDER_SUNKEN,
-            name="Band selector",
-        )
-        self._band_tree_root = self._band_tree.AddRoot("bands")
-        self._band_tree.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_band_tree_activate)
-        self._refresh_band_tree()
-        sizer.Add(self._band_tree, 1, wx.EXPAND | wx.ALL, 6)
+        # Band selector: a button that pops up a grouped menu, so changing
+        # band is deliberate (not an always-live control that's easy to nudge).
+        band_row = wx.BoxSizer(wx.HORIZONTAL)
+        self._band_btn = wx.Button(page, name="Select band")
+        self._band_btn.Bind(wx.EVT_BUTTON, self._on_band_button)
+        band_row.Add(self._band_btn, 0, wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(band_row, 0, wx.ALL, 6)
+        self._refresh_band_button()
 
         # Frequency row
         freq_row = wx.BoxSizer(wx.HORIZONTAL)
@@ -329,18 +325,16 @@ class MainWindow(wx.Frame):
             freq_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
         sizer.Add(freq_row, 0, wx.ALL, 6)
 
-        # Mode / BW row
+        # Modulation / BW row
         mode_row = wx.BoxSizer(wx.HORIZONTAL)
-        mode_label = wx.StaticText(page, label=_("Mode:"))
-        self._mode_choice = wx.Choice(page, choices=MODES, name="Demodulation mode")
+        mode_label = wx.StaticText(page, label=_("Modulation:"))
+        self._mode_choice = wx.Choice(page, choices=MODES, name="Modulation")
         self._mode_choice.SetStringSelection(self._settings.mode)
         self._mode_choice.Bind(wx.EVT_CHOICE, self._on_mode_change)
-        mode_settings_btn = wx.Button(page, label=_("Settings…"), name="Mode settings")
-        mode_settings_btn.Bind(wx.EVT_BUTTON, lambda e: self._open_mode_settings())
-        bw_label = wx.StaticText(page, label=_("BW:"))
+        bw_label = wx.StaticText(page, label=_("Bandwidth:"))
         self._bw_choice = wx.Choice(page, choices=[], name="Filter bandwidth")
         self._bw_choice.Bind(wx.EVT_CHOICE, self._on_bw_change)
-        for w in (mode_label, self._mode_choice, mode_settings_btn, bw_label, self._bw_choice):
+        for w in (mode_label, self._mode_choice, bw_label, self._bw_choice):
             mode_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
         sizer.Add(mode_row, 0, wx.ALL, 6)
 
@@ -462,7 +456,7 @@ class MainWindow(wx.Frame):
         wfm_kw = self._radio.wfm_kwargs() if mode == "WFM" else {}
         nfm_kw = self._radio.nfm_kwargs() if mode == "NFM" else {}
         self._radio.set_mode(mode, wfm_kw, nfm_kw)
-        speech.output(_("Mode {mode}").format(mode=mode))
+        speech.output(_("Modulation {mode}").format(mode=mode))
 
     def _on_bw_change(self, event: wx.CommandEvent) -> None:
         mode = self._mode_choice.GetStringSelection()
@@ -481,7 +475,7 @@ class MainWindow(wx.Frame):
         wfm_kw = self._radio.wfm_kwargs() if mode == "WFM" else {}
         nfm_kw = self._radio.nfm_kwargs() if mode == "NFM" else {}
         self._radio.set_mode(mode, wfm_kw, nfm_kw)
-        speech.output(_("Mode {mode}").format(mode=mode))
+        speech.output(_("Modulation {mode}").format(mode=mode))
 
     def _apply_mode_overrides(self, source) -> None:
         """Apply a band/channel's non-None mode overrides to live settings.
@@ -499,21 +493,6 @@ class MainWindow(wx.Frame):
         if changed:
             self._radio.rebuild_wfm()
             self._radio.rebuild_nfm()
-
-    def _open_mode_settings(self) -> None:
-        """Open the settings editor for the current (live) demod mode."""
-        from config.mode_params import params_for
-        from ui.dialogs.mode_settings_dialog import ModeSettingsDialog
-        mode = self._settings.mode
-        if not params_for(mode):
-            speech.output(_("No settings for {mode}.").format(mode=mode))
-            return
-        dlg = ModeSettingsDialog(self, mode, self._settings, is_override=False)
-        if dlg.ShowModal() == wx.ID_OK:
-            self._radio.rebuild_wfm()
-            self._radio.rebuild_nfm()
-            speech.output(_("{mode} settings applied.").format(mode=mode))
-        dlg.Destroy()
 
     def _set_bandwidth(self, value: int) -> None:
         """Select a bandwidth value, syncing the choice control.
@@ -582,7 +561,7 @@ class MainWindow(wx.Frame):
         if landing is not None:
             self._cursor.reset_offset()
             self._tune(landing)
-        self._refresh_band_tree()
+        self._refresh_band_button()
         self._update_context_anchor()
         speech.output(_("Band {name}").format(name=scene.name))
 
@@ -1172,23 +1151,39 @@ class MainWindow(wx.Frame):
         self.SetTitle("{base} - {ctx}".format(base=self._base_title, ctx=ctx))
         self._statusbar.SetStatusText(ctx)
 
-    def _on_band_tree_activate(self, _event) -> None:  # noqa: ANN001
-        """Apply the band activated (Enter/double-click) in the VFO tree."""
+    def _refresh_band_button(self) -> None:
+        """Show the active band on the VFO band button."""
+        self._band_btn.SetLabel(_("Band: {name}").format(name=self._opstate.scene.name))
+
+    def _on_band_button(self, _event) -> None:  # noqa: ANN001
+        """Pop up a grouped menu to choose the active band."""
         from ui.panels import band_tree
-        scene = band_tree.selected(self._band_tree)
+        scenes = self._scenes.get_all()
+        groups: dict = {}
+        for s in scenes:
+            groups.setdefault(s.group or band_tree.UNGROUPED, []).append(s)
+        ordered = [g for g in band_tree.group_order() if g in groups]
+        ordered += [g for g in groups if g not in ordered]
+        menu = wx.Menu()
+        self._band_menu_map = {}
+        for g in ordered:
+            sub = wx.Menu()
+            for s in groups[g]:
+                item = sub.Append(wx.ID_ANY, band_tree.band_summary(s))
+                self._band_menu_map[item.GetId()] = s
+            menu.AppendSubMenu(sub, g)
+        menu.Bind(wx.EVT_MENU, self._on_band_menu_select)
+        self._band_btn.PopupMenu(menu)
+        menu.Destroy()
+
+    def _on_band_menu_select(self, event) -> None:  # noqa: ANN001
+        scene = self._band_menu_map.get(event.GetId())
         if scene is not None:
             self._on_scene_apply(scene)
 
     def _on_scenes_changed(self) -> None:
-        """Rebuild the VFO band tree after band edits."""
-        self._refresh_band_tree()
-
-    def _refresh_band_tree(self) -> None:
-        """Rebuild the VFO band tree and select the active band."""
-        from ui.panels import band_tree
-        band_tree.populate(self._band_tree, self._band_tree_root, self._scenes)
-        band_tree.select_band(self._band_tree, self._band_tree_root,
-                              self._opstate.scene.name)
+        """Refresh the VFO band button after band edits."""
+        self._refresh_band_button()
 
     def _on_scene_apply(self, scene: Scene) -> None:
         """Apply a scene: switch to the VFO tab (-> VFO mode) and load the band."""

@@ -78,7 +78,7 @@ SHORTCUTS = [
     (N_("Bands"), "Ctrl+Shift+B"),
     (N_("Audio Settings"), "Ctrl+D"),
     (N_("Recording Settings"), "Ctrl+E"),
-    (N_("Mode settings (WFM/NFM/…)"), N_("“Settings…” button by Mode")),
+    (N_("Modulation settings (per band/channel)"), N_("“Modulation settings…” button")),
     (N_("Remote SDR settings"), "Ctrl+G"),
     (N_("Help (this window)"), "F1"),
     ("", ""),

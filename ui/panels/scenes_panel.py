@@ -93,10 +93,10 @@ class ScenesPanel(wx.Panel):
         self._end_ctrl = wx.TextCtrl(self, name="Band end")
         _row(_("Band end (MHz, blank = unbounded):"), self._end_ctrl)
 
-        self._mode_ctrl = wx.Choice(self, choices=MODES, name="Band mode")
+        self._mode_ctrl = wx.Choice(self, choices=MODES, name="Band modulation")
         self._mode_ctrl.SetSelection(0)
         self._mode_ctrl.Bind(wx.EVT_CHOICE, self._on_mode_change)
-        _row(_("Mode:"), self._mode_ctrl)
+        _row(_("Modulation:"), self._mode_ctrl)
 
         self._bw_ctrl = wx.Choice(self, name="Band bandwidth")
         _row(_("Bandwidth:"), self._bw_ctrl)
@@ -124,7 +124,7 @@ class ScenesPanel(wx.Panel):
         adv_grid.Add(self._squelch_ctrl, 1, wx.EXPAND)
         adv_sizer.Add(adv_grid, 0, wx.EXPAND | wx.ALL, 6)
 
-        ms_btn = wx.Button(self, label=_("Mode settings…"), name="Band mode settings")
+        ms_btn = wx.Button(self, label=_("Modulation settings…"), name="Band modulation settings")
         ms_btn.Bind(wx.EVT_BUTTON, self._on_mode_settings)
         adv_sizer.Add(ms_btn, 0, wx.ALL, 4)
         form_sizer.Add(adv_sizer, 0, wx.EXPAND | wx.ALL, 4)
