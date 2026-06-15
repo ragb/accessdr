@@ -176,6 +176,20 @@ Sets the hardware **intermediate frequency (IF) filter** bandwidth inside the R8
 
 In most cases, Auto is the best choice. Manual IF bandwidth is useful when you have a strong interfering signal near the frequency you are listening to.
 
+### Direct Sampling
+
+Lets RTL-SDR dongles receive **HF** (roughly 0.1–28 MHz — shortwave, CB at 27 MHz, AM/MW and LW broadcast) **without an upconverter**, by sampling the ADC directly and bypassing the R820T tuner.
+
+- **Off** (default): normal tuner operation (~24 MHz and up). Use this for FM, airband, VHF/UHF, PMR446, etc.
+- **Q-branch (HF)**: the usual direct-sampling input for HF on RTL-SDR Blog V3 and similar dongles.
+- **I-branch**: the alternate ADC input; some dongles are wired for this instead.
+
+**Important caveats:**
+
+- Direct sampling is an **RTL2832U-only** feature. SDRs reached over SoapySDR (Airspy, SDRplay, etc.) tune HF natively and ignore this setting.
+- It only works if your specific dongle is **wired for it** — the RTL-SDR Blog V3 has the input built in; many dongles need a hardware mod. Reception is **noisy** and benefits from a band-pass/low-pass filter.
+- Changing this restarts the capture stream. Remember to switch it **back to Off** for normal VHF/UHF use.
+
 ### Noise Blanker
 
 The noise blanker suppresses short impulse noise (electrical interference, ignition noise, power line clicks) from the raw IQ signal before demodulation. Enable it in **Options > RF Settings** (++ctrl+r++).

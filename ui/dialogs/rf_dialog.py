@@ -30,6 +30,14 @@ IF_BW_OPTIONS = [
     (2_000_000, "2 MHz"),
 ]
 
+# RTL2832U direct-sampling mode (HF without an upconverter). No-op on SDRs
+# that tune HF natively.
+DIRECT_SAMPLING_OPTIONS = [
+    (0, N_("Off")),
+    (1, N_("I-branch")),
+    (2, N_("Q-branch (HF)")),
+]
+
 
 class RFDialog(wx.Dialog):
     """Modal RF settings dialog with standard OK / Cancel."""
@@ -149,6 +157,20 @@ class RFDialog(wx.Dialog):
                 break
         self._ifbw_choice.SetSelection(bw_idx)
         grid.Add(self._ifbw_choice, 1, wx.EXPAND)
+
+        grid.Add(wx.StaticText(panel, label=_("Direct Sampling:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._ds_choice = wx.Choice(
+            panel,
+            choices=[_(lbl) for _mode, lbl in DIRECT_SAMPLING_OPTIONS],
+            name="Direct Sampling",
+        )
+        ds_idx = 0
+        for i, (mode, _lbl) in enumerate(DIRECT_SAMPLING_OPTIONS):
+            if mode == self._settings.direct_sampling:
+                ds_idx = i
+                break
+        self._ds_choice.SetSelection(ds_idx)
+        grid.Add(self._ds_choice, 1, wx.EXPAND)
 
         # --- Calibration ---
         grid.Add(wx.StaticText(panel, label=_("PPM Correction:")), 0, wx.ALIGN_CENTER_VERTICAL)
@@ -273,6 +295,10 @@ class RFDialog(wx.Dialog):
         ifbw_idx = self._ifbw_choice.GetSelection()
         if 0 <= ifbw_idx < len(IF_BW_OPTIONS):
             self._settings.tuner_bandwidth = IF_BW_OPTIONS[ifbw_idx][0]
+
+        ds_idx = self._ds_choice.GetSelection()
+        if 0 <= ds_idx < len(DIRECT_SAMPLING_OPTIONS):
+            self._settings.direct_sampling = DIRECT_SAMPLING_OPTIONS[ds_idx][0]
 
         self._settings.noise_blanker_enabled = self._nb_cb.GetValue()
         self._settings.noise_blanker_threshold = self._nb_thresh.GetValue()

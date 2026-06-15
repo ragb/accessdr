@@ -105,7 +105,9 @@ class RadioController:
             callbacks=callbacks,
         )
 
-        # Configure SDR hardware
+        # Configure SDR hardware. Direct sampling first: it changes the
+        # signal path, so the frequency below must be set in the right mode.
+        self._sdr.set_direct_sampling(self._settings.direct_sampling)
         self._sdr.set_frequency(self._settings.frequency)
         self._sdr.set_sample_rate(self._settings.sample_rate)
         self._sdr.set_gain(self._settings.gain)
@@ -181,10 +183,14 @@ class RadioController:
     def apply_rf_settings(self) -> bool:
         """Apply RF settings to SDR hardware.
 
-        Returns True if a full restart is required (buffer size changed).
+        Returns True if a full restart is required (buffer size or direct
+        sampling changed — both alter the capture/signal path).
         """
         s = self._settings
-        need_restart = self._running and self._sdr.chunk_size != s.sdr_buffer_size
+        need_restart = self._running and (
+            self._sdr.chunk_size != s.sdr_buffer_size
+            or self._sdr.direct_sampling != s.direct_sampling
+        )
         self._sdr.chunk_size = s.sdr_buffer_size
         if not need_restart and self._running:
             self._sdr.set_gain(s.gain)

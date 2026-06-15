@@ -81,6 +81,12 @@ class SDRBackend(ABC):
     def set_offset_tuning(self, on: bool) -> None: ...
     def set_tuner_bandwidth(self, bw_hz: int) -> None: ...
     def set_bias_tee(self, on: bool) -> None: ...
+    def set_direct_sampling(self, mode: int) -> None:
+        """Set direct-sampling mode: 0 = off, 1 = I-branch, 2 = Q-branch.
+
+        RTL2832U-specific (for HF without an upconverter); a no-op on
+        backends/devices that tune HF natively.
+        """
     def cancel_async(self) -> None:
         """Signal an async capture loop to stop (no-op for most backends)."""
 
@@ -138,6 +144,7 @@ class PyRtlSdrBackend(SDRBackend):
         self.set_offset_tuning(config.get("offset_tuning", False))
         self.set_tuner_bandwidth(config.get("tuner_bandwidth", 0))
         self.set_bias_tee(config.get("bias_tee", False))
+        self.set_direct_sampling(config.get("direct_sampling", 0))
 
         logger.info("Opened RTL-SDR device %d", device_index)
         return True
@@ -261,6 +268,13 @@ class PyRtlSdrBackend(SDRBackend):
             except Exception as exc:   # noqa: BLE001
                 logger.warning("set_bias_tee failed: %s", exc)
 
+    def set_direct_sampling(self, mode: int) -> None:
+        if self._dev_handle is not None:
+            try:
+                _librtlsdr.rtlsdr_set_direct_sampling(self._dev_handle, int(mode))
+            except Exception as exc:   # noqa: BLE001
+                logger.warning("set_direct_sampling failed: %s", exc)
+
     def get_valid_gains(self) -> List[float]:
         if self._rtl is not None:
             try:
@@ -301,6 +315,12 @@ class PyRtlSdrBackend(SDRBackend):
             if not hasattr(lib.rtlsdr_set_bias_tee, "argtypes"):
                 lib.rtlsdr_set_bias_tee.argtypes = [ctypes.c_void_p, ctypes.c_int]
                 lib.rtlsdr_set_bias_tee.restype = ctypes.c_int
+        except Exception:   # noqa: BLE001
+            pass
+        try:
+            if not hasattr(lib.rtlsdr_set_direct_sampling, "argtypes"):
+                lib.rtlsdr_set_direct_sampling.argtypes = [ctypes.c_void_p, ctypes.c_int]
+                lib.rtlsdr_set_direct_sampling.restype = ctypes.c_int
         except Exception:   # noqa: BLE001
             pass
 
@@ -467,6 +487,7 @@ class RtlTcpBackend(SDRBackend):
         if bw:
             self._send_cmd(_CMD_SET_TUNER_BANDWIDTH, bw)
         self._send_cmd(_CMD_SET_BIAS_TEE, int(config.get("bias_tee", False)))
+        self._send_cmd(_CMD_SET_DIRECT_SAMPLING, int(config.get("direct_sampling", 0)))
 
         return True
 
@@ -563,6 +584,9 @@ class RtlTcpBackend(SDRBackend):
 
     def set_bias_tee(self, on: bool) -> None:
         self._send_cmd(_CMD_SET_BIAS_TEE, int(on))
+
+    def set_direct_sampling(self, mode: int) -> None:
+        self._send_cmd(_CMD_SET_DIRECT_SAMPLING, int(mode))
 
     def get_valid_gains(self) -> List[float]:
         return list(_R820T_GAINS)

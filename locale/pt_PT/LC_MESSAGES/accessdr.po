@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AccessDR 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-15 09:52+0100\n"
+"POT-Creation-Date: 2026-06-15 10:25+0100\n"
 "PO-Revision-Date: 2026-02-19 11:40+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: pt_PT\n"
@@ -965,7 +965,7 @@ msgstr "Alternar demodulação segue cursor"
 msgid "--- Dialogs ---"
 msgstr "--- Janelas ---"
 
-#: ui/dialogs/help_dialog.py:74 ui/dialogs/rf_dialog.py:45
+#: ui/dialogs/help_dialog.py:74 ui/dialogs/rf_dialog.py:53
 msgid "RF Settings"
 msgstr "Definições RF"
 
@@ -1089,60 +1089,76 @@ msgstr ""
 msgid "Choose recording folder"
 msgstr "Escolher pasta de gravação"
 
-#: ui/dialogs/rf_dialog.py:25 ui/dialogs/rf_dialog.py:142
+#: ui/dialogs/rf_dialog.py:25 ui/dialogs/rf_dialog.py:150
 #: ui/dialogs/wfm_dialog.py:20
 msgid "Auto"
 msgstr "Auto"
 
-#: ui/dialogs/rf_dialog.py:66
+#: ui/dialogs/rf_dialog.py:36
+msgid "Off"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:37
+msgid "I-branch"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:38
+msgid "Q-branch (HF)"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:74
 msgid "Default / Auto"
 msgstr "Predefinição / Auto"
 
-#: ui/dialogs/rf_dialog.py:75
+#: ui/dialogs/rf_dialog.py:83
 msgid "SDR Device:"
 msgstr "Dispositivo SDR:"
 
-#: ui/dialogs/rf_dialog.py:86
+#: ui/dialogs/rf_dialog.py:94
 msgid "RF Gain (dB):"
 msgstr "Ganho RF (dB):"
 
-#: ui/dialogs/rf_dialog.py:114
+#: ui/dialogs/rf_dialog.py:122
 msgid "RTL AGC"
 msgstr "AGC RTL"
 
-#: ui/dialogs/rf_dialog.py:124
+#: ui/dialogs/rf_dialog.py:132
 msgid "Sample Rate:"
 msgstr "Taxa de Amostragem:"
 
-#: ui/dialogs/rf_dialog.py:133
+#: ui/dialogs/rf_dialog.py:141
 msgid "IQ Buffer Size:"
 msgstr "Tamanho do Buffer IQ:"
 
-#: ui/dialogs/rf_dialog.py:143
+#: ui/dialogs/rf_dialog.py:151
 msgid "IF Bandwidth:"
 msgstr "Largura de Banda IF:"
 
-#: ui/dialogs/rf_dialog.py:154
+#: ui/dialogs/rf_dialog.py:161
+msgid "Direct Sampling:"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:176
 msgid "PPM Correction:"
 msgstr "Correção PPM:"
 
-#: ui/dialogs/rf_dialog.py:163
+#: ui/dialogs/rf_dialog.py:185
 msgid "Offset Tuning (remove DC spike)"
 msgstr "Sintonização offset (remover pico DC)"
 
-#: ui/dialogs/rf_dialog.py:171
+#: ui/dialogs/rf_dialog.py:193
 msgid "Bias Tee (powers antenna via coax)"
 msgstr "Bias Tee (alimenta antena pelo coaxial)"
 
-#: ui/dialogs/rf_dialog.py:181
+#: ui/dialogs/rf_dialog.py:203
 msgid "Noise Blanker"
 msgstr "Supressor de Ruído"
 
-#: ui/dialogs/rf_dialog.py:187
+#: ui/dialogs/rf_dialog.py:209
 msgid "NB Threshold:"
 msgstr "Limiar NB:"
 
-#: ui/dialogs/rf_dialog.py:230
+#: ui/dialogs/rf_dialog.py:252
 msgid ""
 "Bias Tee supplies 4.5 V DC through the antenna connector.\n"
 "\n"
@@ -1162,7 +1178,7 @@ msgstr ""
 "\n"
 "Ativar Bias Tee?"
 
-#: ui/dialogs/rf_dialog.py:237
+#: ui/dialogs/rf_dialog.py:259
 msgid "Bias Tee — Danger"
 msgstr "Bias Tee — Perigo"
 

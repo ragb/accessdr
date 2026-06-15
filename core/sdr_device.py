@@ -38,6 +38,7 @@ class SDRDevice:
         self.agc_mode: bool = False
         self.offset_tuning: bool = False
         self.tuner_bandwidth: int = 0  # Hz, 0 = auto
+        self.direct_sampling: int = 0  # 0 = off, 1 = I-branch, 2 = Q-branch
 
         self.on_samples: Optional[Callable[[np.ndarray], None]] = None
         self.on_error: Optional[Callable[[str], None]] = None
@@ -59,6 +60,7 @@ class SDRDevice:
             agc_mode=self.agc_mode,
             offset_tuning=self.offset_tuning,
             tuner_bandwidth=self.tuner_bandwidth,
+            direct_sampling=self.direct_sampling,
         )
         if not backend.open(device_index, config):
             if self.on_error:
@@ -116,6 +118,11 @@ class SDRDevice:
     def set_bias_tee(self, on: bool) -> None:
         if self._backend is not None:
             self._backend.set_bias_tee(on)
+
+    def set_direct_sampling(self, mode: int) -> None:
+        self.direct_sampling = mode
+        if self._backend is not None:
+            self._backend.set_direct_sampling(mode)
 
     def get_valid_gains(self) -> List[float]:
         """Return cached list of valid tuner gain values in dB."""

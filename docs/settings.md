@@ -53,6 +53,7 @@ Also accessible via **Options > RF Settings** (++ctrl+r++).
 | `noise_blanker_enabled` | false | Enable impulse noise blanker on raw IQ |
 | `noise_blanker_threshold` | 5.0 | Blanker threshold (multiplier above median magnitude) |
 | `bias_tee` | false | Enable Bias Tee DC power on antenna connector. WARNING: can damage incompatible devices. |
+| `direct_sampling` | 0 | RTL2832U direct-sampling mode for HF: 0 = off, 1 = I-branch, 2 = Q-branch. No effect on SDRs that tune HF natively. |
 
 ## Waterfall Display
 
