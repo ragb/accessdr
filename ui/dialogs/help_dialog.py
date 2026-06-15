@@ -75,6 +75,7 @@ SHORTCUTS = [
     (N_("Spectrum Settings"), "Ctrl+S"),
     (N_("Scanner"), "Ctrl+N"),
     (N_("Channels"), "Ctrl+B"),
+    (N_("Scenes"), "Ctrl+Shift+B"),
     (N_("Audio Settings"), "Ctrl+D"),
     (N_("Recording Settings"), "Ctrl+E"),
     (N_("WFM Settings"), "Ctrl+W"),

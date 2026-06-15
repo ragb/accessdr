@@ -157,8 +157,10 @@ class MainWindow(wx.Frame):
         tools_menu = wx.Menu()
         item_scanner = tools_menu.Append(wx.ID_ANY, _("Sca&nner…\tCtrl+N"))
         item_channels = tools_menu.Append(wx.ID_ANY, _("&Channels…\tCtrl+B"))
+        item_scenes = tools_menu.Append(wx.ID_ANY, _("&Scenes…\tCtrl+Shift+B"))
         self.Bind(wx.EVT_MENU, lambda e: self._open_scanner_dialog(), item_scanner)
         self.Bind(wx.EVT_MENU, lambda e: self._open_channels_dialog(), item_channels)
+        self.Bind(wx.EVT_MENU, lambda e: self._open_scenes_dialog(), item_scenes)
         mb.Append(tools_menu, _("&Tools"))
 
         # Options
@@ -880,6 +882,7 @@ class MainWindow(wx.Frame):
             kb.OPEN_SPECTRUM_DIALOG: self._open_spectrum_dialog,
             kb.OPEN_SCANNER_DIALOG: self._open_scanner_dialog,
             kb.OPEN_CHANNELS_DIALOG: self._open_channels_dialog,
+            kb.OPEN_SCENES_DIALOG:  self._open_scenes_dialog,
             kb.OPEN_AUDIO_DIALOG:   self._open_audio_dialog,
             kb.OPEN_WFM_DIALOG:     self._open_wfm_dialog,
             kb.OPEN_NFM_DIALOG:     self._open_nfm_dialog,
@@ -1092,6 +1095,22 @@ class MainWindow(wx.Frame):
                 on_changed=self._on_channels_changed,
             ),
         )
+
+    def _open_scenes_dialog(self) -> None:
+        from ui.dialogs.scenes_dialog import ScenesDialog
+        self._open_or_raise(
+            "scenes",
+            lambda: ScenesDialog(
+                self, self._scenes,
+                on_apply=self._on_scene_apply,
+                get_current=self._get_current_vfo,
+            ),
+        )
+
+    def _on_scene_apply(self, scene: Scene) -> None:
+        """Apply a scene from the dialog: enter VFO mode and load the band."""
+        self._opstate.mode = OpMode.VFO
+        self._apply_scene(scene)
 
     def _get_current_vfo(self) -> tuple[int, str, int]:
         """Current (frequency, mode, bandwidth) for storing to a channel."""
