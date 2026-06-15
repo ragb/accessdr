@@ -21,3 +21,24 @@ if not hasattr(builtins, "N_"):
     builtins.__dict__["N_"] = lambda s: s
 if not hasattr(builtins, "ngettext"):
     builtins.__dict__["ngettext"] = lambda s, p, n: s if n == 1 else p
+
+import pytest
+
+
+@pytest.fixture(scope="session")
+def wx_app():
+    """A single wx.App for the whole test session (required to build widgets)."""
+    import wx
+    app = wx.App()
+    yield app
+
+
+@pytest.fixture(autouse=True)
+def _silence_speech():
+    """Stop tests from driving the screen reader."""
+    try:
+        from accessibility import speech
+        speech.output = lambda *a, **k: None
+    except Exception:
+        pass
+    yield
