@@ -30,6 +30,26 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Backend detection — pyrtlsdr
 # ---------------------------------------------------------------------------
+# pyrtlsdr >= 0.4.0 loads librtlsdr with a bare CDLL('rtlsdr.dll'), relying on
+# the Windows DLL search path (it no longer adds the package dir itself).
+# Register the directory holding the bundled DLLs (for the pthreadVC2 /
+# msvcr100 dependencies) and pre-load rtlsdr.dll by absolute path so the
+# later bare-name import resolves to the already-loaded module — no patching
+# of the installed package required.
+try:
+    import os as _os
+    import sys as _sys
+    from config.paths import bundle_dir as _bundle_dir
+    _dll_dir = _bundle_dir()
+    if _sys.platform == "win32":
+        if hasattr(_os, "add_dll_directory") and _os.path.isdir(_dll_dir):
+            _os.add_dll_directory(_dll_dir)
+        _rtl_dll = _os.path.join(_dll_dir, "rtlsdr.dll")
+        if _os.path.isfile(_rtl_dll):
+            ctypes.CDLL(_rtl_dll)
+except Exception as _exc:   # noqa: BLE001
+    logger.debug("could not pre-load rtlsdr.dll: %s", _exc)
+
 try:
     from rtlsdr.rtlsdr import RtlSdr as _RtlSdrBase
     from rtlsdr.librtlsdr import librtlsdr as _librtlsdr
@@ -79,7 +99,14 @@ class SDRBackend(ABC):
     def set_ppm(self, ppm: int) -> None: ...
     def set_agc_mode(self, on: bool, gain_db: float) -> None: ...
     def set_offset_tuning(self, on: bool) -> None: ...
-    def set_tuner_bandwidth(self, bw_hz: int) -> None: ...
+
+    def set_tuner_bandwidth(self, bw_hz: int) -> int:
+        """Set IF bandwidth (0 = auto). Return the actual applied BW in Hz."""
+        return bw_hz
+
+    def set_dithering(self, on: bool) -> None:
+        """Enable/disable tuner frequency dithering (no-op for most backends)."""
+
     def set_bias_tee(self, on: bool) -> None: ...
     def cancel_async(self) -> None:
         """Signal an async capture loop to stop (no-op for most backends)."""
@@ -137,6 +164,7 @@ class PyRtlSdrBackend(SDRBackend):
         self.set_agc_mode(config.get("agc_mode", False), config.get("gain", 30.0))
         self.set_offset_tuning(config.get("offset_tuning", False))
         self.set_tuner_bandwidth(config.get("tuner_bandwidth", 0))
+        self.set_dithering(config.get("tuner_dithering", True))
         self.set_bias_tee(config.get("bias_tee", False))
 
         logger.info("Opened RTL-SDR device %d", device_index)
@@ -247,12 +275,29 @@ class PyRtlSdrBackend(SDRBackend):
             except Exception as exc:   # noqa: BLE001
                 logger.warning("set_offset_tuning failed: %s", exc)
 
-    def set_tuner_bandwidth(self, bw_hz: int) -> None:
+    def set_tuner_bandwidth(self, bw_hz: int) -> int:
+        if self._dev_handle is None:
+            return bw_hz
+        try:
+            getfn = getattr(_librtlsdr, "rtlsdr_set_and_get_tuner_bandwidth", None)
+            if getfn is not None:
+                applied = ctypes.c_uint32(0)
+                getfn(self._dev_handle, bw_hz, ctypes.byref(applied), 1)
+                return int(applied.value) or bw_hz
+            _librtlsdr.rtlsdr_set_tuner_bandwidth(self._dev_handle, bw_hz)
+        except Exception as exc:   # noqa: BLE001
+            logger.warning("set_tuner_bandwidth failed: %s", exc)
+        return bw_hz
+
+    def set_dithering(self, on: bool) -> None:
         if self._dev_handle is not None:
+            fn = getattr(_librtlsdr, "rtlsdr_set_dithering", None)
+            if fn is None:
+                return
             try:
-                _librtlsdr.rtlsdr_set_tuner_bandwidth(self._dev_handle, bw_hz)
+                fn(self._dev_handle, int(on))
             except Exception as exc:   # noqa: BLE001
-                logger.warning("set_tuner_bandwidth failed: %s", exc)
+                logger.warning("set_dithering failed: %s", exc)
 
     def set_bias_tee(self, on: bool) -> None:
         if self._dev_handle is not None:
@@ -301,6 +346,23 @@ class PyRtlSdrBackend(SDRBackend):
             if not hasattr(lib.rtlsdr_set_bias_tee, "argtypes"):
                 lib.rtlsdr_set_bias_tee.argtypes = [ctypes.c_void_p, ctypes.c_int]
                 lib.rtlsdr_set_bias_tee.restype = ctypes.c_int
+        except Exception:   # noqa: BLE001
+            pass
+        try:
+            fn = getattr(lib, "rtlsdr_set_dithering", None)
+            if fn is not None and not hasattr(fn, "argtypes"):
+                fn.argtypes = [ctypes.c_void_p, ctypes.c_int]
+                fn.restype = ctypes.c_int
+        except Exception:   # noqa: BLE001
+            pass
+        try:
+            fn = getattr(lib, "rtlsdr_set_and_get_tuner_bandwidth", None)
+            if fn is not None and not hasattr(fn, "argtypes"):
+                fn.argtypes = [
+                    ctypes.c_void_p, ctypes.c_uint32,
+                    ctypes.POINTER(ctypes.c_uint32), ctypes.c_int,
+                ]
+                fn.restype = ctypes.c_int
         except Exception:   # noqa: BLE001
             pass
 
@@ -558,8 +620,9 @@ class RtlTcpBackend(SDRBackend):
     def set_offset_tuning(self, on: bool) -> None:
         self._send_cmd(_CMD_SET_OFFSET_TUNING, int(on))
 
-    def set_tuner_bandwidth(self, bw_hz: int) -> None:
+    def set_tuner_bandwidth(self, bw_hz: int) -> int:
         self._send_cmd(_CMD_SET_TUNER_BANDWIDTH, bw_hz)
+        return bw_hz  # rtl_tcp can't report the actual applied BW
 
     def set_bias_tee(self, on: bool) -> None:
         self._send_cmd(_CMD_SET_BIAS_TEE, int(on))

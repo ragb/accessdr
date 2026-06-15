@@ -1075,6 +1075,14 @@ class MainWindow(wx.Frame):
         if self._radio.apply_rf_settings():
             self._stop_radio()
             self._start_radio()
+        # Announce the bandwidth the tuner actually applied (it quantises to
+        # discrete steps, so the requested value isn't always honoured).
+        if self._radio.running and settings.tuner_bandwidth:
+            applied = self._radio.applied_tuner_bandwidth
+            if applied:
+                speech.output(
+                    _("IF bandwidth {bw:.0f} kHz").format(bw=applied / 1000)
+                )
 
     def _on_audio_settings_changed(self, settings: Settings) -> None:
         self._settings = settings

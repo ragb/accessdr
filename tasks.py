@@ -44,8 +44,11 @@ PYINSTALLER = _find_tool("pyinstaller.exe")
 MAKENSIS = shutil.which("makensis") or r"C:\Program Files (x86)\NSIS\makensis.exe"
 
 RTLSDR_DLL_URL = (
+    # v2.1.0 static w64 build — exports the full librtlsdr API (GPIO,
+    # set_dithering, set_and_get_tuner_bandwidth) that pyrtlsdr >= 0.4.0
+    # binds eagerly; the older v0.9.0 static build did not.
     "https://github.com/librtlsdr/librtlsdr/releases/download/"
-    "v0.9.0/rtlsdr-bin-w64_static.zip"
+    "v2.1.0/rtlsdr-bin-w64_static.zip"
 )
 
 HELP_SRC_DIR = os.path.join(PROJECT_ROOT, "docs")
