@@ -79,22 +79,28 @@ class ScenesPanel(wx.Panel):
         grid = wx.FlexGridSizer(cols=2, vgap=6, hgap=8)
         grid.AddGrowableCol(1)
 
-        def _row(label_text: str, ctrl: wx.Window) -> None:
-            grid.Add(wx.StaticText(self, label=label_text), 0, wx.ALIGN_CENTER_VERTICAL)
-            grid.Add(ctrl, 1, wx.EXPAND)
+        # Create the StaticText label BEFORE its control so screen readers
+        # associate each control with the right (preceding) label.
+        def _label(text: str) -> None:
+            grid.Add(wx.StaticText(self, label=text), 0, wx.ALIGN_CENTER_VERTICAL)
 
+        _label(_("Name:"))
         self._name_ctrl = wx.TextCtrl(self, name="Band name")
-        _row(_("Name:"), self._name_ctrl)
+        grid.Add(self._name_ctrl, 1, wx.EXPAND)
 
+        _label(_("Group:"))
         self._group_ctrl = wx.ComboBox(self, choices=band_tree.group_order(), name="Band group")
-        _row(_("Group:"), self._group_ctrl)
+        grid.Add(self._group_ctrl, 1, wx.EXPAND)
 
+        _label(_("Band start (MHz, blank = unbounded):"))
         self._start_ctrl = wx.TextCtrl(self, name="Band start")
-        _row(_("Band start (MHz, blank = unbounded):"), self._start_ctrl)
+        grid.Add(self._start_ctrl, 1, wx.EXPAND)
 
+        _label(_("Band end (MHz, blank = unbounded):"))
         self._end_ctrl = wx.TextCtrl(self, name="Band end")
-        _row(_("Band end (MHz, blank = unbounded):"), self._end_ctrl)
+        grid.Add(self._end_ctrl, 1, wx.EXPAND)
 
+        _label(_("Modulation:"))
         mode_box = wx.BoxSizer(wx.HORIZONTAL)
         self._mode_ctrl = wx.Choice(self, choices=MODES, name="Band modulation")
         self._mode_ctrl.SetSelection(0)
@@ -103,21 +109,24 @@ class ScenesPanel(wx.Panel):
         self._ms_btn.Bind(wx.EVT_BUTTON, self._on_mode_settings)
         mode_box.Add(self._mode_ctrl, 0, wx.RIGHT, 6)
         mode_box.Add(self._ms_btn, 0)
-        _row(_("Modulation:"), mode_box)
+        grid.Add(mode_box, 1, wx.EXPAND)
 
+        _label(_("Bandwidth:"))
         self._bw_ctrl = wx.Choice(self, name="Band bandwidth")
-        _row(_("Bandwidth:"), self._bw_ctrl)
+        grid.Add(self._bw_ctrl, 1, wx.EXPAND)
 
+        _label(_("Tuning step:"))
         self._step_ctrl = wx.Choice(
             self,
             choices=[_("Follow tuning step")] + [_(s) for s in STEP_LABELS],
             name="Band step",
         )
         self._step_ctrl.SetSelection(0)
-        _row(_("Tuning step:"), self._step_ctrl)
+        grid.Add(self._step_ctrl, 1, wx.EXPAND)
 
+        _label(_("Default frequency (MHz, optional):"))
         self._default_ctrl = wx.TextCtrl(self, name="Default frequency")
-        _row(_("Default frequency (MHz, optional):"), self._default_ctrl)
+        grid.Add(self._default_ctrl, 1, wx.EXPAND)
 
         form_sizer.Add(grid, 0, wx.EXPAND | wx.ALL, 6)
 
