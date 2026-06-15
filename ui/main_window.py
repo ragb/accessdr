@@ -278,12 +278,6 @@ class MainWindow(wx.Frame):
         outer.Add(self._spectrum_panel, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
 
         panel.SetSizer(outer)
-
-        # Swallow Left/Right on the shared sliders/toggle so the spectrum
-        # cursor gets them (VFO-page choices are bound in _build_vfo_page).
-        for w in (self._vol_slider, self._sq_slider, self._sweep_btn):
-            w.Bind(wx.EVT_KEY_DOWN, self._eat_left_right)
-
         self._update_bw_choices(self._settings.mode)
 
     def _build_vfo_page(self, notebook: wx.Notebook) -> None:
@@ -352,17 +346,6 @@ class MainWindow(wx.Frame):
 
         page.SetSizer(sizer)
         notebook.AddPage(page, _("VFO"))
-
-        for w in (self._scene_choice, self._step_choice, self._mode_choice, self._bw_choice):
-            w.Bind(wx.EVT_KEY_DOWN, self._eat_left_right)
-
-    @staticmethod
-    def _eat_left_right(event: wx.KeyEvent) -> None:
-        """Swallow Left/Right on a control so the cursor handler gets them."""
-        code = event.GetKeyCode()
-        if code in (wx.WXK_LEFT, wx.WXK_RIGHT) and event.GetModifiers() in (0, wx.MOD_CONTROL):
-            return  # consumed — main _on_key handler will process
-        event.Skip()
 
     def _build_status_bar(self) -> None:
         self._statusbar = self.CreateStatusBar(name="Status bar")
@@ -832,10 +815,28 @@ class MainWindow(wx.Frame):
             event.Skip()
             return
 
-        # On the Channels/Scenes tabs, release plain navigation/typing keys
-        # (arrows, Page Up/Down, letters, Enter, Space) to the focused list or
-        # form control. Function keys and Ctrl/Alt shortcuts still work on
-        # every tab (start/stop, volume, tab switching, dialogs).
+        # Transport / audio controls work on every tab, whatever has focus.
+        global_actions = {
+            kb.START_STOP, kb.TOGGLE_MUTE,
+            kb.VOLUME_UP, kb.VOLUME_DOWN,
+            kb.SQUELCH_UP, kb.SQUELCH_DOWN,
+        }
+        if action in global_actions:
+            self._dispatch_action(action)
+            return
+
+        # Let arrow-using controls (scene/step/mode/bw dropdowns, sliders,
+        # spinners) handle the arrow keys themselves; cursor/frequency arrows
+        # act only when focus is on the spectrum, a button, or the panel.
+        if code in (wx.WXK_UP, wx.WXK_DOWN, wx.WXK_LEFT, wx.WXK_RIGHT) and isinstance(
+            focused, (wx.Choice, wx.ComboBox, wx.Slider, wx.SpinCtrl, wx.SpinCtrlDouble)
+        ):
+            event.Skip()
+            return
+
+        # On the Channels/Scenes tabs, release the remaining plain keys
+        # (letters, Enter, Space, Page nav) to the focused list or form
+        # control. Function keys and Ctrl/Alt shortcuts work on every tab.
         if self._notebook.GetSelection() != 0:  # 0 == VFO page
             is_function_key = wx.WXK_F1 <= code <= wx.WXK_F24
             has_cmd_modifier = bool(modifiers & (wx.MOD_CONTROL | wx.MOD_ALT))
