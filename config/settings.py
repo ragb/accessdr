@@ -28,6 +28,7 @@ class Settings:
     offset_tuning: bool = False
     bias_tee: bool = False
     tuner_bandwidth: int = 0         # Hz, 0 = auto
+    tuner_dithering: bool = True     # False = disable tuner dither (cleaner CW/SSB/digital)
 
     # Audio
     volume: float = 0.75             # 0.0 – 1.0

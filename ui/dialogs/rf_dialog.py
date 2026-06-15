@@ -167,6 +167,14 @@ class RFDialog(wx.Dialog):
         grid.Add(self._offset_cb, 1, wx.EXPAND)
 
         grid.Add(wx.StaticText(panel, label=""), 0)
+        self._dither_cb = wx.CheckBox(
+            panel, label=_("Disable tuner dithering (cleaner CW/SSB/digital)"),
+            name="Disable tuner dithering",
+        )
+        self._dither_cb.SetValue(not self._settings.tuner_dithering)
+        grid.Add(self._dither_cb, 1, wx.EXPAND)
+
+        grid.Add(wx.StaticText(panel, label=""), 0)
         self._bias_tee_cb = wx.CheckBox(
             panel, label=_("Bias Tee (powers antenna via coax)"),
             name="Bias Tee",
@@ -268,6 +276,7 @@ class RFDialog(wx.Dialog):
         self._settings.ppm = self._ppm_spin.GetValue()
         self._settings.agc_mode = self._agc_cb.GetValue()
         self._settings.offset_tuning = self._offset_cb.GetValue()
+        self._settings.tuner_dithering = not self._dither_cb.GetValue()
         self._settings.bias_tee = self._bias_tee_cb.GetValue()
 
         ifbw_idx = self._ifbw_choice.GetSelection()

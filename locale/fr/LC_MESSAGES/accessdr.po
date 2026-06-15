@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: accessdr 0.5.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-25 12:32+0100\n"
+"POT-Creation-Date: 2026-06-15 19:59+0100\n"
 "PO-Revision-Date: 2026-05-24 18:23+0200\n"
 "Last-Translator: Michel Such <michel.such@free.fr>\n"
 "Language: fr\n"
@@ -488,12 +488,17 @@ msgstr "Distant : {name} ({host}:{port})"
 msgid "User guide not found. Run 'invoke build-help' first."
 msgstr "Guide utilisateur non trouvé. Exécutez d'abord 'invoke build-help'."
 
-#: ui/main_window.py:1103
+#: ui/main_window.py:1084
+#, python-brace-format
+msgid "IF bandwidth {bw:.0f} kHz"
+msgstr ""
+
+#: ui/main_window.py:1111
 #, python-brace-format
 msgid "SDR error: {msg}"
 msgstr "Erreur SDR: {msg}"
 
-#: ui/main_window.py:1106
+#: ui/main_window.py:1114
 #, python-brace-format
 msgid "Error: {msg}"
 msgstr "Erreur: {msg}"
@@ -981,18 +986,22 @@ msgid "Offset Tuning (remove DC spike)"
 msgstr "Réglage par décalage (suppression du pic de courant continu)"
 
 #: ui/dialogs/rf_dialog.py:171
+msgid "Disable tuner dithering (cleaner CW/SSB/digital)"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:179
 msgid "Bias Tee (powers antenna via coax)"
 msgstr "Bias Tee (Alimentation de l'antenne via coaxial)"
 
-#: ui/dialogs/rf_dialog.py:181
+#: ui/dialogs/rf_dialog.py:189
 msgid "Noise Blanker"
 msgstr "Réducteur de bruit"
 
-#: ui/dialogs/rf_dialog.py:187
+#: ui/dialogs/rf_dialog.py:195
 msgid "NB Threshold:"
 msgstr "Seuil NB:"
 
-#: ui/dialogs/rf_dialog.py:230
+#: ui/dialogs/rf_dialog.py:238
 msgid ""
 "Bias Tee supplies 4.5 V DC through the antenna connector.\n"
 "\n"
@@ -1013,7 +1022,7 @@ msgstr ""
 "\n"
 "Activer le Bias Tee ?"
 
-#: ui/dialogs/rf_dialog.py:237
+#: ui/dialogs/rf_dialog.py:245
 msgid "Bias Tee — Danger"
 msgstr "Bias Tee — Danger"
 
