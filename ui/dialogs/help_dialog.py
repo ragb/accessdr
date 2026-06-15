@@ -88,7 +88,7 @@ SHORTCUTS = [
     (N_("Stop scan"), "Escape"),
     ("", ""),
     (N_("--- General ---"), ""),
-    (N_("Open Bands menu"), "Alt+R  (Radio menu)"),
+    (N_("Open Radio menu (scenes, channels, scanner)"), "Alt+R"),
     (N_("Quit"), "Alt+F4"),
 ]
 

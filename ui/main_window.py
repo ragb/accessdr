@@ -20,7 +20,6 @@ import wx
 
 from accessibility import speech
 from accessibility.sonification import Sonification
-from config.bands import BAND_NAMES, centre_frequency, get_band
 from config.channels import Channel, ChannelMapStore
 from config.modes import (
     AUDIO_RATE, BW_OPTIONS, MODE_KEYS, MODES,
@@ -149,24 +148,16 @@ class MainWindow(wx.Frame):
 
         # Radio
         radio_menu = wx.Menu()
-        bands_menu = wx.Menu()
-        for name in BAND_NAMES:
-            item = bands_menu.Append(wx.ID_ANY, _(name))
-            self.Bind(wx.EVT_MENU, self._make_band_handler(name), item)
-        radio_menu.AppendSubMenu(bands_menu, _("&Bands"))
         item_freq = radio_menu.Append(wx.ID_ANY, _("&Enter Frequency…\tCtrl+Q"))
+        radio_menu.AppendSeparator()
+        item_scenes = radio_menu.Append(wx.ID_ANY, _("&Scenes (bands)…\tCtrl+Shift+B"))
+        item_channels = radio_menu.Append(wx.ID_ANY, _("&Channels…\tCtrl+B"))
+        item_scanner = radio_menu.Append(wx.ID_ANY, _("Sca&nner…\tCtrl+N"))
         self.Bind(wx.EVT_MENU, self._on_enter_freq_menu, item_freq)
-        mb.Append(radio_menu, _("&Radio"))
-
-        # Tools
-        tools_menu = wx.Menu()
-        item_scanner = tools_menu.Append(wx.ID_ANY, _("Sca&nner…\tCtrl+N"))
-        item_channels = tools_menu.Append(wx.ID_ANY, _("&Channels…\tCtrl+B"))
-        item_scenes = tools_menu.Append(wx.ID_ANY, _("&Scenes…\tCtrl+Shift+B"))
-        self.Bind(wx.EVT_MENU, lambda e: self._open_scanner_dialog(), item_scanner)
-        self.Bind(wx.EVT_MENU, lambda e: self._open_channels_dialog(), item_channels)
         self.Bind(wx.EVT_MENU, lambda e: self._open_scenes_dialog(), item_scenes)
-        mb.Append(tools_menu, _("&Tools"))
+        self.Bind(wx.EVT_MENU, lambda e: self._open_channels_dialog(), item_channels)
+        self.Bind(wx.EVT_MENU, lambda e: self._open_scanner_dialog(), item_scanner)
+        mb.Append(radio_menu, _("&Radio"))
 
         # Options
         options_menu = wx.Menu()
@@ -1021,23 +1012,6 @@ class MainWindow(wx.Frame):
             fname = os.path.basename(self._recording_path)
             text += _(" [REC: {filename}]").format(filename=fname)
         self._statusbar.SetStatusText(text)
-
-    # ==================================================================
-    # Band jump
-    # ==================================================================
-
-    def _make_band_handler(self, name: str):
-        def handler(_event):
-            lo, hi, mode = get_band(name)
-            freq = centre_frequency(name)
-            self._tune(freq)
-            self._set_mode(mode)
-            speech.output(
-                _("Band: {name}, {freq}, mode {mode}").format(
-                    name=_(name), freq=fmt_freq(freq), mode=mode
-                )
-            )
-        return handler
 
     # ==================================================================
     # Dialog openers

@@ -114,6 +114,6 @@ When "demod follows cursor" is enabled (Shift+C), moving the cursor with Left/Ri
 
 | Key | Action |
 |---|---|
-| ++alt+r++ | Open Radio menu (band presets) |
+| ++alt+r++ | Open Radio menu (scenes, channels, scanner) |
 | ++ctrl+shift+b++ | Save bookmark |
 | ++alt+f4++ | Quit |
