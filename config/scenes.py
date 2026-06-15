@@ -52,41 +52,32 @@ class Scene:
         return None
 
 
-# Reasonable default tuning steps per mode for seeded band scenes (Hz).
-_DEFAULT_STEP_BY_MODE = {
-    "WFM": 100_000,
-    "NFM": 12_500,
-    "AM": 9_000,
-    "USB": 1_000,
-    "LSB": 1_000,
-    "CW": 100,
-    "DSB": 9_000,
-}
-
-
 def default_scenes() -> List[Scene]:
     """Ship a default band plan: the free scene plus one scene per known band.
 
     Seeded from ``config.bands`` so the band list has a single source of
     truth (these scenes supersede the former Radio → Bands menu).
     """
-    # Lazy imports: config.bands / config.modes use N_() at module scope, so
-    # importing them only here keeps config.scenes import-light for callers
-    # that never need the defaults.
+    # Lazy import: config.bands uses N_() at module scope, so importing it
+    # only here keeps config.scenes import-light for callers that never need
+    # the defaults.
     from config.bands import BANDS
-    from config.modes import BW_OPTIONS
 
     scenes: List[Scene] = [Scene(FREE_SCENE_NAME)]
-    for name, (lo, hi, mode) in BANDS.items():
-        bw_opts = BW_OPTIONS.get(mode, [])
+    for name, entry in BANDS.items():
+        # entry is (lo, hi, mode, bandwidth, step) with an optional trailing
+        # dict of per-mode overrides (nfm_deviation / wfm_deemphasis / squelch).
+        lo, hi, mode, bandwidth, step, *rest = entry
+        overrides = rest[0] if rest else {}
         scenes.append(Scene(
             name=name,
             freq_start=lo,
             freq_end=hi,
             mode=mode,
-            bandwidth=bw_opts[0][0] if bw_opts else 0,
-            step=_DEFAULT_STEP_BY_MODE.get(mode, 0),
+            bandwidth=bandwidth,
+            step=step,
             default_freq=(lo + hi) // 2,
+            **overrides,
         ))
     return scenes
 

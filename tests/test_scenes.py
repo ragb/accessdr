@@ -29,17 +29,21 @@ def test_bounded_scene_lands_at_default_then_start():
 def test_default_scenes_include_free_and_bands():
     names = [s.name for s in default_scenes()]
     assert FREE_SCENE_NAME in names
-    assert "FM Broadcast" in names
+    assert "FM Radio" in names
     assert "PMR446" in names
 
 
 def test_default_scenes_include_hf_and_shortwave():
     by_name = {s.name: s for s in default_scenes()}
-    assert "40m Amateur" in by_name and by_name["40m Amateur"].mode == "LSB"
-    assert "20m Amateur" in by_name and by_name["20m Amateur"].mode == "USB"
+    assert "40m Ham" in by_name and by_name["40m Ham"].mode == "LSB"
+    assert "20m Ham" in by_name and by_name["20m Ham"].mode == "USB"
     assert "49m SW" in by_name and by_name["49m SW"].mode == "AM"
-    assert "CB 27 MHz" in by_name
+    assert "CB 27m" in by_name
     assert by_name["49m SW"].freq_start == 5_900_000
+    assert by_name["49m SW"].step == 5_000        # SW 5 kHz raster
+    assert by_name["AM Radio"].step == 9_000       # MW 9 kHz
+    assert by_name["Airband"].bandwidth == 10_000  # explicit per-band bw
+    assert by_name["PMR446"].nfm_deviation == 2_500  # per-mode override
 
 
 def test_load_merges_new_default_bands(tmp_path):
@@ -49,18 +53,18 @@ def test_load_merges_new_default_bands(tmp_path):
     store = SceneStore()
     store.load(path)
     names = [s.name for s in store.scenes]
-    assert "40m Amateur" in names      # merged in
+    assert "40m Ham" in names           # merged in
     assert names[0] == FREE_SCENE_NAME  # existing entry preserved/first
 
 
 def test_merge_keeps_user_edits(tmp_path):
     path = os.path.join(tmp_path, "scenes.json")
-    # User edited FM Broadcast; merge must not overwrite it.
-    edited = Scene("FM Broadcast", 88_000_000, 108_000_000, "WFM", 150_000)
+    # User edited FM Radio; merge must not overwrite it.
+    edited = Scene("FM Radio", 88_000_000, 108_000_000, "WFM", 150_000)
     SceneStore(scenes=[edited]).save(path)
     store = SceneStore()
     store.load(path)
-    fm = store.by_name("FM Broadcast")
+    fm = store.by_name("FM Radio")
     assert fm.bandwidth == 150_000     # user's value, not the default
 
 

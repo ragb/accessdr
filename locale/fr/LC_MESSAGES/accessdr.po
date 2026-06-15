@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: accessdr 0.5.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-15 15:16+0100\n"
+"POT-Creation-Date: 2026-06-15 15:26+0100\n"
 "PO-Revision-Date: 2026-05-24 18:23+0200\n"
 "Last-Translator: Michel Such <michel.such@free.fr>\n"
 "Language: fr\n"
@@ -23,139 +23,139 @@ msgstr ""
 msgid "AccessDR v{version}"
 msgstr "AccessDR v{version}"
 
-#: config/bands.py:16
-msgid "AM Broadcast"
-msgstr "Diffusion AM"
-
-#: config/bands.py:18
-msgid "160m Amateur"
-msgstr ""
-
-#: config/bands.py:19
-msgid "90m SW"
-msgstr ""
-
-#: config/bands.py:20
-msgid "80m Amateur"
-msgstr ""
-
-#: config/bands.py:21
-msgid "75m SW"
-msgstr ""
-
-#: config/bands.py:22
-msgid "60m SW"
-msgstr ""
-
-#: config/bands.py:23
-msgid "49m SW"
-msgstr ""
-
-#: config/bands.py:24
-msgid "40m Amateur"
-msgstr ""
-
 #: config/bands.py:25
-msgid "41m SW"
-msgstr ""
-
-#: config/bands.py:26
-msgid "31m SW"
+msgid "AM Radio"
 msgstr ""
 
 #: config/bands.py:27
-msgid "30m Amateur"
+msgid "160m Ham"
 msgstr ""
 
 #: config/bands.py:28
-msgid "25m SW"
+msgid "90m SW"
 msgstr ""
 
 #: config/bands.py:29
-msgid "22m SW"
+msgid "80m Ham"
 msgstr ""
 
 #: config/bands.py:30
-msgid "20m Amateur"
+msgid "75m SW"
 msgstr ""
 
 #: config/bands.py:31
-msgid "19m SW"
+msgid "60m SW"
 msgstr ""
 
 #: config/bands.py:32
-msgid "16m SW"
+msgid "49m SW"
 msgstr ""
 
 #: config/bands.py:33
-msgid "17m Amateur"
+msgid "40m Ham"
 msgstr ""
 
 #: config/bands.py:34
-msgid "15m Amateur"
+msgid "41m SW"
 msgstr ""
 
 #: config/bands.py:35
-msgid "13m SW"
+msgid "31m SW"
 msgstr ""
 
 #: config/bands.py:36
-msgid "12m Amateur"
+msgid "30m Ham"
 msgstr ""
 
 #: config/bands.py:37
-msgid "CB 27 MHz"
+msgid "25m SW"
 msgstr ""
 
 #: config/bands.py:38
-msgid "10m Amateur"
+msgid "22m SW"
+msgstr ""
+
+#: config/bands.py:39
+msgid "20m Ham"
 msgstr ""
 
 #: config/bands.py:40
-msgid "6m Amateur"
+msgid "19m SW"
 msgstr ""
 
 #: config/bands.py:41
-msgid "FM Broadcast"
-msgstr "Diffusion FM"
+msgid "16m SW"
+msgstr ""
 
 #: config/bands.py:42
-msgid "Air Band"
-msgstr "Bande Aviation"
+msgid "17m Ham"
+msgstr ""
 
 #: config/bands.py:43
-msgid "2m Amateur"
-msgstr "2m Amateur"
+msgid "15m Ham"
+msgstr ""
 
 #: config/bands.py:44
-msgid "Marine VHF"
-msgstr "VHF Marine"
+msgid "13m SW"
+msgstr ""
 
 #: config/bands.py:45
-msgid "NOAA Weather"
-msgstr "Météo NOAA"
+msgid "12m Ham"
+msgstr ""
 
 #: config/bands.py:46
-msgid "70cm Amateur"
-msgstr "Amateur 70cm"
+msgid "CB 27m"
+msgstr ""
 
 #: config/bands.py:47
+msgid "10m Ham"
+msgstr ""
+
+#: config/bands.py:49
+msgid "6m Ham"
+msgstr ""
+
+#: config/bands.py:50
+msgid "FM Radio"
+msgstr ""
+
+#: config/bands.py:51
+msgid "Airband"
+msgstr ""
+
+#: config/bands.py:52
+msgid "2m Ham"
+msgstr ""
+
+#: config/bands.py:53
+msgid "Marine"
+msgstr ""
+
+#: config/bands.py:54
+msgid "NOAA WX"
+msgstr ""
+
+#: config/bands.py:55
+msgid "70cm Ham"
+msgstr ""
+
+#: config/bands.py:56
 msgid "PMR446"
 msgstr "PMR446"
 
-#: config/bands.py:48
+#: config/bands.py:58
 msgid "UHF CB"
 msgstr "CB UHF"
 
-#: config/bands.py:49
-msgid "GSM 900 Uplink"
-msgstr "GSM 900 Uplink"
+#: config/bands.py:59
+msgid "GSM Up"
+msgstr ""
 
-#: config/bands.py:50
-msgid "GSM 900 Downlink"
-msgstr "GSM 900 Downlink"
+#: config/bands.py:60
+msgid "GSM Down"
+msgstr ""
 
-#: config/bands.py:51
+#: config/bands.py:61
 msgid "DECT"
 msgstr "DECT"
 
@@ -1777,4 +1777,64 @@ msgstr ""
 
 #~ msgid "Deleted scene {name}."
 #~ msgstr ""
+
+#~ msgid "AM Broadcast"
+#~ msgstr "Diffusion AM"
+
+#~ msgid "160m Amateur"
+#~ msgstr ""
+
+#~ msgid "80m Amateur"
+#~ msgstr ""
+
+#~ msgid "40m Amateur"
+#~ msgstr ""
+
+#~ msgid "30m Amateur"
+#~ msgstr ""
+
+#~ msgid "20m Amateur"
+#~ msgstr ""
+
+#~ msgid "17m Amateur"
+#~ msgstr ""
+
+#~ msgid "15m Amateur"
+#~ msgstr ""
+
+#~ msgid "12m Amateur"
+#~ msgstr ""
+
+#~ msgid "CB 27 MHz"
+#~ msgstr ""
+
+#~ msgid "10m Amateur"
+#~ msgstr ""
+
+#~ msgid "6m Amateur"
+#~ msgstr ""
+
+#~ msgid "FM Broadcast"
+#~ msgstr "Diffusion FM"
+
+#~ msgid "Air Band"
+#~ msgstr "Bande Aviation"
+
+#~ msgid "2m Amateur"
+#~ msgstr "2m Amateur"
+
+#~ msgid "Marine VHF"
+#~ msgstr "VHF Marine"
+
+#~ msgid "NOAA Weather"
+#~ msgstr "Météo NOAA"
+
+#~ msgid "70cm Amateur"
+#~ msgstr "Amateur 70cm"
+
+#~ msgid "GSM 900 Uplink"
+#~ msgstr "GSM 900 Uplink"
+
+#~ msgid "GSM 900 Downlink"
+#~ msgstr "GSM 900 Downlink"
 
