@@ -29,6 +29,7 @@ class Settings:
     bias_tee: bool = False
     tuner_bandwidth: int = 0         # Hz, 0 = auto
     direct_sampling: int = 0         # 0 = off, 1 = I-branch, 2 = Q-branch (RTL HF)
+    upconverter_offset: int = 0      # Hz added to the hardware LO (0 = no upconverter)
 
     # Audio
     volume: float = 0.75             # 0.0 – 1.0

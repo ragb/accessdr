@@ -54,6 +54,7 @@ Also accessible via **Options > RF Settings** (++ctrl+r++).
 | `noise_blanker_threshold` | 5.0 | Blanker threshold (multiplier above median magnitude) |
 | `bias_tee` | false | Enable Bias Tee DC power on antenna connector. WARNING: can damage incompatible devices. |
 | `direct_sampling` | 0 | RTL2832U direct-sampling mode for HF: 0 = off, 1 = I-branch, 2 = Q-branch. No effect on SDRs that tune HF natively. |
+| `upconverter_offset` | 0 | Hz added to the hardware LO when using an upconverter (e.g. 125000000 for Ham It Up). 0 = no upconverter. The app keeps showing the real HF frequency. |
 
 ## Waterfall Display
 

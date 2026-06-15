@@ -190,6 +190,20 @@ Lets RTL-SDR dongles receive **HF** (roughly 0.1–28 MHz — shortwave, CB at 2
 - It only works if your specific dongle is **wired for it** — the RTL-SDR Blog V3 has the input built in; many dongles need a hardware mod. Reception is **noisy** and benefits from a band-pass/low-pass filter.
 - Changing this restarts the capture stream. Remember to switch it **back to Off** for normal VHF/UHF use.
 
+### Upconverter
+
+An **upconverter** (Nooelec Ham It Up, SpyVerter, etc.) is the cleaner way to receive HF on an RTL dongle. It mixes the whole HF range *up* by a fixed local-oscillator (LO) frequency so the R820T tuner receives it normally — no aliasing, far quieter than direct sampling, and it covers the full HF range including **CB (27 MHz)** and the **10m band**.
+
+Set **Upconverter LO** to your converter's LO in MHz:
+
+- **125 MHz** — Nooelec Ham It Up (the most common).
+- **120 MHz** — SpyVerter.
+- **0** — no upconverter (default).
+
+When set, AccessDR adds the offset to the hardware tuning frequency automatically while **continuing to show and accept the real HF frequency**. So you simply tune to 27.185 MHz (CB channel 19) or 7.1 MHz (40m) as normal, and the app commands the dongle to LO + that frequency behind the scenes. The scenes and channel maps (AM Broadcast, CB) work directly through it.
+
+Use either an upconverter **or** direct sampling, not both — leave Direct Sampling **Off** when an upconverter LO is set.
+
 ### Noise Blanker
 
 The noise blanker suppresses short impulse noise (electrical interference, ignition noise, power line clicks) from the raw IQ signal before demodulation. Enable it in **Options > RF Settings** (++ctrl+r++).

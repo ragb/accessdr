@@ -108,7 +108,7 @@ class RadioController:
         # Configure SDR hardware. Direct sampling first: it changes the
         # signal path, so the frequency below must be set in the right mode.
         self._sdr.set_direct_sampling(self._settings.direct_sampling)
-        self._sdr.set_frequency(self._settings.frequency)
+        self._sdr.set_frequency(self._hw_freq(self._settings.frequency))
         self._sdr.set_sample_rate(self._settings.sample_rate)
         self._sdr.set_gain(self._settings.gain)
         self._sdr.set_ppm(self._settings.ppm)
@@ -162,9 +162,17 @@ class RadioController:
     # Hardware / pipeline control
     # ------------------------------------------------------------------
 
+    def _hw_freq(self, freq_hz: int) -> int:
+        """Map a real (display) frequency to the hardware LO frequency.
+
+        With an upconverter, the dongle tunes ``freq + upconverter_offset``
+        while the rest of the app keeps the real HF frequency.
+        """
+        return freq_hz + self._settings.upconverter_offset
+
     def set_frequency(self, freq_hz: int) -> None:
-        """Tune SDR and notify pipeline of retune."""
-        self._sdr.set_frequency(freq_hz)
+        """Tune SDR (via upconverter offset) and notify pipeline of retune."""
+        self._sdr.set_frequency(self._hw_freq(freq_hz))
         if self._pipeline is not None:
             self._pipeline.notify_retune()
 
@@ -200,6 +208,8 @@ class RadioController:
             self._sdr.set_offset_tuning(s.offset_tuning)
             self._sdr.set_tuner_bandwidth(s.tuner_bandwidth)
             self._sdr.set_bias_tee(s.bias_tee)
+            # Re-tune so a changed upconverter offset takes effect now.
+            self._sdr.set_frequency(self._hw_freq(s.frequency))
         return need_restart
 
     def rebuild_wfm(self) -> None:

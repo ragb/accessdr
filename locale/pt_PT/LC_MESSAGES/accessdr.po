@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AccessDR 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-15 10:25+0100\n"
+"POT-Creation-Date: 2026-06-15 11:31+0100\n"
 "PO-Revision-Date: 2026-02-19 11:40+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: pt_PT\n"
@@ -1139,26 +1139,30 @@ msgid "Direct Sampling:"
 msgstr ""
 
 #: ui/dialogs/rf_dialog.py:176
+msgid "Upconverter LO (MHz, 0 = none):"
+msgstr ""
+
+#: ui/dialogs/rf_dialog.py:187
 msgid "PPM Correction:"
 msgstr "Correção PPM:"
 
-#: ui/dialogs/rf_dialog.py:185
+#: ui/dialogs/rf_dialog.py:196
 msgid "Offset Tuning (remove DC spike)"
 msgstr "Sintonização offset (remover pico DC)"
 
-#: ui/dialogs/rf_dialog.py:193
+#: ui/dialogs/rf_dialog.py:204
 msgid "Bias Tee (powers antenna via coax)"
 msgstr "Bias Tee (alimenta antena pelo coaxial)"
 
-#: ui/dialogs/rf_dialog.py:203
+#: ui/dialogs/rf_dialog.py:214
 msgid "Noise Blanker"
 msgstr "Supressor de Ruído"
 
-#: ui/dialogs/rf_dialog.py:209
+#: ui/dialogs/rf_dialog.py:220
 msgid "NB Threshold:"
 msgstr "Limiar NB:"
 
-#: ui/dialogs/rf_dialog.py:252
+#: ui/dialogs/rf_dialog.py:263
 msgid ""
 "Bias Tee supplies 4.5 V DC through the antenna connector.\n"
 "\n"
@@ -1178,7 +1182,7 @@ msgstr ""
 "\n"
 "Ativar Bias Tee?"
 
-#: ui/dialogs/rf_dialog.py:259
+#: ui/dialogs/rf_dialog.py:270
 msgid "Bias Tee — Danger"
 msgstr "Bias Tee — Perigo"
 

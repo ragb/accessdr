@@ -172,6 +172,17 @@ class RFDialog(wx.Dialog):
         self._ds_choice.SetSelection(ds_idx)
         grid.Add(self._ds_choice, 1, wx.EXPAND)
 
+        grid.Add(
+            wx.StaticText(panel, label=_("Upconverter LO (MHz, 0 = none):")),
+            0, wx.ALIGN_CENTER_VERTICAL,
+        )
+        self._upconv_spin = wx.SpinCtrl(
+            panel, min=0, max=300,
+            value=str(self._settings.upconverter_offset // 1_000_000),
+            name="Upconverter LO",
+        )
+        grid.Add(self._upconv_spin, 1, wx.EXPAND)
+
         # --- Calibration ---
         grid.Add(wx.StaticText(panel, label=_("PPM Correction:")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._ppm_spin = wx.SpinCtrl(
@@ -299,6 +310,8 @@ class RFDialog(wx.Dialog):
         ds_idx = self._ds_choice.GetSelection()
         if 0 <= ds_idx < len(DIRECT_SAMPLING_OPTIONS):
             self._settings.direct_sampling = DIRECT_SAMPLING_OPTIONS[ds_idx][0]
+
+        self._settings.upconverter_offset = self._upconv_spin.GetValue() * 1_000_000
 
         self._settings.noise_blanker_enabled = self._nb_cb.GetValue()
         self._settings.noise_blanker_threshold = self._nb_thresh.GetValue()
