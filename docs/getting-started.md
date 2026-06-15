@@ -54,11 +54,11 @@ The `invoke fetch-dlls` command downloads the RTL-SDR library automatically.
 
 ## First Steps
 
-1. **Start the radio** — press ++r++ or click the Start button. AccessDR will announce "Radio started" through your screen reader.
+1. **Start the radio** — press ++f2++ or click the Start button. AccessDR will announce "Radio started" through your screen reader.
 2. **Tune to a station** — press ++up++ or ++down++ to step through frequencies. The current frequency is announced after each step.
 3. **Change the step size** — press ++s++ to cycle through step sizes (1 Hz to 1 MHz). Use 100 kHz steps for quickly scanning FM broadcast.
-4. **Switch modes** — press ++w++ for Wide FM (broadcast radio), ++n++ for Narrow FM, ++a++ for AM, etc.
+4. **Switch modulation** — press ++m++ then the modulation letter: ++m++ ++w++ for Wide FM (broadcast radio), ++m++ ++n++ for Narrow FM, ++m++ ++a++ for AM, and so on.
 5. **Check signal strength** — press ++i++ to hear the current signal level and status.
-6. **Adjust volume** — use the Volume slider or press ++m++ to mute/unmute.
+6. **Adjust volume** — use ++f11++ / ++f12++ or the Volume slider, and press ++f3++ to mute/unmute.
 
 See the full [User Guide](user-guide.md) for detailed instructions on all features.

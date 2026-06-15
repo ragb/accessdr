@@ -30,27 +30,89 @@ Press ++s++ to cycle through step sizes:
 | 100 kHz | FM broadcast scanning |
 | 1 MHz | Quick band scanning |
 
+In VFO mode, ++page-up++ and ++page-down++ also step the frequency by the current step, but clamp at the edges of the current band (you hear "Band edge" when you reach them).
+
 ### Pause / Resume
 
 Press ++space++ to **pause** the radio — IQ capture and audio stop, but the last spectrum snapshot remains visible and navigable. Cursor movement, probe tone, peaks, zoom and all other spectrum features continue to work on the frozen data. Press ++space++ again to **resume** reception. Press ++f2++ while paused to fully stop the radio and release the device.
 
-### Band Presets
+## Channels and Bands
 
-Open the **Radio > Bands** menu (++alt+r++) to jump to a preset band. Each preset tunes to the band's centre frequency and sets the appropriate demodulation mode.
+AccessDR works like a Baofeng/handheld transceiver, with two operating modes surfaced as the two tabs of a notebook at the top of the main window:
 
-Available bands:
+- **VFO tab** — free tuning within a **band**. Selecting this tab puts the radio in **VFO mode**.
+- **Channels tab** — stepping through numbered memory **channels**. Selecting this tab puts the radio in **Memory (MR) mode**.
 
-| Band | Frequency Range | Mode |
-|---|---|---|
-| AM Broadcast | 530 kHz - 1.71 MHz | AM |
-| FM Broadcast | 87.5 - 108 MHz | WFM |
-| Air Band | 108 - 137 MHz | AM |
-| 2m Amateur | 144 - 148 MHz | NFM |
-| NOAA Weather | 162.4 - 162.55 MHz | NFM |
-| Marine VHF | 156 - 174 MHz | NFM |
-| UHF CB | 462.55 - 467.73 MHz | NFM |
-| 70cm Amateur | 420 - 450 MHz | NFM |
-| PMR446 | 446.0 - 446.2 MHz | NFM |
+**The active tab _is_ the operating mode.** Press ++v++ to toggle between the two tabs (and therefore between VFO and Memory mode). On the Channels tab, ++ctrl+b++ jumps straight to it and focuses the channel list.
+
+### The context anchor
+
+The window title always shows your live operating context, so a screen reader announces exactly where you are whenever the title is read:
+
+- In VFO mode: `AccessDR v0.6.0 - VFO, FM Radio, 98.100 MHz` (operating mode, band name, frequency).
+- In Memory mode: `AccessDR v0.6.0 - Memory, PMR446, channel 1, PMR 1` (operating mode, channel-map name, channel number, channel label).
+
+The same context text is shown in the status bar.
+
+### Bands (VFO presets)
+
+A **band** is a VFO preset: a frequency range plus a default modulation, bandwidth, tuning step, an optional default landing frequency, and optional per-modulation overrides — all grouped by service category. Loading a band switches to the VFO tab, tunes to the band's default frequency (its centre, unless you set otherwise), and applies the band's modulation and bandwidth.
+
+On the VFO tab, choose a band with the **"Band: …" button**, which pops up a grouped menu — one submenu per service category. Making band changes deliberate (a menu, not an always-live dropdown) avoids nudging the band by accident.
+
+In VFO mode you can also cycle bands from the keyboard: ++"["++ for the previous band and ++"]"++ for the next.
+
+A special **Free / Full Range** band (in the _General_ group) has no edges — it reproduces classic free-style VFO tuning across the whole tunable range.
+
+The built-in band plan ships with:
+
+| Group | Bands |
+|---|---|
+| Broadcast | AM Radio (MW), FM Radio |
+| Shortwave | 90m, 75m, 60m, 49m, 41m, 31m, 25m, 22m, 19m, 16m, 13m |
+| Amateur | 160m, 80m, 40m, 30m, 20m, 17m, 15m, 12m, 10m, 6m |
+| Aircraft / Marine | Airband, Marine |
+| PMR / CB | CB 27m, PMR446, UHF CB |
+| Weather / Other | NOAA WX, GSM Up, GSM Down, DECT |
+| General | Free / Full Range |
+
+(The Amateur group also covers the VHF/UHF 2m and 70cm bands.)
+
+#### The Bands dialog
+
+Open the full band editor with **Radio > Bands…** (++ctrl+shift+b++). It presents the band plan as a tree grouped by service (Broadcast, Shortwave, Amateur, Aircraft / Marine, PMR / CB, Weather / Other, and General). A tree is read naturally by screen readers — group level, expand/collapse, and leaf labels that include each band's range and modulation.
+
+From the dialog you can:
+
+- **Apply** a selected band (tunes the VFO into it).
+- **Save** or edit a band — name, group, start/end edges (blank = unbounded), modulation, bandwidth, tuning step (or "Follow tuning step"), an optional default landing frequency, an optional squelch override, and per-modulation overrides via the **Settings…** button.
+- **Store Current VFO** as a new band, seeding the form from your current frequency and modulation.
+- **Delete** a band, or **Import…** / **Export…** the whole band plan as JSON.
+
+Newly shipped default bands are merged into your saved plan on upgrade, so updates add bands without overwriting your own edits.
+
+### Channels (memory)
+
+A **channel** is a numbered memory slot — like a memory on a Baofeng or Yaesu handheld. Each channel has a number, a label, a frequency, a modulation, a bandwidth, and optional per-modulation overrides. Channels are grouped into named **channel maps**, and the radio steps through the channels of the active map when in Memory mode.
+
+The Channels tab is the channel editor. Open it by selecting the tab, pressing ++v++ to toggle into Memory mode, or pressing ++ctrl+b++ (which focuses the channel list). From the tab you can:
+
+- **Switch maps** with the Channel Map dropdown, or create one with **New Map** and remove one with **Delete Map** (the last remaining map cannot be deleted).
+- **Add or edit a channel** in the form — number, label, frequency (MHz or kHz), modulation, bandwidth, and per-modulation overrides via the **Settings…** button. Saving a channel _upserts_ by number (saving over an existing number replaces it). Press **Save Channel** to store it.
+- **Store Current VFO** to capture your current frequency and modulation into the next free channel number — then type a label and save.
+- **Load Selected** to tune to the highlighted channel (this also enters Memory mode). Activating a row in the list (Enter or double-click) does the same.
+- **Move Up** / **Move Down** to reorder a channel by swapping its number with its neighbour.
+- **Delete Selected** to remove a channel, or **Import…** / **Export…** a single map as JSON.
+
+Three maps ship by default:
+
+| Map | Contents |
+|---|---|
+| My Channels | Empty — your own scratch map |
+| PMR446 | 16 channels, 12.5 kHz spacing from 446.00625 MHz, NFM |
+| CB (CEPT FM) | 40 channels, CEPT FM CB plan, NFM |
+
+In Memory mode, ++page-up++ and ++page-down++ step to the next and previous channel in the active map and announce the channel number, label, and frequency.
 
 ## Demodulation Modes
 
@@ -72,7 +134,7 @@ Each mode has selectable filter bandwidths in the main window's BW dropdown.
 
 The standard mode for **FM broadcast radio** (87.5–108 MHz). Uses a 200 kHz channel and includes stereo decoding — AccessDR automatically detects and announces stereo or mono. This is the default mode and the best starting point for new users. Typical bandwidth: 150–200 kHz.
 
-WFM includes several sub-features configurable via **Options > WFM Settings** (++ctrl+w++):
+WFM includes several sub-features, configured via the **Settings…** button next to the Modulation selector (see [Modulation Settings](#modulation-settings)):
 
 - **De-emphasis** — compensates for the FM pre-emphasis curve. Set to Auto (detects your region), 50 us (Europe/Asia), or 75 us (Americas/South Korea). Wrong de-emphasis makes audio sound too bright or too dull.
 - **Stereo mode** — Auto detects the 19 kHz pilot and blends between mono and stereo based on signal quality. Force Mono disables stereo decoding (quieter on weak signals). Force Stereo always decodes stereo regardless of signal quality.
@@ -85,7 +147,7 @@ Used by most **two-way radio** systems: amateur (ham) radio repeaters, PMR446 wa
 
 NFM includes **CTCSS tone detection** — when a repeater or radio system uses a sub-audible tone (67.0–254.1 Hz) for access control, AccessDR detects and reports the tone. Press ++i++ to hear the detected CTCSS tone along with signal information.
 
-A **CTCSS notch filter** automatically removes the detected sub-audible tone from the audio output, eliminating the low-frequency hum that can be distracting on speakers or headphones with good bass response. The notch filter is enabled by default and can be toggled in **Options > NFM Settings** (++ctrl+shift+n++).
+A **CTCSS notch filter** automatically removes the detected sub-audible tone from the audio output, eliminating the low-frequency hum that can be distracting on speakers or headphones with good bass response. The notch filter is enabled by default and can be toggled via the **Settings…** button next to the Modulation selector (see [Modulation Settings](#modulation-settings)).
 
 ### AM — Amplitude Modulation
 
@@ -111,11 +173,11 @@ Similar to AM but **without carrier filtering**. Useful for receiving AM signals
 
 | Key | Action |
 |---|---|
-| ++page-up++ | Volume up (+5%) |
-| ++page-down++ | Volume down (-5%) |
+| ++f11++ | Volume up (+5%) |
+| ++f12++ | Volume down (-5%) |
 | ++f3++ | Mute / Unmute |
-| ++shift+page-up++ | Squelch up (+3 dB) |
-| ++shift+page-down++ | Squelch down (-3 dB) |
+| ++shift+f11++ | Squelch up (+3 dB) |
+| ++shift+f12++ | Squelch down (-3 dB) |
 
 Volume and squelch sliders are also available in the main window. The mute toggle button is labelled "Mute (M)" in the UI.
 
@@ -200,7 +262,7 @@ Set **Upconverter LO** to your converter's LO in MHz:
 - **120 MHz** — SpyVerter.
 - **0** — no upconverter (default).
 
-When set, AccessDR adds the offset to the hardware tuning frequency automatically while **continuing to show and accept the real HF frequency**. So you simply tune to 27.185 MHz (CB channel 19) or 7.1 MHz (40m) as normal, and the app commands the dongle to LO + that frequency behind the scenes. The scenes and channel maps (AM Broadcast, CB) work directly through it.
+When set, AccessDR adds the offset to the hardware tuning frequency automatically while **continuing to show and accept the real HF frequency**. So you simply tune to 27.185 MHz (CB channel 19) or 7.1 MHz (40m) as normal, and the app commands the dongle to LO + that frequency behind the scenes. The HF bands and channel maps (AM Radio, CB) work directly through it.
 
 Use either an upconverter **or** direct sampling, not both — leave Direct Sampling **Off** when an upconverter LO is set.
 
@@ -227,11 +289,22 @@ The Bias Tee option supplies **4.5 V DC power** through the coaxial antenna conn
 
 A confirmation dialog will appear each time you enable this setting to prevent accidental activation.
 
-## WFM Settings
+## Modulation Settings
 
-Open the WFM Settings dialog with ++ctrl+w++ to configure broadcast FM-specific parameters. Changes take effect immediately if you are currently receiving in WFM mode.
+Some modulations carry extra, modulation-specific settings. Rather than a single global dialog, each **Modulation:** selector — on the **VFO tab**, in the **Bands** form, and in the **Channels** form — has a **Settings…** button beside it. The button is **enabled only when the current modulation actually has settings**:
 
-See the [WFM mode description](#wfm--wideband-fm) above for details on each setting.
+| Modulation | Settings |
+|---|---|
+| WFM | De-emphasis, Stereo, HF noise cut (hi-blend), RDS decoding |
+| NFM | Deviation (Hz), Remove CTCSS tone |
+| AM, USB, LSB, CW, DSB | None — the Settings… button is disabled |
+
+The settings are **per band and per channel, not global.** There is no global WFM or NFM settings dialog any more.
+
+- On the **VFO tab**, the Settings… button edits the live built-in defaults for the current modulation; changes apply immediately if you are receiving in that modulation.
+- In the **Bands** and **Channels** forms, the Settings… button edits **overrides** for that band or channel. Each setting can be left at its default ("inherit the built-in default") or overridden. Band overrides are applied when you load the band; channel overrides when you load the channel. Remember to **Save** the band or channel after editing its modulation settings.
+
+See the [WFM mode description](#wfm--wideband-fm) and [NFM mode description](#nfm--narrowband-fm) above for what each individual setting does.
 
 ## Spectrum
 
@@ -369,13 +442,3 @@ When receiving from a remote server, the status bar shows the server name and th
 - **Latency** — network latency adds delay to the audio. A local network (LAN or Wi-Fi) works well; a slow internet connection may cause dropouts.
 - **Bandwidth** — rtl_tcp streams raw IQ data at the full sample rate. At 2.4 MSPS, this is about 4.8 MB/s (38 Mbit/s). Ensure your network can handle this.
 - **Single client** — a standard rtl_tcp server supports one client at a time.
-
-## Bookmarks
-
-Save and recall favourite frequencies:
-
-1. Open the Bookmarks dialog with ++ctrl+b++
-2. **Save** the current frequency and mode as a bookmark
-3. **Load** a bookmark to tune to it instantly
-
-Bookmarks are stored in a JSON file and persist across sessions.

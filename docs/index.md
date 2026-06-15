@@ -20,15 +20,16 @@ Software-defined radio uses a small USB dongle to receive radio signals across a
 - **Spectrum sonification** — hear the RF spectrum as a sweeping tone that maps signal strength to volume and frequency position to pitch
 - **Remote SDR (rtl_tcp)** — stream IQ data from a remote rtl_tcp server over the network, with multi-server management
 - **Frequency scanner** — automatically scan a range and stop on active signals
-- **Bookmarks** — save and recall your favourite frequencies
-- **Band presets** — jump to common bands (FM, Air, Amateur, Weather, Marine) with a single menu selection
+- **VFO / Memory operation** — work like a handheld: free-tune within a band (VFO) or step through numbered memory channels (MR)
+- **Bands** — VFO presets grouped by service (broadcast, shortwave, amateur, airband, marine, PMR/CB, weather), selected from a menu or the Bands editor
+- **Channel memory** — numbered channels grouped into named maps, including ready-made PMR446 and CB plans
 
 ## Quick Start
 
 1. Plug in your RTL-SDR dongle
 2. Install the [WinUSB driver](getting-started.md#driver-setup) if you haven't already
 3. [Download the installer](https://github.com/ragb/accessdr/releases/latest) or [run from source](getting-started.md#running-from-source)
-4. Press ++r++ to start the radio
+4. Press ++f2++ to start the radio
 5. Use ++up++ / ++down++ to tune
 
 See the [Getting Started](getting-started.md) guide for detailed setup instructions.

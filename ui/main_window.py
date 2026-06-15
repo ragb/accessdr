@@ -176,8 +176,8 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, lambda e: self._open_recording_dialog(), item_rec)
         self.Bind(wx.EVT_MENU, lambda e: self._open_rtl_tcp_dialog(), item_rtl_tcp)
         mb.Append(options_menu, _("&Options"))
-        # WFM/NFM settings now live on the per-mode "Settings…" buttons
-        # (VFO, Bands, Channels); Ctrl+W / Ctrl+Shift+N still open them.
+        # Modulation settings live on the per-modulation "Settings…" buttons
+        # (VFO, Bands, Channels) — there is no global modulation dialog.
 
         # Help
         help_menu = wx.Menu()
