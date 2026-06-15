@@ -119,24 +119,30 @@ class ChannelsPanel(wx.Panel):
         form_btns = wx.BoxSizer(wx.HORIZONTAL)
         save_btn = wx.Button(self, label=_("Save Channel"), name="Save channel")
         vfo_btn = wx.Button(self, label=_("Store Current VFO"), name="Store current VFO")
+        ms_btn = wx.Button(self, label=_("Mode settings…"), name="Channel mode settings")
         save_btn.Bind(wx.EVT_BUTTON, self._on_save_channel)
         vfo_btn.Bind(wx.EVT_BUTTON, self._on_store_vfo)
-        form_btns.Add(save_btn, 0, wx.RIGHT, 6)
-        form_btns.Add(vfo_btn, 0)
+        ms_btn.Bind(wx.EVT_BUTTON, self._on_mode_settings)
+        for b in (save_btn, vfo_btn, ms_btn):
+            form_btns.Add(b, 0, wx.RIGHT, 6)
         form_sizer.Add(form_btns, 0, wx.ALL, 4)
         sizer.Add(form_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
-        # --- Action buttons (Load / Delete / Import / Export) ---
+        # --- Action buttons (Load / Move / Delete / Import / Export) ---
         btn_row = wx.BoxSizer(wx.HORIZONTAL)
         load_btn = wx.Button(self, label=_("Load Selected"), name="Load selected channel")
+        up_btn = wx.Button(self, label=_("Move Up"), name="Move channel up")
+        down_btn = wx.Button(self, label=_("Move Down"), name="Move channel down")
         del_btn = wx.Button(self, label=_("Delete Selected"), name="Delete selected channel")
         imp_btn = wx.Button(self, label=_("Import…"), name="Import map")
         exp_btn = wx.Button(self, label=_("Export…"), name="Export map")
         load_btn.Bind(wx.EVT_BUTTON, self._on_load_selected)
+        up_btn.Bind(wx.EVT_BUTTON, lambda e: self._on_move(-1))
+        down_btn.Bind(wx.EVT_BUTTON, lambda e: self._on_move(+1))
         del_btn.Bind(wx.EVT_BUTTON, self._on_delete)
         imp_btn.Bind(wx.EVT_BUTTON, self._on_import)
         exp_btn.Bind(wx.EVT_BUTTON, self._on_export)
-        for b in (load_btn, del_btn, imp_btn, exp_btn):
+        for b in (load_btn, up_btn, down_btn, del_btn, imp_btn, exp_btn):
             btn_row.Add(b, 0, wx.RIGHT, 6)
         sizer.Add(btn_row, 0, wx.ALL, 8)
 
@@ -320,6 +326,51 @@ class ChannelsPanel(wx.Panel):
         self._refresh_list()
         self._notify_changed()
         speech.output(_("Deleted channel {n}.").format(n=ch.number))
+
+    def _select_row(self, idx: int) -> None:
+        if 0 <= idx < self._list.GetItemCount():
+            self._list.Select(idx)
+            self._list.Focus(idx)
+            self._list.EnsureVisible(idx)
+
+    def _on_move(self, direction: int) -> None:
+        """Reorder by swapping the selected channel's number with its neighbour."""
+        ch = self._selected_channel()
+        cmap = self._store.active_map()
+        if ch is None or cmap is None:
+            speech.output(_("No channel selected."))
+            return
+        chans = cmap.sorted_channels()
+        idx = chans.index(ch)
+        tgt = idx + direction
+        if not 0 <= tgt < len(chans):
+            speech.output(_("Already at the edge."))
+            return
+        other = chans[tgt]
+        ch.number, other.number = other.number, ch.number
+        self._refresh_list()
+        self._notify_changed()
+        self._select_row(tgt)
+        speech.output(_("Channel {n}.").format(n=ch.number))
+
+    def _on_mode_settings(self, _event: wx.CommandEvent) -> None:
+        ch = self._selected_channel()
+        if ch is None:
+            speech.output(_("Select a channel first."))
+            return
+        from config.mode_params import params_for
+        if not params_for(ch.mode):
+            speech.output(_("No settings for {mode}.").format(mode=ch.mode))
+            return
+        from ui.dialogs.mode_settings_dialog import ModeSettingsDialog
+        dlg = ModeSettingsDialog(
+            self, ch.mode, ch, is_override=True,
+            title=_("{label} — {mode} settings").format(label=ch.label, mode=ch.mode),
+        )
+        if dlg.ShowModal() == wx.ID_OK:
+            self._notify_changed()
+            speech.output(_("Channel settings saved."))
+        dlg.Destroy()
 
     # ------------------------------------------------------------------
     # Import / export (single map as JSON)

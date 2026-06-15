@@ -26,6 +26,14 @@ class Channel:
     frequency: int                  # Hz
     mode: str = "WFM"
     bandwidth: int = 200_000        # Hz
+    # Optional per-channel mode overrides — None inherits the global setting.
+    # Attribute names match config.mode_params / Settings.
+    nfm_deviation: Optional[int] = None
+    nfm_ctcss_notch: Optional[bool] = None
+    wfm_deemphasis: Optional[str] = None
+    wfm_stereo_mode: Optional[str] = None
+    wfm_hiblend_enabled: Optional[bool] = None
+    wfm_rds_enabled: Optional[bool] = None
 
 
 @dataclass

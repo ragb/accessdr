@@ -168,18 +168,16 @@ class MainWindow(wx.Frame):
         item_spectrum = options_menu.Append(wx.ID_ANY, _("&Spectrum Settings…\tCtrl+S"))
         item_audio = options_menu.Append(wx.ID_ANY, _("&Audio Settings…\tCtrl+D"))
         item_rec = options_menu.Append(wx.ID_ANY, _("R&ecording Settings…\tCtrl+E"))
-        item_wfm = options_menu.Append(wx.ID_ANY, _("&WFM Settings…\tCtrl+W"))
-        item_nfm = options_menu.Append(wx.ID_ANY, _("&NFM Settings…"))
         options_menu.AppendSeparator()
         item_rtl_tcp = options_menu.Append(wx.ID_ANY, _("Remote SD&R…\tCtrl+G"))
         self.Bind(wx.EVT_MENU, lambda e: self._open_rf_dialog(), item_rf)
         self.Bind(wx.EVT_MENU, lambda e: self._open_spectrum_dialog(), item_spectrum)
         self.Bind(wx.EVT_MENU, lambda e: self._open_audio_dialog(), item_audio)
         self.Bind(wx.EVT_MENU, lambda e: self._open_recording_dialog(), item_rec)
-        self.Bind(wx.EVT_MENU, lambda e: self._open_wfm_dialog(), item_wfm)
-        self.Bind(wx.EVT_MENU, lambda e: self._open_nfm_dialog(), item_nfm)
         self.Bind(wx.EVT_MENU, lambda e: self._open_rtl_tcp_dialog(), item_rtl_tcp)
         mb.Append(options_menu, _("&Options"))
+        # WFM/NFM settings now live on the per-mode "Settings…" buttons
+        # (VFO, Bands, Channels); Ctrl+W / Ctrl+Shift+N still open them.
 
         # Help
         help_menu = wx.Menu()
@@ -337,10 +335,12 @@ class MainWindow(wx.Frame):
         self._mode_choice = wx.Choice(page, choices=MODES, name="Demodulation mode")
         self._mode_choice.SetStringSelection(self._settings.mode)
         self._mode_choice.Bind(wx.EVT_CHOICE, self._on_mode_change)
+        mode_settings_btn = wx.Button(page, label=_("Settings…"), name="Mode settings")
+        mode_settings_btn.Bind(wx.EVT_BUTTON, lambda e: self._open_mode_settings())
         bw_label = wx.StaticText(page, label=_("BW:"))
         self._bw_choice = wx.Choice(page, choices=[], name="Filter bandwidth")
         self._bw_choice.Bind(wx.EVT_CHOICE, self._on_bw_change)
-        for w in (mode_label, self._mode_choice, bw_label, self._bw_choice):
+        for w in (mode_label, self._mode_choice, mode_settings_btn, bw_label, self._bw_choice):
             mode_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
         sizer.Add(mode_row, 0, wx.ALL, 6)
 
@@ -483,6 +483,38 @@ class MainWindow(wx.Frame):
         self._radio.set_mode(mode, wfm_kw, nfm_kw)
         speech.output(_("Mode {mode}").format(mode=mode))
 
+    def _apply_mode_overrides(self, source) -> None:
+        """Apply a band/channel's non-None mode overrides to live settings.
+
+        Attribute names on the source match config.mode_params / Settings,
+        so the override simply replaces the global value for this session.
+        """
+        from config.mode_params import params_for
+        changed = False
+        for p in params_for(self._settings.mode):
+            val = getattr(source, p.key, None)
+            if val is not None:
+                setattr(self._settings, p.key, val)
+                changed = True
+        if changed:
+            self._radio.rebuild_wfm()
+            self._radio.rebuild_nfm()
+
+    def _open_mode_settings(self) -> None:
+        """Open the settings editor for the current (live) demod mode."""
+        from config.mode_params import params_for
+        from ui.dialogs.mode_settings_dialog import ModeSettingsDialog
+        mode = self._settings.mode
+        if not params_for(mode):
+            speech.output(_("No settings for {mode}.").format(mode=mode))
+            return
+        dlg = ModeSettingsDialog(self, mode, self._settings, is_override=False)
+        if dlg.ShowModal() == wx.ID_OK:
+            self._radio.rebuild_wfm()
+            self._radio.rebuild_nfm()
+            speech.output(_("{mode} settings applied.").format(mode=mode))
+        dlg.Destroy()
+
     def _set_bandwidth(self, value: int) -> None:
         """Select a bandwidth value, syncing the choice control.
 
@@ -522,6 +554,7 @@ class MainWindow(wx.Frame):
         self._cursor.reset_offset()
         self._set_mode(ch.mode)
         self._set_bandwidth(ch.bandwidth)
+        self._apply_mode_overrides(ch)
         self._tune(ch.frequency)
         speech.output(
             _("Channel {n}, {label}, {freq}").format(
@@ -539,12 +572,7 @@ class MainWindow(wx.Frame):
         self._opstate.set_scene(scene)
         self._set_mode(scene.mode)
         self._set_bandwidth(scene.bandwidth)
-        if scene.nfm_deviation is not None:
-            self._settings.nfm_deviation = scene.nfm_deviation
-            self._radio.rebuild_nfm()
-        if scene.wfm_deemphasis is not None:
-            self._settings.wfm_deemphasis = scene.wfm_deemphasis
-            self._radio.rebuild_wfm()
+        self._apply_mode_overrides(scene)
         if scene.squelch is not None:
             self._settings.squelch = scene.squelch
             self._audio.squelch = scene.squelch
@@ -911,8 +939,6 @@ class MainWindow(wx.Frame):
             kb.OPEN_CHANNELS_DIALOG: self._show_channels_tab,
             kb.OPEN_BANDS_DIALOG:   self._open_bands_dialog,
             kb.OPEN_AUDIO_DIALOG:   self._open_audio_dialog,
-            kb.OPEN_WFM_DIALOG:     self._open_wfm_dialog,
-            kb.OPEN_NFM_DIALOG:     self._open_nfm_dialog,
             kb.OPEN_RTL_TCP_DIALOG: self._open_rtl_tcp_dialog,
             kb.OPEN_RECORDING_DIALOG: self._open_recording_dialog,
             kb.OPEN_USER_GUIDE:     lambda: self._on_open_user_guide(None),
@@ -1203,20 +1229,6 @@ class MainWindow(wx.Frame):
         dlg.ShowModal()
         dlg.Destroy()
 
-    def _open_wfm_dialog(self) -> None:
-        from ui.dialogs.wfm_dialog import WFMDialog
-        dlg = WFMDialog(self, self._settings)
-        if dlg.ShowModal() == wx.ID_OK:
-            self._on_wfm_settings_changed()
-        dlg.Destroy()
-
-    def _open_nfm_dialog(self) -> None:
-        from ui.dialogs.nfm_dialog import NFMDialog
-        dlg = NFMDialog(self, self._settings)
-        if dlg.ShowModal() == wx.ID_OK:
-            self._on_nfm_settings_changed()
-        dlg.Destroy()
-
     def _open_rtl_tcp_dialog(self) -> None:
         from ui.dialogs.rtl_tcp_dialog import RtlTcpDialog
         import copy
@@ -1275,14 +1287,6 @@ class MainWindow(wx.Frame):
     # ==================================================================
     # Callbacks
     # ==================================================================
-
-    def _on_wfm_settings_changed(self) -> None:
-        """Apply WFM settings changes — rebuild demodulator if in WFM mode."""
-        self._radio.rebuild_wfm()
-
-    def _on_nfm_settings_changed(self) -> None:
-        """Apply NFM settings changes — rebuild demodulator if in NFM mode."""
-        self._radio.rebuild_nfm()
 
     def _on_rf_settings_changed(self, settings: Settings) -> None:
         self._settings = settings

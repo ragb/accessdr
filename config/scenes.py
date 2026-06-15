@@ -33,9 +33,14 @@ class Scene:
     bandwidth: int = 200_000        # Hz
     step: int = 0                   # Hz; 0 == follow the user's tuning step
     default_freq: Optional[int] = None  # where to land on load; None = band start
-    # Optional demod overrides — None leaves the current setting untouched.
+    # Optional demod overrides — None leaves the global setting untouched.
+    # Attribute names match config.mode_params / Settings.
     nfm_deviation: Optional[int] = None
+    nfm_ctcss_notch: Optional[bool] = None
     wfm_deemphasis: Optional[str] = None
+    wfm_stereo_mode: Optional[str] = None
+    wfm_hiblend_enabled: Optional[bool] = None
+    wfm_rds_enabled: Optional[bool] = None
     squelch: Optional[float] = None
     # Service category, used to group bands in the Bands tree.
     group: str = ""

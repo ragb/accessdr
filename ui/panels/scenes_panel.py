@@ -23,7 +23,6 @@ from ui.panels import band_tree
 
 # Step choice: a leading "follow tuning step" entry maps to step == 0.
 _STEP_VALUES = [0] + STEPS
-_DEEMPH_CHOICES = [("", N_("(no override)")), ("50", "50 µs"), ("75", "75 µs")]
 
 
 def _parse_opt_freq(text: str) -> Optional[int]:
@@ -115,30 +114,19 @@ class ScenesPanel(wx.Panel):
 
         form_sizer.Add(grid, 0, wx.EXPAND | wx.ALL, 6)
 
-        # Advanced (optional demod overrides)
-        adv_box = wx.StaticBox(self, label=_("Advanced overrides (optional)"))
+        # Advanced: band squelch + per-mode settings (overrides) button
+        adv_box = wx.StaticBox(self, label=_("Advanced (optional)"))
         adv_sizer = wx.StaticBoxSizer(adv_box, wx.VERTICAL)
         adv_grid = wx.FlexGridSizer(cols=2, vgap=6, hgap=8)
         adv_grid.AddGrowableCol(1)
-
-        def _adv_row(label_text: str, ctrl: wx.Window) -> None:
-            adv_grid.Add(wx.StaticText(self, label=label_text), 0, wx.ALIGN_CENTER_VERTICAL)
-            adv_grid.Add(ctrl, 1, wx.EXPAND)
-
-        self._nfm_dev_ctrl = wx.TextCtrl(self, name="NFM deviation override")
-        _adv_row(_("NFM deviation (Hz):"), self._nfm_dev_ctrl)
-
-        self._deemph_ctrl = wx.Choice(
-            self, choices=[lbl for _v, lbl in _DEEMPH_CHOICES],
-            name="WFM de-emphasis override",
-        )
-        self._deemph_ctrl.SetSelection(0)
-        _adv_row(_("WFM de-emphasis:"), self._deemph_ctrl)
-
+        adv_grid.Add(wx.StaticText(self, label=_("Squelch (dBm):")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._squelch_ctrl = wx.TextCtrl(self, name="Squelch override")
-        _adv_row(_("Squelch (dBm):"), self._squelch_ctrl)
-
+        adv_grid.Add(self._squelch_ctrl, 1, wx.EXPAND)
         adv_sizer.Add(adv_grid, 0, wx.EXPAND | wx.ALL, 6)
+
+        ms_btn = wx.Button(self, label=_("Mode settings…"), name="Band mode settings")
+        ms_btn.Bind(wx.EVT_BUTTON, self._on_mode_settings)
+        adv_sizer.Add(ms_btn, 0, wx.ALL, 4)
         form_sizer.Add(adv_sizer, 0, wx.EXPAND | wx.ALL, 4)
 
         form_btns = wx.BoxSizer(wx.HORIZONTAL)
@@ -231,12 +219,14 @@ class ScenesPanel(wx.Panel):
             _STEP_VALUES.index(s.step) if s.step in _STEP_VALUES else 0
         )
         self._default_ctrl.SetValue("" if s.default_freq is None else fmt_freq(s.default_freq))
-        self._nfm_dev_ctrl.SetValue("" if s.nfm_deviation is None else str(s.nfm_deviation))
-        deemph_vals = [v for v, _lbl in _DEEMPH_CHOICES]
-        self._deemph_ctrl.SetSelection(
-            deemph_vals.index(s.wfm_deemphasis) if s.wfm_deemphasis in deemph_vals else 0
-        )
         self._squelch_ctrl.SetValue("" if s.squelch is None else f"{s.squelch:.0f}")
+
+    # Mode-override attributes carried across a form save (edited via the
+    # "Mode settings…" button, not the structural form fields).
+    _OVERRIDE_KEYS = (
+        "nfm_deviation", "nfm_ctcss_notch", "wfm_deemphasis",
+        "wfm_stereo_mode", "wfm_hiblend_enabled", "wfm_rds_enabled",
+    )
 
     def _read_form(self) -> Optional[Scene]:
         name = self._name_ctrl.GetValue().strip()
@@ -250,12 +240,10 @@ class ScenesPanel(wx.Panel):
         except ValueError:
             speech.output(_("Invalid frequency."))
             return None
-        nfm_dev = self._nfm_dev_ctrl.GetValue().strip()
         squelch = self._squelch_ctrl.GetValue().strip()
-        deemph = _DEEMPH_CHOICES[self._deemph_ctrl.GetSelection()][0]
         group = self._group_ctrl.GetValue().strip()
         try:
-            return Scene(
+            scene = Scene(
                 name=name,
                 freq_start=start,
                 freq_end=end,
@@ -263,14 +251,37 @@ class ScenesPanel(wx.Panel):
                 bandwidth=self._form_bandwidth(),
                 step=_STEP_VALUES[self._step_ctrl.GetSelection()],
                 default_freq=default_freq,
-                nfm_deviation=int(nfm_dev) if nfm_dev else None,
-                wfm_deemphasis=deemph or None,
                 squelch=float(squelch) if squelch else None,
                 group=group,
             )
         except ValueError:
-            speech.output(_("Invalid numeric override."))
+            speech.output(_("Invalid numeric value."))
             return None
+        # Preserve mode overrides set via the Mode settings dialog.
+        existing = self._store.by_name(name)
+        if existing is not None:
+            for key in self._OVERRIDE_KEYS:
+                setattr(scene, key, getattr(existing, key))
+        return scene
+
+    def _on_mode_settings(self, _event: wx.CommandEvent) -> None:
+        s = self._selected_scene()
+        if s is None:
+            speech.output(_("Select a band first."))
+            return
+        from config.mode_params import params_for
+        if not params_for(s.mode):
+            speech.output(_("No settings for {mode}.").format(mode=s.mode))
+            return
+        from ui.dialogs.mode_settings_dialog import ModeSettingsDialog
+        dlg = ModeSettingsDialog(
+            self, s.mode, s, is_override=True,
+            title=_("{name} — {mode} settings").format(name=s.name, mode=s.mode),
+        )
+        if dlg.ShowModal() == wx.ID_OK:
+            self._notify_changed()
+            speech.output(_("Band settings saved."))
+        dlg.Destroy()
 
     def _on_save_scene(self, _event: wx.CommandEvent) -> None:
         scene = self._read_form()
