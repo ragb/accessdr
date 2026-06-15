@@ -19,11 +19,11 @@ from accessibility import speech
 from config.modes import BW_OPTIONS, MODES, STEP_LABELS, STEPS
 from config.scenes import Scene, SceneStore
 from ui.formatting import fmt_freq, parse_freq
+from ui.panels import band_tree
 
 # Step choice: a leading "follow tuning step" entry maps to step == 0.
 _STEP_VALUES = [0] + STEPS
 _DEEMPH_CHOICES = [("", N_("(no override)")), ("50", "50 µs"), ("75", "75 µs")]
-_UNGROUPED = N_("General")
 
 
 def _parse_opt_freq(text: str) -> Optional[int]:
@@ -32,12 +32,6 @@ def _parse_opt_freq(text: str) -> Optional[int]:
     if not text:
         return None
     return parse_freq(text, default_unit="mhz")
-
-
-def _group_order() -> list:
-    """Display order for band groups: General, then the service order."""
-    from config.bands import GROUP_ORDER
-    return [_UNGROUPED] + list(GROUP_ORDER)
 
 
 class ScenesPanel(wx.Panel):
@@ -91,7 +85,7 @@ class ScenesPanel(wx.Panel):
         self._name_ctrl = wx.TextCtrl(self, name="Band name")
         _row(_("Name:"), self._name_ctrl)
 
-        self._group_ctrl = wx.ComboBox(self, choices=_group_order(), name="Band group")
+        self._group_ctrl = wx.ComboBox(self, choices=band_tree.group_order(), name="Band group")
         _row(_("Group:"), self._group_ctrl)
 
         self._start_ctrl = wx.TextCtrl(self, name="Band start")
@@ -179,33 +173,17 @@ class ScenesPanel(wx.Panel):
     # Tree
     # ------------------------------------------------------------------
 
-    def _band_summary(self, s: Scene) -> str:
-        if s.unbounded:
-            return s.name
-        return f"{s.name}  ({fmt_freq(s.freq_start)}–{fmt_freq(s.freq_end)}, {s.mode})"
-
     def _refresh_tree(self) -> None:
-        self._tree.DeleteChildren(self._root)
-        # Group scenes by their group (blank → General).
-        groups: dict = {}
+        band_tree.populate(self._tree, self._root, self._store)
+        # Offer the standard groups plus any custom ones the user has made.
+        groups = list(band_tree.group_order())
         for s in self._store.get_all():
-            groups.setdefault(s.group or _UNGROUPED, []).append(s)
-        ordered = [g for g in _group_order() if g in groups]
-        ordered += [g for g in groups if g not in ordered]
-        for g in ordered:
-            node = self._tree.AppendItem(self._root, g)
-            for s in groups[g]:
-                leaf = self._tree.AppendItem(node, self._band_summary(s))
-                self._tree.SetItemData(leaf, s)
-            self._tree.Expand(node)
-        # Keep the group combo in sync with known groups.
-        self._group_ctrl.Set(ordered or _group_order())
+            if s.group and s.group not in groups:
+                groups.append(s.group)
+        self._group_ctrl.Set(groups)
 
     def _selected_scene(self) -> Optional[Scene]:
-        item = self._tree.GetSelection()
-        if not item.IsOk():
-            return None
-        return self._tree.GetItemData(item)   # None for a group node
+        return band_tree.selected(self._tree)
 
     def _refresh_bw_choices(self, mode: str, select_value: Optional[int] = None) -> None:
         options = BW_OPTIONS.get(mode, [])

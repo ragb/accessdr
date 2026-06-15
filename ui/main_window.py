@@ -285,17 +285,18 @@ class MainWindow(wx.Frame):
         page.SetName("VFO panel")
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # Band row (a band is a VFO preset; managed via the Bands dialog)
-        scene_row = wx.BoxSizer(wx.HORIZONTAL)
-        scene_label = wx.StaticText(page, label=_("Band:"))
-        self._scene_choice = wx.Choice(
-            page, choices=[s.name for s in self._scenes.get_all()], name="Band"
+        # Band tree (grouped by service; Enter/activate applies a band)
+        sizer.Add(wx.StaticText(page, label=_("Band:")), 0, wx.LEFT | wx.TOP, 6)
+        self._band_tree = wx.TreeCtrl(
+            page,
+            style=wx.TR_HIDE_ROOT | wx.TR_HAS_BUTTONS | wx.TR_SINGLE
+            | wx.TR_FULL_ROW_HIGHLIGHT | wx.BORDER_SUNKEN,
+            name="Band selector",
         )
-        self._scene_choice.SetStringSelection(self._opstate.scene.name)
-        self._scene_choice.Bind(wx.EVT_CHOICE, self._on_scene_choice)
-        for w in (scene_label, self._scene_choice):
-            scene_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
-        sizer.Add(scene_row, 0, wx.ALL, 6)
+        self._band_tree_root = self._band_tree.AddRoot("bands")
+        self._band_tree.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_band_tree_activate)
+        self._refresh_band_tree()
+        sizer.Add(self._band_tree, 1, wx.EXPAND | wx.ALL, 6)
 
         # Frequency row
         freq_row = wx.BoxSizer(wx.HORIZONTAL)
@@ -553,7 +554,7 @@ class MainWindow(wx.Frame):
         if landing is not None:
             self._cursor.reset_offset()
             self._tune(landing)
-        self._refresh_scene_choice()
+        self._refresh_band_tree()
         self._update_context_anchor()
         speech.output(_("Band {name}").format(name=scene.name))
 
@@ -817,7 +818,8 @@ class MainWindow(wx.Frame):
         # spinners) handle the arrow keys themselves; cursor/frequency arrows
         # act only when focus is on the spectrum, a button, or the panel.
         if code in (wx.WXK_UP, wx.WXK_DOWN, wx.WXK_LEFT, wx.WXK_RIGHT) and isinstance(
-            focused, (wx.Choice, wx.ComboBox, wx.Slider, wx.SpinCtrl, wx.SpinCtrlDouble)
+            focused, (wx.Choice, wx.ComboBox, wx.Slider, wx.SpinCtrl,
+                      wx.SpinCtrlDouble, wx.TreeCtrl, wx.ListCtrl)
         ):
             event.Skip()
             return
@@ -1144,22 +1146,23 @@ class MainWindow(wx.Frame):
         self.SetTitle("{base} - {ctx}".format(base=self._base_title, ctx=ctx))
         self._statusbar.SetStatusText(ctx)
 
-    def _on_scene_choice(self, _event: wx.CommandEvent) -> None:
-        """Apply the scene picked from the VFO-tab dropdown."""
-        scene = self._scenes.by_name(self._scene_choice.GetStringSelection())
+    def _on_band_tree_activate(self, _event) -> None:  # noqa: ANN001
+        """Apply the band activated (Enter/double-click) in the VFO tree."""
+        from ui.panels import band_tree
+        scene = band_tree.selected(self._band_tree)
         if scene is not None:
             self._on_scene_apply(scene)
 
     def _on_scenes_changed(self) -> None:
-        """Refresh the VFO scene dropdown after scene edits."""
-        self._refresh_scene_choice()
+        """Rebuild the VFO band tree after band edits."""
+        self._refresh_band_tree()
 
-    def _refresh_scene_choice(self) -> None:
-        """Rebuild the VFO scene dropdown and select the active scene."""
-        self._scene_choice.Set([s.name for s in self._scenes.get_all()])
-        if not self._scene_choice.SetStringSelection(self._opstate.scene.name):
-            if self._scene_choice.GetCount():
-                self._scene_choice.SetSelection(0)
+    def _refresh_band_tree(self) -> None:
+        """Rebuild the VFO band tree and select the active band."""
+        from ui.panels import band_tree
+        band_tree.populate(self._band_tree, self._band_tree_root, self._scenes)
+        band_tree.select_band(self._band_tree, self._band_tree_root,
+                              self._opstate.scene.name)
 
     def _on_scene_apply(self, scene: Scene) -> None:
         """Apply a scene: switch to the VFO tab (-> VFO mode) and load the band."""
