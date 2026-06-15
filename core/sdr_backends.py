@@ -30,6 +30,26 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Backend detection — pyrtlsdr
 # ---------------------------------------------------------------------------
+# pyrtlsdr >= 0.4.0 loads librtlsdr with a bare CDLL('rtlsdr.dll'), relying on
+# the Windows DLL search path (it no longer adds the package dir itself).
+# Register the directory holding the bundled DLLs (for the pthreadVC2 /
+# msvcr100 dependencies) and pre-load rtlsdr.dll by absolute path so the
+# later bare-name import resolves to the already-loaded module — no patching
+# of the installed package required.
+try:
+    import os as _os
+    import sys as _sys
+    from config.paths import bundle_dir as _bundle_dir
+    _dll_dir = _bundle_dir()
+    if _sys.platform == "win32":
+        if hasattr(_os, "add_dll_directory") and _os.path.isdir(_dll_dir):
+            _os.add_dll_directory(_dll_dir)
+        _rtl_dll = _os.path.join(_dll_dir, "rtlsdr.dll")
+        if _os.path.isfile(_rtl_dll):
+            ctypes.CDLL(_rtl_dll)
+except Exception as _exc:   # noqa: BLE001
+    logger.debug("could not pre-load rtlsdr.dll: %s", _exc)
+
 try:
     from rtlsdr.rtlsdr import RtlSdr as _RtlSdrBase
     from rtlsdr.librtlsdr import librtlsdr as _librtlsdr
