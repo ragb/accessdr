@@ -119,6 +119,7 @@ class RadioController:
         else:
             self._sdr.set_tuner_bandwidth(0)  # auto
         self._sdr.set_dithering(self._settings.tuner_dithering)
+        self._sdr.bias_tee_gpio = self._settings.bias_tee_gpio
         self._sdr.set_bias_tee(self._settings.bias_tee)
 
         self._sdr.on_samples = self._pipeline.process
@@ -209,6 +210,7 @@ class RadioController:
             self._sdr.set_offset_tuning(s.offset_tuning)
             self._sdr.set_tuner_bandwidth(s.tuner_bandwidth)
             self._sdr.set_dithering(s.tuner_dithering)
+            self._sdr.bias_tee_gpio = s.bias_tee_gpio
             self._sdr.set_bias_tee(s.bias_tee)
             # Re-tune so a changed upconverter offset takes effect now.
             self._sdr.set_frequency(self._hw_freq(s.frequency))

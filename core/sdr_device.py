@@ -40,6 +40,8 @@ class SDRDevice:
         self.tuner_bandwidth: int = 0  # Hz, 0 = auto
         self.direct_sampling: int = 0  # 0 = off, 1 = I-branch, 2 = Q-branch
         self.tuner_dithering: bool = True
+        self.bias_tee: bool = False
+        self.bias_tee_gpio: int = 0
         self.applied_tuner_bandwidth: int = 0  # actual BW the tuner applied (Hz)
 
         self.on_samples: Optional[Callable[[np.ndarray], None]] = None
@@ -64,6 +66,8 @@ class SDRDevice:
             tuner_bandwidth=self.tuner_bandwidth,
             direct_sampling=self.direct_sampling,
             tuner_dithering=self.tuner_dithering,
+            bias_tee=self.bias_tee,
+            bias_tee_gpio=self.bias_tee_gpio,
         )
         if not backend.open(device_index, config):
             if self.on_error:
@@ -132,8 +136,9 @@ class SDRDevice:
             self._backend.set_dithering(on)
 
     def set_bias_tee(self, on: bool) -> None:
+        self.bias_tee = on
         if self._backend is not None:
-            self._backend.set_bias_tee(on)
+            self._backend.set_bias_tee(on, self.bias_tee_gpio)
 
     def set_direct_sampling(self, mode: int) -> None:
         self.direct_sampling = mode
@@ -164,14 +169,27 @@ class SDRDevice:
 
     def stop(self) -> None:
         self._running = False
-        # Don't call cancel_async() from the main thread — on Windows/WinUSB,
-        # cross-thread rtlsdr_cancel_async while rtlsdr_read_async is running
-        # can cause access violations.  The async callback checks running()
-        # and calls cancel_async() from the capture thread itself.
+        # Proactively cancel the async read from this (main) thread.  We used to
+        # rely solely on the capture thread cancelling itself from a sample
+        # callback, but if that callback doesn't fire (or the first cancel
+        # doesn't take) the thread stays blocked inside rtlsdr_read_async,
+        # keeping device 0 claimed so it can't be reopened.  Cross-thread
+        # cancel is safe now that pyrtlsdr's close()-on-cancel is neutered
+        # (see PyRtlSdrBackend.open) — rtlsdr_cancel_async is just a
+        # thread-safe libusb_cancel_transfer.
+        if self._backend is not None:
+            self._backend.cancel_async()
         if self._thread is not None:
-            self._thread.join(timeout=5.0)
+            self._thread.join(timeout=2.0)
             if self._thread.is_alive():
-                logger.error("SDR capture thread did not exit within 5 s")
+                # Cancel didn't take on the first try — retry, then wait longer.
+                logger.warning("capture thread slow to stop; retrying cancel")
+                if self._backend is not None:
+                    self._backend.cancel_async()
+                self._thread.join(timeout=3.0)
+                if self._thread.is_alive():
+                    logger.error("SDR capture thread did not exit; device may "
+                                 "stay busy until replug")
             self._thread = None
 
     def pause(self) -> None:
