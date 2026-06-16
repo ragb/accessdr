@@ -31,6 +31,7 @@ from config.locale_utils import detect_deemphasis_tau
 from .ctcss import CTCSSDetector
 from .filters import Resampler, make_lowpass_iir, make_bandpass_iir, deemphasis_filter
 from .rds import RDSDecoder
+from .squelch_metric import AMCarrierMetric, FMNoiseMetric
 
 logger = logging.getLogger(__name__)
 
@@ -193,12 +194,20 @@ class WFMDemodulator(Demodulator):
         # RDS decoder
         self._rds = RDSDecoder(baseband_rate)
 
+        # Carrier squelch: above-audio noise metric
+        self._noise_metric = FMNoiseMetric(baseband_rate, "WFM")
+
         self.stereo_detected: bool = False
         self._pilot_count: int = 0
         self._pilot_check_ctr: int = 0
         self._stereo_blend: float = 0.0   # 0 = mono, 1 = full stereo
         self._last_pilot_snr: float = 0.0
         self._hiblend: float = 0.0        # 0 = full BW, 1 = hi-cut active
+
+    @property
+    def noise_db(self) -> float:
+        """Above-audio noise power (dB) — lower = stronger FM signal."""
+        return self._noise_metric._smooth_db
 
     @property
     def rds_station(self) -> str:
@@ -228,6 +237,9 @@ class WFMDemodulator(Demodulator):
 
         # FM discriminant → normalized MPX baseband (±1.0 at full deviation)
         mpx = _fm_discriminant(iq) * self._disc_gain
+
+        # Carrier squelch: measure above-audio noise in discriminator output
+        self._noise_metric.process(mpx)
 
         # Extract L+R (mono sum, 0–15 kHz)
         lpr, self._zi_lpr = sp_signal.sosfilt(
@@ -418,12 +430,27 @@ class NFMDemodulator(Demodulator):
         self._zi_lp = sp_signal.sosfilt_zi(self._lp_sos) * 0.0
         # CTCSS tone detector (operates on resampled audio)
         self._ctcss = CTCSSDetector(audio_rate)
+        # Carrier squelch: above-audio noise metric.
+        # The noise band sits just above the expected audio content.
+        # For narrow-deviation signals (e.g. CB ±2 kHz), audio tops out
+        # around deviation + 0.5 kHz, so the noise band must be lower
+        # than the standard 4–6 kHz to actually sit above the signal.
+        audio_top = deviation + 500.0  # Hz
+        noise_lo = max(audio_top, 3_000.0)  # never below 3 kHz
+        noise_hi = noise_lo + 2_000.0       # 2 kHz wide band
+        self._noise_metric = FMNoiseMetric(
+            baseband_rate, "NFM", noise_band=(noise_lo, noise_hi))
         # CTCSS notch filter state
         self._ctcss_notch_enabled: bool = kwargs.get("ctcss_notch", True)
         self._notch_tone: float | None = None
         self._notch_b: np.ndarray | None = None
         self._notch_a: np.ndarray | None = None
         self._notch_zi: np.ndarray | None = None
+
+    @property
+    def noise_db(self) -> float:
+        """Above-audio noise power (dB) — lower = stronger FM signal."""
+        return self._noise_metric._smooth_db
 
     @property
     def ctcss_tone(self) -> float | None:
@@ -437,6 +464,8 @@ class NFMDemodulator(Demodulator):
         if float(np.sqrt(np.mean(np.square(mag)))) > 0.03:
             iq = iq / np.maximum(mag, np.float32(1e-10))
         disc = _fm_discriminant(iq) * self._disc_gain
+        # Carrier squelch: measure above-audio noise in discriminator output
+        self._noise_metric.process(disc)
         audio, self._zi_lp = sp_signal.sosfilt(
             self._lp_sos, disc, zi=self._zi_lp)
         resampled = self._resample(audio)
@@ -483,10 +512,20 @@ class AMDemodulator(Demodulator):
         self._zi_dc = sp_signal.lfilter_zi(self._dc_b, self._dc_a) * 0.0
         # Smoothed carrier amplitude for AM AGC (0 = not yet seeded).
         self._carrier_level: float = 0.0
+        # Carrier-to-noise squelch metric
+        self._cnr_metric = AMCarrierMetric()
+
+    @property
+    def cnr_db(self) -> float:
+        """Carrier-to-noise ratio (dB) — higher = stronger AM signal."""
+        return self._cnr_metric._smooth_db
 
     def process(self, iq: np.ndarray) -> np.ndarray:
         iq = self._channel_filter(iq)
         envelope = np.abs(iq).astype(np.float64)
+
+        # Carrier squelch: measure CNR on channel-filtered envelope
+        self._cnr_metric.process(envelope)
 
         # AM AGC: the raw envelope scales with RF level, so without this the
         # audio level swings with signal strength and is far quieter than the

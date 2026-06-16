@@ -103,13 +103,6 @@ class ScannerDialog(wx.Frame):
         self._map_choice.Bind(wx.EVT_CHOICE, lambda e: self._update_info())
         grid.Add(self._map_choice, 1, wx.EXPAND)
 
-        # Squelch threshold
-        grid.Add(wx.StaticText(panel, label=_("Squelch (dBm):")), 0, wx.ALIGN_CENTER_VERTICAL)
-        self._squelch = wx.SpinCtrl(
-            panel, value="-60", min=-120, max=0, name="Scan squelch threshold dBm"
-        )
-        grid.Add(self._squelch, 1, wx.EXPAND)
-
         src_sizer.Add(grid, 0, wx.EXPAND | wx.ALL, 6)
 
         self._info = wx.StaticText(panel, label="", name="Scan range")
@@ -215,7 +208,6 @@ class ScannerDialog(wx.Frame):
     # ------------------------------------------------------------------
 
     def _on_start(self, _event: wx.CommandEvent) -> None:
-        squelch = float(self._squelch.GetValue())
         self._results_list.DeleteAllItems()
 
         if self._source.GetSelection() == _SRC_BAND:
@@ -226,7 +218,7 @@ class ScannerDialog(wx.Frame):
             step = band.step if band.step > 0 else _DEFAULT_STEP_HZ
             self._set_mode(band.mode)
             self._status.SetLabel(_("Scanning band {name}…").format(name=band.name))
-            self._scanner.start(band.freq_start, band.freq_end, step, squelch)
+            self._scanner.start(band.freq_start, band.freq_end, step)
             speech.output(
                 _("Scanning band {name}, {start} to {stop}.").format(
                     name=band.name,
@@ -243,9 +235,6 @@ class ScannerDialog(wx.Frame):
             if not chans:
                 speech.output(_("This channel map is empty."))
                 return
-            # Set the demod mode from the first channel so a stop on a hit is
-            # audible.  (Detection itself is mode-independent — it reads the
-            # spectrum peak.)
             self._set_mode(chans[0].mode)
             freqs = [c.frequency for c in chans]
             labels = [
@@ -253,7 +242,7 @@ class ScannerDialog(wx.Frame):
                 for c in chans
             ]
             self._status.SetLabel(_("Scanning map {name}…").format(name=cmap.name))
-            self._scanner.start_list(freqs, squelch, labels)
+            self._scanner.start_list(freqs, labels)
             speech.output(
                 _("Scanning channel map {name}, {count} channels.").format(
                     name=cmap.name, count=len(chans)

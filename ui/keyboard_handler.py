@@ -36,7 +36,6 @@ SCENE_NEXT = "scene_next"
 
 # --- Radio control ---
 START_STOP = "start_stop"
-TOGGLE_PAUSE = "toggle_pause"
 TOGGLE_MUTE = "toggle_mute"
 TOGGLE_RECORDING = "toggle_recording"
 
@@ -48,6 +47,8 @@ VOLUME_UP = "volume_up"
 VOLUME_DOWN = "volume_down"
 SQUELCH_UP = "squelch_up"
 SQUELCH_DOWN = "squelch_down"
+SQUELCH_TOGGLE = "squelch_toggle"
+SQUELCH_MONITOR = "squelch_monitor"
 
 # --- Sonification / spectrum ---
 SNAPSHOT = "snapshot"
@@ -99,8 +100,6 @@ def _build_keymap() -> dict[tuple[int, int], str]:
     km: dict[tuple[int, int], str] = {
         # Radio control
         (wx.WXK_F2, NONE):           START_STOP,
-        (wx.WXK_SPACE, NONE):        TOGGLE_PAUSE,
-        (wx.WXK_SPACE, M):           TOGGLE_PAUSE,
         (wx.WXK_F3, NONE):           TOGGLE_MUTE,
 
         # Frequency
@@ -130,6 +129,10 @@ def _build_keymap() -> dict[tuple[int, int], str]:
         (wx.WXK_F12, NONE):         VOLUME_DOWN,
         (wx.WXK_F11, S):            SQUELCH_UP,
         (wx.WXK_F12, S):            SQUELCH_DOWN,
+        (ord("A"), M | S):          SQUELCH_TOGGLE,
+        (wx.WXK_F4, M):             SQUELCH_TOGGLE,
+        (ord("L"), NONE):            SQUELCH_MONITOR,
+        (wx.WXK_F4, NONE):          SQUELCH_MONITOR,
 
         # Sonification
         (wx.WXK_F5, NONE):          SNAPSHOT,

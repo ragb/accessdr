@@ -121,8 +121,8 @@ class ChannelsPanel(wx.Panel):
         self._bw_ctrl = wx.Choice(self, name="Channel bandwidth")
         grid.Add(self._bw_ctrl, 0)
 
-        grid.Add(wx.StaticText(self, label=_("Squelch (dBm, optional):")), 0, wx.ALIGN_CENTER_VERTICAL)
-        self._squelch_ctrl = wx.TextCtrl(self, name="Channel squelch")
+        grid.Add(wx.StaticText(self, label=_("Squelch sensitivity (0–10, optional):")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._squelch_ctrl = wx.TextCtrl(self, name="Channel squelch sensitivity")
         grid.Add(self._squelch_ctrl, 0)
 
         form_sizer.Add(grid, 0, wx.EXPAND | wx.ALL, 6)
@@ -280,7 +280,7 @@ class ChannelsPanel(wx.Panel):
         self._freq_ctrl.SetValue(fmt_freq(ch.frequency))
         self._mode_ctrl.SetStringSelection(ch.mode)
         self._refresh_bw_choices(ch.mode, ch.bandwidth)
-        self._squelch_ctrl.SetValue("" if ch.squelch is None else f"{ch.squelch:.0f}")
+        self._squelch_ctrl.SetValue("" if ch.squelch_sensitivity is None else str(ch.squelch_sensitivity))
         self._pending_overrides = {k: getattr(ch, k) for k in self._OVERRIDE_KEYS}
         self._update_ms_btn()
 
@@ -302,9 +302,9 @@ class ChannelsPanel(wx.Panel):
         bandwidth = self._form_bandwidth()
         sq_text = self._squelch_ctrl.GetValue().strip()
         try:
-            squelch = float(sq_text) if sq_text else None
+            squelch_sensitivity = int(sq_text) if sq_text else None
         except ValueError:
-            speech.output(_("Invalid squelch value."))
+            speech.output(_("Invalid squelch sensitivity."))
             return
         # Upsert by number.
         existing = next((c for c in cmap.channels if c.number == number), None)
@@ -316,7 +316,7 @@ class ChannelsPanel(wx.Panel):
             existing.frequency = freq_hz
             existing.mode = mode
             existing.bandwidth = bandwidth
-        existing.squelch = squelch
+        existing.squelch_sensitivity = squelch_sensitivity
         # Carry the modulation overrides edited via the Settings… button.
         for key, val in self._pending_overrides.items():
             setattr(existing, key, val)

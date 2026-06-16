@@ -41,7 +41,7 @@ class Scene:
     wfm_stereo_mode: Optional[str] = None
     wfm_hiblend_enabled: Optional[bool] = None
     wfm_rds_enabled: Optional[bool] = None
-    squelch: Optional[float] = None
+    squelch_sensitivity: Optional[int] = None  # 0–10; None = keep global
     # Service category, used to group bands in the Bands tree.
     group: str = ""
 

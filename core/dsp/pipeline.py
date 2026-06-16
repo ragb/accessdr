@@ -21,6 +21,9 @@ from core.dsp.filters import StatefulDecimator
 from core.dsp.mixer import Mixer
 from core.dsp.noise_blanker import NoiseBlanker
 from core.dsp.spectrum import SpectrumAnalyser
+from core.dsp.squelch_metric import (
+    AdaptiveNoiseFloor, AMAutoThreshold, FMAutoThreshold, sensitivity_to_margins,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +38,8 @@ class PipelineCallbacks:
     on_spectrum: Optional[Callable[[np.ndarray], None]] = None
     on_stereo_change: Optional[Callable[[bool], None]] = None
     on_rds_station: Optional[Callable[[str], None]] = None
+    noise_db_setter: Optional[Callable[[float], None]] = None
+    auto_squelch_threshold_setter: Optional[Callable[[float], None]] = None
 
 
 class DSPPipeline:
@@ -122,6 +127,13 @@ class DSPPipeline:
         # WFM kwargs for mode rebuilds
         self._wfm_kwargs = wfm_kwargs or {}
 
+        # Adaptive noise floor for non-FM auto squelch
+        self._adaptive_floor = AdaptiveNoiseFloor()
+        # FM carrier squelch auto threshold
+        self._fm_auto_threshold = FMAutoThreshold()
+        # AM carrier-to-noise auto threshold
+        self._am_auto_threshold = AMAutoThreshold()
+
     @property
     def baseband_rate(self) -> int:
         return self._baseband_rate
@@ -133,6 +145,13 @@ class DSPPipeline:
     @property
     def demodulator(self) -> Demodulator:
         return self._demodulator
+
+    def set_squelch_sensitivity(self, sensitivity: int) -> None:
+        """Update the squelch margin/headroom from a sensitivity level (0–10)."""
+        m = sensitivity_to_margins(sensitivity)
+        self._fm_auto_threshold.set_margin(m["fm_margin"])
+        self._am_auto_threshold.set_margin(m["am_margin"])
+        self._adaptive_floor.set_headroom(m["rssi_headroom"])
 
     def set_mode(
         self,
@@ -201,6 +220,9 @@ class DSPPipeline:
             )
             self._dsp_stereo = None
             self._stereo_delay = 0
+            self._adaptive_floor.reset()
+            self._fm_auto_threshold.reset()
+            self._am_auto_threshold.reset()
 
         # Handle retune
         if self._retune_pending:
@@ -212,6 +234,14 @@ class DSPPipeline:
             rds = getattr(self._demodulator, "_rds", None)
             if rds is not None:
                 rds.reset()
+            # Reset the noise metric smoother so stale values from the
+            # previous frequency don't keep the squelch gate open.
+            noise_metric = getattr(self._demodulator, "_noise_metric", None)
+            if noise_metric is not None:
+                noise_metric.reset()
+            cnr_metric = getattr(self._demodulator, "_cnr_metric", None)
+            if cnr_metric is not None:
+                cnr_metric.reset()
 
         # DC offset removal
         iq = iq - np.mean(iq)
@@ -236,6 +266,35 @@ class DSPPipeline:
         bb = self._decimator.process(mixed)
         audio = self._demodulator.process(bb)
         self._audio_write(audio)
+
+        # Auto squelch metric — three strategies by mode:
+        #   FM (WFM/NFM): carrier squelch via above-audio noise
+        #   AM/DSB: carrier-to-noise ratio on channel-filtered envelope
+        #   SSB/CW: adaptive RSSI noise floor tracking
+        noise_db_val = getattr(self._demodulator, "noise_db", None)
+        cnr_db_val = getattr(self._demodulator, "cnr_db", None)
+        if noise_db_val is not None:
+            # FM mode — forward the carrier squelch noise reading + threshold
+            if self._cb.noise_db_setter is not None:
+                self._cb.noise_db_setter(noise_db_val)
+            if self._cb.auto_squelch_threshold_setter is not None:
+                self._cb.auto_squelch_threshold_setter(
+                    self._fm_auto_threshold.update(noise_db_val))
+        elif cnr_db_val is not None:
+            # AM mode — forward the carrier-to-noise ratio + threshold
+            if self._cb.noise_db_setter is not None:
+                self._cb.noise_db_setter(cnr_db_val)
+            if self._cb.auto_squelch_threshold_setter is not None:
+                self._cb.auto_squelch_threshold_setter(
+                    self._am_auto_threshold.update(cnr_db_val))
+        else:
+            # SSB/CW — feed RSSI into adaptive noise floor tracker
+            rssi = 10.0 * np.log10(max(iq_power, 1e-10))
+            auto_thr = self._adaptive_floor.update(rssi)
+            if self._cb.noise_db_setter is not None:
+                self._cb.noise_db_setter(rssi)
+            if self._cb.auto_squelch_threshold_setter is not None:
+                self._cb.auto_squelch_threshold_setter(auto_thr)
 
         # Stereo/RDS tracking (WFM only)
         if self._mode == "WFM":

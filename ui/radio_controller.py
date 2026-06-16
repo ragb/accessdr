@@ -34,7 +34,6 @@ class RadioController:
         self._sdr = SDRDevice(chunk_size=settings.sdr_buffer_size, settings=settings)
         self._pipeline: Optional[DSPPipeline] = None
         self._running = False
-        self._paused = False
 
     # ------------------------------------------------------------------
     # Properties
@@ -43,10 +42,6 @@ class RadioController:
     @property
     def running(self) -> bool:
         return self._running
-
-    @property
-    def paused(self) -> bool:
-        return self._paused
 
     @property
     def pipeline(self) -> Optional[DSPPipeline]:
@@ -90,6 +85,12 @@ class RadioController:
         mode = self._settings.mode
         wfm_kw = self.wfm_kwargs() if mode == "WFM" else {}
         nfm_kw = self.nfm_kwargs() if mode == "NFM" else {}
+        # Wire auto squelch callbacks into pipeline callbacks
+        callbacks.noise_db_setter = (
+            lambda db: setattr(self._audio, "noise_db", db))
+        callbacks.auto_squelch_threshold_setter = (
+            lambda db: setattr(self._audio, "auto_squelch_threshold", db))
+
         self._pipeline = DSPPipeline(
             sample_rate=self._settings.sample_rate,
             chunk_size=self._sdr.chunk_size,
@@ -104,6 +105,11 @@ class RadioController:
             nfm_kwargs=nfm_kw,
             callbacks=callbacks,
         )
+
+        # Sync squelch state
+        self._audio.squelch_enabled = self._settings.squelch_enabled
+        self._audio.current_mode = mode
+        self._pipeline.set_squelch_sensitivity(self._settings.squelch_sensitivity)
 
         # Configure SDR hardware. Direct sampling first: it changes the
         # signal path, so the frequency below must be set in the right mode.
@@ -127,38 +133,16 @@ class RadioController:
         self._audio.start()
 
         self._running = True
-        self._paused = False
         return True
 
     def stop(self) -> None:
         """Stop capture, close SDR, stop audio, destroy pipeline."""
         self._running = False
-        self._paused = False
         self._sdr.stop()
         self._sdr.on_samples = None
         self._sdr.close()
         self._audio.stop()
         self._pipeline = None
-
-    def pause(self) -> bool:
-        """Pause capture and audio.
-
-        Returns True if paused, False if radio is already stopped.
-        """
-        if not self._running and not self._paused:
-            return False
-        self._sdr.pause()
-        self._audio.pause()
-        self._running = False
-        self._paused = True
-        return True
-
-    def resume(self) -> None:
-        """Resume capture and audio from paused state."""
-        self._sdr.start()
-        self._audio.resume()
-        self._running = True
-        self._paused = False
 
     # ------------------------------------------------------------------
     # Hardware / pipeline control
@@ -177,6 +161,11 @@ class RadioController:
         self._sdr.set_frequency(self._hw_freq(freq_hz))
         if self._pipeline is not None:
             self._pipeline.notify_retune()
+        # Force squelch gate closed so it must re-open based on the new
+        # frequency's metrics.  Prevents stale open state during scanning.
+        if hasattr(self._audio, "_sq_open"):
+            self._audio._sq_open = False
+            self._audio._sq_hang_remaining = 0
 
     def set_mode(
         self,
@@ -187,6 +176,7 @@ class RadioController:
         """Change demod mode on pipeline and set tuner BW to auto."""
         if self._pipeline is not None:
             self._pipeline.set_mode(mode, wfm_kwargs or {}, nfm_kwargs or {})
+        self._audio.current_mode = mode
         if self._running:
             self._sdr.set_tuner_bandwidth(0)
 

@@ -135,8 +135,8 @@ class ScenesPanel(wx.Panel):
         adv_sizer = wx.StaticBoxSizer(adv_box, wx.VERTICAL)
         adv_grid = wx.FlexGridSizer(cols=2, vgap=6, hgap=8)
         adv_grid.AddGrowableCol(1)
-        adv_grid.Add(wx.StaticText(self, label=_("Squelch (dBm):")), 0, wx.ALIGN_CENTER_VERTICAL)
-        self._squelch_ctrl = wx.TextCtrl(self, name="Squelch override")
+        adv_grid.Add(wx.StaticText(self, label=_("Squelch sensitivity (0–10):")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._squelch_ctrl = wx.TextCtrl(self, name="Squelch sensitivity override")
         adv_grid.Add(self._squelch_ctrl, 1, wx.EXPAND)
         adv_sizer.Add(adv_grid, 0, wx.EXPAND | wx.ALL, 6)
         form_sizer.Add(adv_sizer, 0, wx.EXPAND | wx.ALL, 4)
@@ -246,7 +246,7 @@ class ScenesPanel(wx.Panel):
             _STEP_VALUES.index(s.step) if s.step in _STEP_VALUES else 0
         )
         self._default_ctrl.SetValue("" if s.default_freq is None else fmt_freq(s.default_freq))
-        self._squelch_ctrl.SetValue("" if s.squelch is None else f"{s.squelch:.0f}")
+        self._squelch_ctrl.SetValue("" if s.squelch_sensitivity is None else str(s.squelch_sensitivity))
         self._pending_overrides = {k: getattr(s, k) for k in self._OVERRIDE_KEYS}
         self._update_ms_btn()
 
@@ -262,7 +262,7 @@ class ScenesPanel(wx.Panel):
         except ValueError:
             speech.output(_("Invalid frequency."))
             return None
-        squelch = self._squelch_ctrl.GetValue().strip()
+        sq_text = self._squelch_ctrl.GetValue().strip()
         group = self._group_ctrl.GetValue().strip()
         try:
             scene = Scene(
@@ -273,7 +273,7 @@ class ScenesPanel(wx.Panel):
                 bandwidth=self._form_bandwidth(),
                 step=_STEP_VALUES[self._step_ctrl.GetSelection()],
                 default_freq=default_freq,
-                squelch=float(squelch) if squelch else None,
+                squelch_sensitivity=int(sq_text) if sq_text else None,
                 group=group,
             )
         except ValueError:

@@ -52,6 +52,7 @@ class Scanner:
         set_frequency_cb: Callable[[int], None],
         get_signal_db_cb: Callable[[], float],
         dispatcher: Callable = lambda f, *a, **kw: f(*a, **kw),
+        get_squelch_open_cb: Optional[Callable[[], bool]] = None,
     ) -> None:
         """
         Parameters
@@ -62,10 +63,14 @@ class Scanner:
             Callable that returns the current peak signal in dBm.
         dispatcher:
             Used to push callbacks to the UI thread (typically wx.CallAfter).
+        get_squelch_open_cb:
+            Callable returning True when the auto squelch gate considers
+            a signal present.  Used for signal detection during scanning.
         """
         self._set_freq = set_frequency_cb
         self._get_signal = get_signal_db_cb
         self._dispatch = dispatcher
+        self._get_squelch_open = get_squelch_open_cb
 
         self._thread: Optional[threading.Thread] = None
         self._running = False
@@ -88,7 +93,6 @@ class Scanner:
         start_hz: int,
         stop_hz: int,
         step_hz: int,
-        squelch_db: float = -80.0,
     ) -> None:
         """Scan a frequency range from *start_hz* to *stop_hz* in *step_hz* steps.
 
@@ -101,22 +105,20 @@ class Scanner:
         while freq <= stop_hz:
             targets.append((freq, ""))
             freq += step_hz
-        self.start_targets(targets, squelch_db)
+        self.start_targets(targets)
 
     def start_list(
         self,
         freqs: List[int],
-        squelch_db: float = -80.0,
         labels: Optional[List[str]] = None,
     ) -> None:
         """Scan a discrete list of frequencies (channel-map / memory scan)."""
         labels = labels or [""] * len(freqs)
-        self.start_targets(list(zip(freqs, labels)), squelch_db)
+        self.start_targets(list(zip(freqs, labels)))
 
     def start_targets(
         self,
         targets: List[Tuple[int, str]],
-        squelch_db: float = -80.0,
     ) -> None:
         """Scan an explicit list of ``(freq_hz, label)`` targets."""
         if self._running:
@@ -129,7 +131,7 @@ class Scanner:
 
         self._thread = threading.Thread(
             target=self._scan_loop,
-            args=(list(targets), squelch_db),
+            args=(list(targets),),
             daemon=True,
             name="Scanner",
         )
@@ -161,7 +163,6 @@ class Scanner:
     def _scan_loop(
         self,
         targets: List[Tuple[int, str]],
-        squelch_db: float,
     ) -> None:
         i = 0
         n = len(targets)
@@ -186,9 +187,14 @@ class Scanner:
             if not self._running:
                 break
 
-            # Check signal
+            # Check signal via the live auto squelch gate
             strength = self._get_signal()
-            if strength >= squelch_db:
+            signal_found = (
+                self._get_squelch_open()
+                if self._get_squelch_open is not None
+                else False
+            )
+            if signal_found:
                 result = ScanResult(freq_hz=freq, strength_db=strength, label=label)
                 self.results.append(result)
                 logger.info("Signal found: %s", result)
