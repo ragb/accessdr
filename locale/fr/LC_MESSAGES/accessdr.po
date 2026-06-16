@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: accessdr 0.5.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-16 15:51+0100\n"
+"POT-Creation-Date: 2026-06-16 16:53+0100\n"
 "PO-Revision-Date: 2026-05-24 18:23+0200\n"
 "Last-Translator: Michel Such <michel.such@free.fr>\n"
 "Language: fr\n"
@@ -663,21 +663,25 @@ msgstr ""
 msgid "Remote: {name} ({host}:{port})"
 msgstr "Distant : {name} ({host}:{port})"
 
-#: ui/dialogs/help_dialog.py:165 ui/main_window.py:1340
+#: ui/dialogs/help_dialog.py:163 ui/main_window.py:1337
 msgid "User guide not found. Run 'invoke build-help' first."
 msgstr "Guide utilisateur non trouvé. Exécutez d'abord 'invoke build-help'."
 
-#: ui/main_window.py:1371
+#: ui/dialogs/help_dialog.py:170 ui/main_window.py:1346
+msgid "User Guide — AccessDR"
+msgstr ""
+
+#: ui/main_window.py:1378
 #, python-brace-format
 msgid "IF bandwidth {bw:.0f} kHz"
 msgstr ""
 
-#: ui/main_window.py:1398
+#: ui/main_window.py:1405
 #, python-brace-format
 msgid "SDR error: {msg}"
 msgstr "Erreur SDR: {msg}"
 
-#: ui/main_window.py:1401
+#: ui/main_window.py:1408
 #, python-brace-format
 msgid "Error: {msg}"
 msgstr "Erreur: {msg}"
@@ -716,18 +720,9 @@ msgstr "Aucun pic détecté."
 msgid "Peaks: "
 msgstr "Pics: "
 
-#: ui/dialogs/about_dialog.py:24
+#: ui/dialogs/about_dialog.py:23
 msgid "About AccessDR"
 msgstr "À propos d'AccessDR"
-
-#: ui/dialogs/about_dialog.py:53
-#, python-brace-format
-msgid ""
-"AccessDR version {version}. Accessible SDR radio application. Created by "
-"Rui Batista. License: MIT."
-msgstr ""
-"AccessDR version {version}. Application accessible pour Radio SDR. Créée "
-"par Rui Batista. Licence: MIT."
 
 #: ui/dialogs/about_dialog.py:74
 msgid "Version"
@@ -1054,7 +1049,7 @@ msgstr "Touche(s)"
 msgid "Open User Guide"
 msgstr "Ouvrir le Guide de l'Utilisateur"
 
-#: ui/dialogs/help_dialog.py:168
+#: ui/dialogs/help_dialog.py:175
 msgid "Keyboard Shortcuts for AccessDR."
 msgstr "Raccourcis clavier pour AccessDR."
 
@@ -2095,4 +2090,13 @@ msgstr ""
 
 #~ msgid "Scan started from {start} to {stop}, step {step} kHz."
 #~ msgstr "Balayage en cours de {start} à {stop}, pas {step} kHz."
+
+#~ msgid ""
+#~ "AccessDR version {version}. Accessible SDR "
+#~ "radio application. Created by Rui "
+#~ "Batista. License: MIT."
+#~ msgstr ""
+#~ "AccessDR version {version}. Application "
+#~ "accessible pour Radio SDR. Créée par "
+#~ "Rui Batista. Licence: MIT."
 

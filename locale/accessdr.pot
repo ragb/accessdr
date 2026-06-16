@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: accessdr 0.7.0b1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-16 15:51+0100\n"
+"POT-Creation-Date: 2026-06-16 16:53+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -662,21 +662,25 @@ msgstr ""
 msgid "Remote: {name} ({host}:{port})"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:165 ui/main_window.py:1340
+#: ui/dialogs/help_dialog.py:163 ui/main_window.py:1337
 msgid "User guide not found. Run 'invoke build-help' first."
 msgstr ""
 
-#: ui/main_window.py:1371
+#: ui/dialogs/help_dialog.py:170 ui/main_window.py:1346
+msgid "User Guide — AccessDR"
+msgstr ""
+
+#: ui/main_window.py:1378
 #, python-brace-format
 msgid "IF bandwidth {bw:.0f} kHz"
 msgstr ""
 
-#: ui/main_window.py:1398
+#: ui/main_window.py:1405
 #, python-brace-format
 msgid "SDR error: {msg}"
 msgstr ""
 
-#: ui/main_window.py:1401
+#: ui/main_window.py:1408
 #, python-brace-format
 msgid "Error: {msg}"
 msgstr ""
@@ -715,15 +719,8 @@ msgstr ""
 msgid "Peaks: "
 msgstr ""
 
-#: ui/dialogs/about_dialog.py:24
+#: ui/dialogs/about_dialog.py:23
 msgid "About AccessDR"
-msgstr ""
-
-#: ui/dialogs/about_dialog.py:53
-#, python-brace-format
-msgid ""
-"AccessDR version {version}. Accessible SDR radio application. Created by "
-"Rui Batista. License: MIT."
 msgstr ""
 
 #: ui/dialogs/about_dialog.py:74
@@ -1051,7 +1048,7 @@ msgstr ""
 msgid "Open User Guide"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:168
+#: ui/dialogs/help_dialog.py:175
 msgid "Keyboard Shortcuts for AccessDR."
 msgstr ""
 
