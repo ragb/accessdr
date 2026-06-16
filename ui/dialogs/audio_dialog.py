@@ -68,6 +68,22 @@ class AudioDialog(wx.Dialog):
         self._buf_choice.SetSelection(_buf_sizes.index(cur_buf) if cur_buf in _buf_sizes else 3)
         grid.Add(self._buf_choice, 1, wx.EXPAND)
 
+        # Squelch hang time (tail held open after a signal drops; 0 = instant cut)
+        grid.Add(wx.StaticText(panel, label=_("Squelch Hang (ms):")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._hang_spin = wx.SpinCtrl(
+            panel, min=0, max=3000, value=str(int(self._settings.squelch_hang_ms)),
+            name="Squelch hang time milliseconds",
+        )
+        grid.Add(self._hang_spin, 1, wx.EXPAND)
+
+        # Squelch hysteresis (how far below the open threshold it closes)
+        grid.Add(wx.StaticText(panel, label=_("Squelch Hysteresis (dB):")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._hyst_spin = wx.SpinCtrl(
+            panel, min=0, max=20, value=str(int(self._settings.squelch_hysteresis_db)),
+            name="Squelch hysteresis dB",
+        )
+        grid.Add(self._hyst_spin, 1, wx.EXPAND)
+
         sizer.Add(grid, 0, wx.EXPAND | wx.ALL, 12)
 
         panel.SetSizer(sizer)
@@ -95,5 +111,10 @@ class AudioDialog(wx.Dialog):
         idx = self._buf_choice.GetSelection()
         if 0 <= idx < len(self._buf_sizes):
             self._settings.audio_buffer_size = self._buf_sizes[idx]
+        self._settings.squelch_hang_ms = float(self._hang_spin.GetValue())
+        self._settings.squelch_hysteresis_db = float(self._hyst_spin.GetValue())
+        # Apply live so the change is audible without a restart.
+        self._audio.squelch_hang_ms = self._settings.squelch_hang_ms
+        self._audio.squelch_hysteresis_db = self._settings.squelch_hysteresis_db
         self._settings.save()
         self.EndModal(wx.ID_OK)

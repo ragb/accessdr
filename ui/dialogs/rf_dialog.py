@@ -216,6 +216,16 @@ class RFDialog(wx.Dialog):
         self._bias_tee_cb.Bind(wx.EVT_CHECKBOX, self._on_bias_tee_toggle)
         grid.Add(self._bias_tee_cb, 1, wx.EXPAND)
 
+        # Bias-tee GPIO pin: rtlsdr_set_bias_tee() only drives GPIO 0, but some
+        # dongles wire the bias-tee circuit to a different pin.  Let the user
+        # pick if the default (0) doesn't power their LNA.
+        grid.Add(wx.StaticText(panel, label=_("Bias Tee GPIO pin:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._bias_gpio_spin = wx.SpinCtrl(
+            panel, min=0, max=7, value=str(self._settings.bias_tee_gpio),
+            name="Bias Tee GPIO pin",
+        )
+        grid.Add(self._bias_gpio_spin, 1, wx.EXPAND)
+
         # --- Processing ---
         grid.Add(wx.StaticText(panel, label=""), 0)
         self._nb_cb = wx.CheckBox(
@@ -311,6 +321,7 @@ class RFDialog(wx.Dialog):
         self._settings.offset_tuning = self._offset_cb.GetValue()
         self._settings.tuner_dithering = not self._dither_cb.GetValue()
         self._settings.bias_tee = self._bias_tee_cb.GetValue()
+        self._settings.bias_tee_gpio = self._bias_gpio_spin.GetValue()
 
         ifbw_idx = self._ifbw_choice.GetSelection()
         if 0 <= ifbw_idx < len(IF_BW_OPTIONS):

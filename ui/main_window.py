@@ -65,6 +65,8 @@ class MainWindow(wx.Frame):
         )
         self._audio.volume = self._settings.volume
         self._audio.squelch = self._settings.squelch
+        self._audio.squelch_hysteresis_db = self._settings.squelch_hysteresis_db
+        self._audio.squelch_hang_ms = self._settings.squelch_hang_ms
         self._audio.muted = self._settings.muted
         self._noise_blanker = NoiseBlanker(self._settings.noise_blanker_threshold)
         self._noise_blanker.enabled = self._settings.noise_blanker_enabled
@@ -112,6 +114,7 @@ class MainWindow(wx.Frame):
         self._mode_pending: bool = False           # waiting for mode letter after M
         self._above_threshold: bool = False        # auto-announce threshold state
         self._recording_path: str = ""               # current recording file path
+        self._save_later = None                     # debounced settings save (wx.CallLater)
 
         # Open dialogs cache (so we don't create duplicates)
         self._dialogs: dict = {}
@@ -361,6 +364,8 @@ class MainWindow(wx.Frame):
         self._mute_btn.SetValue(self._settings.muted)
         self._sq_slider.SetValue(int(self._settings.squelch))
         self._sq_lbl.SetLabel(f"{self._settings.squelch:.0f} dBm")
+        # Reflect the restored band / mode / channel context immediately.
+        self._update_context_anchor()
 
     # ==================================================================
     # Frequency control
@@ -375,6 +380,7 @@ class MainWindow(wx.Frame):
         wx.CallAfter(speech.output, fmt_freq(listen))
         wx.CallAfter(self._update_context_anchor)
         wx.CallAfter(self._cursor._update_demod_marker)
+        wx.CallAfter(self._schedule_save)
 
     def _step_frequency(self, direction: int) -> None:
         step = STEPS[self._step_idx]
@@ -570,6 +576,7 @@ class MainWindow(wx.Frame):
         self._apply_mode_overrides(ch)
         self._apply_squelch_override(ch.squelch)
         self._tune(ch.frequency)
+        self._persist_op_state()
         speech.output(
             _("Channel {n}, {label}, {freq}").format(
                 n=ch.number, label=ch.label, freq=fmt_freq(ch.frequency)
@@ -594,6 +601,7 @@ class MainWindow(wx.Frame):
             self._tune(landing)
         self._refresh_band_button()
         self._update_context_anchor()
+        self._persist_op_state()
         speech.output(_("Band {name}").format(name=scene.name))
 
     def _cycle_scene(self, direction: int) -> None:
@@ -1128,7 +1136,13 @@ class MainWindow(wx.Frame):
 
     def _open_scanner_dialog(self) -> None:
         from ui.dialogs.scanner_dialog import ScannerDialog
-        self._open_or_raise("scanner", lambda: ScannerDialog(self, self._scanner))
+        self._open_or_raise(
+            "scanner",
+            lambda: ScannerDialog(
+                self, self._scanner, self._scenes, self._channels,
+                set_mode_cb=self._set_mode,
+            ),
+        )
 
     def _show_channels_tab(self) -> None:
         self._notebook.SetSelection(1)          # Channels page
@@ -1151,6 +1165,7 @@ class MainWindow(wx.Frame):
         sel = self._notebook.GetSelection()
         self._opstate.mode = OpMode.MR if sel == 1 else OpMode.VFO  # 1 == Channels
         self._update_context_anchor()
+        self._persist_op_state()
         page = self._notebook.GetCurrentPage()
         if page is not None:
             page.SetFocus()
@@ -1181,6 +1196,32 @@ class MainWindow(wx.Frame):
             )
         self.SetTitle("{base} - {ctx}".format(base=self._base_title, ctx=ctx))
         self._statusbar.SetStatusText(ctx)
+
+    def _persist_op_state(self) -> None:
+        """Write the operating context to disk now.
+
+        Called whenever the band / mode / channel context changes (and, debounced,
+        after tuning) so the last state survives a crash — _on_close only runs on a
+        clean exit, which the WinUSB teardown can't always guarantee.
+        """
+        try:
+            self._settings.op_mode = self._opstate.mode.value
+            self._settings.active_scene = self._opstate.scene.name
+            self._settings.active_channel = self._opstate.channel_index
+            self._settings.save()
+            self._channels.save()
+        except Exception:   # noqa: BLE001
+            logger.exception("failed to persist operating state")
+
+    def _schedule_save(self) -> None:
+        """Debounce a settings save ~2 s after the last tune (captures frequency)."""
+        try:
+            if self._save_later is not None and self._save_later.IsRunning():
+                self._save_later.Restart(2000)
+            else:
+                self._save_later = wx.CallLater(2000, self._persist_op_state)
+        except Exception:   # noqa: BLE001
+            pass
 
     def _refresh_band_button(self) -> None:
         """Show the active band on the VFO band button."""
@@ -1359,6 +1400,13 @@ class MainWindow(wx.Frame):
             self._statusbar.SetStatusText,
             _("Error: {msg}").format(msg=msg),
         )
+        # Tear the radio down on the UI thread so we don't keep issuing
+        # hardware calls on a device that has gone away (e.g. unplugged).
+        wx.CallAfter(self._stop_radio_on_error)
+
+    def _stop_radio_on_error(self) -> None:
+        if self._radio.running or self._radio.paused:
+            self._stop_radio()
 
     # ==================================================================
     # Shutdown
@@ -1368,6 +1416,11 @@ class MainWindow(wx.Frame):
         self.Close()
 
     def _on_close(self, event: wx.CloseEvent) -> None:
+        if self._save_later is not None:
+            try:
+                self._save_later.Stop()
+            except Exception:   # noqa: BLE001
+                pass
         self._cursor.stop()
         self._stop_recording()
         self._stop_radio()
