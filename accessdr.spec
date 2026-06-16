@@ -18,7 +18,12 @@ PROJ = os.path.abspath(".")
 _ver_text = open(os.path.join(PROJ, "accessdr_version.py")).read()
 _ver_match = re.search(r'__version__\s*=\s*"([^"]+)"', _ver_text)
 _version = _ver_match.group(1) if _ver_match else "0.0.0"
-_ver_parts = (_version + ".0.0.0").split(".")[:4]
+# Windows FixedFileInfo needs four integers.  PEP 440 pre-release strings
+# like "0.7.0b1" aren't directly parseable (int("0b1") fails), so pull out
+# the numeric components — the pre-release number becomes the 4th field
+# (e.g. "0.7.0b1" -> (0, 7, 0, 1), "1.2.3" -> (1, 2, 3, 0)).
+_ver_nums = re.findall(r"\d+", _version) or ["0"]
+_ver_parts = (_ver_nums + ["0", "0", "0", "0"])[:4]
 _ver_tuple = tuple(int(x) for x in _ver_parts)
 
 a = Analysis(
