@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AccessDR 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-16 16:53+0100\n"
+"POT-Creation-Date: 2026-06-16 15:51+0100\n"
 "PO-Revision-Date: 2026-02-19 11:40+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: pt_PT\n"
@@ -663,25 +663,21 @@ msgstr ""
 msgid "Remote: {name} ({host}:{port})"
 msgstr "Remoto: {name} ({host}:{port})"
 
-#: ui/dialogs/help_dialog.py:163 ui/main_window.py:1337
+#: ui/dialogs/help_dialog.py:165 ui/main_window.py:1340
 msgid "User guide not found. Run 'invoke build-help' first."
 msgstr "Guia do utilizador não encontrado. Execute 'invoke build-help' primeiro."
 
-#: ui/dialogs/help_dialog.py:170 ui/main_window.py:1346
-msgid "User Guide — AccessDR"
-msgstr ""
-
-#: ui/main_window.py:1378
+#: ui/main_window.py:1371
 #, python-brace-format
 msgid "IF bandwidth {bw:.0f} kHz"
 msgstr ""
 
-#: ui/main_window.py:1405
+#: ui/main_window.py:1398
 #, python-brace-format
 msgid "SDR error: {msg}"
 msgstr "Erro SDR: {msg}"
 
-#: ui/main_window.py:1408
+#: ui/main_window.py:1401
 #, python-brace-format
 msgid "Error: {msg}"
 msgstr "Erro: {msg}"
@@ -720,9 +716,18 @@ msgstr "Nenhum pico detetado."
 msgid "Peaks: "
 msgstr "Picos: "
 
-#: ui/dialogs/about_dialog.py:23
+#: ui/dialogs/about_dialog.py:24
 msgid "About AccessDR"
 msgstr "Sobre o AccessDR"
+
+#: ui/dialogs/about_dialog.py:53
+#, python-brace-format
+msgid ""
+"AccessDR version {version}. Accessible SDR radio application. Created by "
+"Rui Batista. License: MIT."
+msgstr ""
+"AccessDR versão {version}. Aplicação de rádio SDR acessível. Criado por "
+"Rui Batista. Licença: MIT."
 
 #: ui/dialogs/about_dialog.py:74
 msgid "Version"
@@ -1051,7 +1056,7 @@ msgstr "Tecla(s)"
 msgid "Open User Guide"
 msgstr "Abrir Guia do Utilizador"
 
-#: ui/dialogs/help_dialog.py:175
+#: ui/dialogs/help_dialog.py:168
 msgid "Keyboard Shortcuts for AccessDR."
 msgstr "Atalhos de teclado do AccessDR."
 
@@ -2239,13 +2244,4 @@ msgstr ""
 
 #~ msgid "Scan started from {start} to {stop}, step {step} kHz."
 #~ msgstr "Varrimento iniciado de {start} a {stop}, passo {step} kHz."
-
-#~ msgid ""
-#~ "AccessDR version {version}. Accessible SDR "
-#~ "radio application. Created by Rui "
-#~ "Batista. License: MIT."
-#~ msgstr ""
-#~ "AccessDR versão {version}. Aplicação de "
-#~ "rádio SDR acessível. Criado por Rui "
-#~ "Batista. Licença: MIT."
 

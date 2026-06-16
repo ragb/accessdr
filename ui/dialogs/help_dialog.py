@@ -159,17 +159,10 @@ class HelpDialog(wx.Frame):
 
     def _on_open_guide(self, _event: wx.CommandEvent) -> None:
         path = os.path.join(help_dir(), "user-guide.html")
-        if not os.path.isfile(path):
-            speech.output(_("User guide not found. Run 'invoke build-help' first."))
-            return
-        from ui.dialogs.html_view import HtmlViewFrame, webview_available
-        if not webview_available():
+        if os.path.isfile(path):
             webbrowser.open(path)
-            return
-        frame = HtmlViewFrame(
-            self.GetParent() or self, _("User Guide — AccessDR"), path=path
-        )
-        frame.Show()
+        else:
+            speech.output(_("User guide not found. Run 'invoke build-help' first."))
 
     def _announce(self) -> None:
         lines = [_("Keyboard Shortcuts for AccessDR.")]

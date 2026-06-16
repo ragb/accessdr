@@ -26,13 +26,6 @@ _ver_nums = re.findall(r"\d+", _version) or ["0"]
 _ver_parts = (_ver_nums + ["0", "0", "0", "0"])[:4]
 _ver_tuple = tuple(int(x) for x in _ver_parts)
 
-# WebView2Loader.dll ships with wxPython and is required for the accessible
-# Edge/WebView2 backend used by the in-app HTML views (About, User Guide).
-# PyInstaller doesn't reliably bundle it, so add it explicitly when present.
-import wx as _wx_pkg
-_webview2_dll = os.path.join(os.path.dirname(_wx_pkg.__file__), "WebView2Loader.dll")
-_extra_binaries = [(_webview2_dll, ".")] if os.path.isfile(_webview2_dll) else []
-
 a = Analysis(
     ["main.py"],
     pathex=[PROJ],
@@ -40,7 +33,7 @@ a = Analysis(
         (os.path.join(PROJ, "rtlsdr.dll"), "."),
         (os.path.join(PROJ, "pthreadVC2.dll"), "."),
         (os.path.join(PROJ, "msvcr100.dll"), "."),
-    ] + _extra_binaries,
+    ],
     datas=[
         (os.path.join(PROJ, "locale"), "locale"),
         (os.path.join(PROJ, "build", "help"), "help"),
