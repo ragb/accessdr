@@ -30,6 +30,14 @@ IF_BW_OPTIONS = [
     (2_000_000, "2 MHz"),
 ]
 
+# RTL2832U direct-sampling mode (HF without an upconverter). No-op on SDRs
+# that tune HF natively.
+DIRECT_SAMPLING_OPTIONS = [
+    (0, N_("Off")),
+    (1, N_("I-branch")),
+    (2, N_("Q-branch (HF)")),
+]
+
 
 class RFDialog(wx.Dialog):
     """Modal RF settings dialog with standard OK / Cancel."""
@@ -150,6 +158,31 @@ class RFDialog(wx.Dialog):
         self._ifbw_choice.SetSelection(bw_idx)
         grid.Add(self._ifbw_choice, 1, wx.EXPAND)
 
+        grid.Add(wx.StaticText(panel, label=_("Direct Sampling:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._ds_choice = wx.Choice(
+            panel,
+            choices=[_(lbl) for _mode, lbl in DIRECT_SAMPLING_OPTIONS],
+            name="Direct Sampling",
+        )
+        ds_idx = 0
+        for i, (mode, _lbl) in enumerate(DIRECT_SAMPLING_OPTIONS):
+            if mode == self._settings.direct_sampling:
+                ds_idx = i
+                break
+        self._ds_choice.SetSelection(ds_idx)
+        grid.Add(self._ds_choice, 1, wx.EXPAND)
+
+        grid.Add(
+            wx.StaticText(panel, label=_("Upconverter LO (MHz, 0 = none):")),
+            0, wx.ALIGN_CENTER_VERTICAL,
+        )
+        self._upconv_spin = wx.SpinCtrl(
+            panel, min=0, max=300,
+            value=str(self._settings.upconverter_offset // 1_000_000),
+            name="Upconverter LO",
+        )
+        grid.Add(self._upconv_spin, 1, wx.EXPAND)
+
         # --- Calibration ---
         grid.Add(wx.StaticText(panel, label=_("PPM Correction:")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._ppm_spin = wx.SpinCtrl(
@@ -182,6 +215,16 @@ class RFDialog(wx.Dialog):
         self._bias_tee_cb.SetValue(self._settings.bias_tee)
         self._bias_tee_cb.Bind(wx.EVT_CHECKBOX, self._on_bias_tee_toggle)
         grid.Add(self._bias_tee_cb, 1, wx.EXPAND)
+
+        # Bias-tee GPIO pin: rtlsdr_set_bias_tee() only drives GPIO 0, but some
+        # dongles wire the bias-tee circuit to a different pin.  Let the user
+        # pick if the default (0) doesn't power their LNA.
+        grid.Add(wx.StaticText(panel, label=_("Bias Tee GPIO pin:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._bias_gpio_spin = wx.SpinCtrl(
+            panel, min=0, max=7, value=str(self._settings.bias_tee_gpio),
+            name="Bias Tee GPIO pin",
+        )
+        grid.Add(self._bias_gpio_spin, 1, wx.EXPAND)
 
         # --- Processing ---
         grid.Add(wx.StaticText(panel, label=""), 0)
@@ -278,10 +321,17 @@ class RFDialog(wx.Dialog):
         self._settings.offset_tuning = self._offset_cb.GetValue()
         self._settings.tuner_dithering = not self._dither_cb.GetValue()
         self._settings.bias_tee = self._bias_tee_cb.GetValue()
+        self._settings.bias_tee_gpio = self._bias_gpio_spin.GetValue()
 
         ifbw_idx = self._ifbw_choice.GetSelection()
         if 0 <= ifbw_idx < len(IF_BW_OPTIONS):
             self._settings.tuner_bandwidth = IF_BW_OPTIONS[ifbw_idx][0]
+
+        ds_idx = self._ds_choice.GetSelection()
+        if 0 <= ds_idx < len(DIRECT_SAMPLING_OPTIONS):
+            self._settings.direct_sampling = DIRECT_SAMPLING_OPTIONS[ds_idx][0]
+
+        self._settings.upconverter_offset = self._upconv_spin.GetValue() * 1_000_000
 
         self._settings.noise_blanker_enabled = self._nb_cb.GetValue()
         self._settings.noise_blanker_threshold = self._nb_thresh.GetValue()

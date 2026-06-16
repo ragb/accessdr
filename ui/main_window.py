@@ -20,13 +20,14 @@ import wx
 
 from accessibility import speech
 from accessibility.sonification import Sonification
-from config.bands import BAND_NAMES, centre_frequency, get_band
-from config.bookmarks import Bookmark, BookmarkStore
+from config.channels import Channel, ChannelMapStore
 from config.modes import (
     AUDIO_RATE, BW_OPTIONS, MODE_KEYS, MODES,
     STEP_LABELS, STEPS,
 )
+from config.scenes import Scene, SceneStore
 from config.settings import Settings
+from core.operating_mode import OperatingState, OpMode
 from core.audio import AudioOutput
 from core.dsp.noise_blanker import NoiseBlanker
 from core.dsp.pipeline import PipelineCallbacks
@@ -35,6 +36,7 @@ from core.scanner import Scanner
 from core.signal_utils import s_meter
 from ui.cursor_controller import CursorController
 from ui.formatting import fmt_freq, freq_number, freq_unit, parse_freq
+from ui.panels.channels_panel import ChannelsPanel
 from ui.radio_controller import RadioController
 from ui.spectrum_controller import SpectrumController
 from ui.spectrum_panel import SpectrumPanel
@@ -48,8 +50,9 @@ class MainWindow(wx.Frame):
     """Primary application window."""
 
     def __init__(self, parent, title: str) -> None:
-        super().__init__(parent, title=title, size=(640, 560))
+        super().__init__(parent, title=title, size=(700, 780))
         self.SetName("AccessDR Main Window")
+        self._base_title = title
 
         # Load persisted settings
         self._settings = Settings.load()
@@ -62,6 +65,8 @@ class MainWindow(wx.Frame):
         )
         self._audio.volume = self._settings.volume
         self._audio.squelch = self._settings.squelch
+        self._audio.squelch_hysteresis_db = self._settings.squelch_hysteresis_db
+        self._audio.squelch_hang_ms = self._settings.squelch_hang_ms
         self._audio.muted = self._settings.muted
         self._noise_blanker = NoiseBlanker(self._settings.noise_blanker_threshold)
         self._noise_blanker.enabled = self._settings.noise_blanker_enabled
@@ -81,8 +86,26 @@ class MainWindow(wx.Frame):
             get_signal_db_cb=lambda: self._audio.signal_db,
             dispatcher=wx.CallAfter,
         )
-        self._bookmarks = BookmarkStore()
-        self._bookmarks.load()
+        self._scenes = SceneStore()
+        self._scenes.load()
+        self._channels = ChannelMapStore()
+        self._channels.load()
+
+        # Operating mode (VFO/MR), restored from persisted settings.
+        restored_scene = (
+            self._scenes.by_name(self._settings.active_scene)
+            if self._settings.active_scene else None
+        ) or self._scenes.free_scene()
+        try:
+            restored_mode = OpMode(self._settings.op_mode)
+        except ValueError:
+            restored_mode = OpMode.VFO
+        self._opstate = OperatingState(
+            scene=restored_scene,
+            channel_map=self._channels.active_map(),
+            mode=restored_mode,
+        )
+        self._opstate.channel_index = self._settings.active_channel
 
         # Runtime state
         self._step_idx = STEPS.index(self._settings.step) if self._settings.step in STEPS else 3
@@ -91,6 +114,7 @@ class MainWindow(wx.Frame):
         self._mode_pending: bool = False           # waiting for mode letter after M
         self._above_threshold: bool = False        # auto-announce threshold state
         self._recording_path: str = ""               # current recording file path
+        self._save_later = None                     # debounced settings save (wx.CallLater)
 
         # Open dialogs cache (so we don't create duplicates)
         self._dialogs: dict = {}
@@ -109,6 +133,10 @@ class MainWindow(wx.Frame):
         )
         self._spectrum_panel.set_cursor_click_callback(self._cursor.on_spectrum_click)
         self._action_table = self._build_dispatch_table()
+        # Align the initial tab with the restored operating mode (without
+        # firing a page-changed event), then show the context anchor.
+        self._notebook.ChangeSelection(1 if self._opstate.mode is OpMode.MR else 0)
+        self._update_context_anchor()
 
         self.Bind(wx.EVT_CLOSE, self._on_close)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
@@ -127,24 +155,15 @@ class MainWindow(wx.Frame):
         file_menu.Append(wx.ID_EXIT, _("E&xit\tAlt+F4"))
         mb.Append(file_menu, _("&File"))
 
-        # Radio
+        # Radio (VFO / Channels are tabs; bands are managed in a dialog)
         radio_menu = wx.Menu()
-        bands_menu = wx.Menu()
-        for name in BAND_NAMES:
-            item = bands_menu.Append(wx.ID_ANY, _(name))
-            self.Bind(wx.EVT_MENU, self._make_band_handler(name), item)
-        radio_menu.AppendSubMenu(bands_menu, _("&Bands"))
         item_freq = radio_menu.Append(wx.ID_ANY, _("&Enter Frequency…\tCtrl+Q"))
+        item_bands = radio_menu.Append(wx.ID_ANY, _("&Bands…\tCtrl+Shift+B"))
+        item_scanner = radio_menu.Append(wx.ID_ANY, _("Sca&nner…\tCtrl+N"))
         self.Bind(wx.EVT_MENU, self._on_enter_freq_menu, item_freq)
-        mb.Append(radio_menu, _("&Radio"))
-
-        # Tools
-        tools_menu = wx.Menu()
-        item_scanner = tools_menu.Append(wx.ID_ANY, _("Sca&nner…\tCtrl+N"))
-        item_bookmarks = tools_menu.Append(wx.ID_ANY, _("&Bookmarks…\tCtrl+B"))
+        self.Bind(wx.EVT_MENU, lambda e: self._open_bands_dialog(), item_bands)
         self.Bind(wx.EVT_MENU, lambda e: self._open_scanner_dialog(), item_scanner)
-        self.Bind(wx.EVT_MENU, lambda e: self._open_bookmarks_dialog(), item_bookmarks)
-        mb.Append(tools_menu, _("&Tools"))
+        mb.Append(radio_menu, _("&Radio"))
 
         # Options
         options_menu = wx.Menu()
@@ -152,18 +171,16 @@ class MainWindow(wx.Frame):
         item_spectrum = options_menu.Append(wx.ID_ANY, _("&Spectrum Settings…\tCtrl+S"))
         item_audio = options_menu.Append(wx.ID_ANY, _("&Audio Settings…\tCtrl+D"))
         item_rec = options_menu.Append(wx.ID_ANY, _("R&ecording Settings…\tCtrl+E"))
-        item_wfm = options_menu.Append(wx.ID_ANY, _("&WFM Settings…\tCtrl+W"))
-        item_nfm = options_menu.Append(wx.ID_ANY, _("&NFM Settings…"))
         options_menu.AppendSeparator()
         item_rtl_tcp = options_menu.Append(wx.ID_ANY, _("Remote SD&R…\tCtrl+G"))
         self.Bind(wx.EVT_MENU, lambda e: self._open_rf_dialog(), item_rf)
         self.Bind(wx.EVT_MENU, lambda e: self._open_spectrum_dialog(), item_spectrum)
         self.Bind(wx.EVT_MENU, lambda e: self._open_audio_dialog(), item_audio)
         self.Bind(wx.EVT_MENU, lambda e: self._open_recording_dialog(), item_rec)
-        self.Bind(wx.EVT_MENU, lambda e: self._open_wfm_dialog(), item_wfm)
-        self.Bind(wx.EVT_MENU, lambda e: self._open_nfm_dialog(), item_nfm)
         self.Bind(wx.EVT_MENU, lambda e: self._open_rtl_tcp_dialog(), item_rtl_tcp)
         mb.Append(options_menu, _("&Options"))
+        # Modulation settings live on the per-modulation "Settings…" buttons
+        # (VFO, Bands, Channels) — there is no global modulation dialog.
 
         # Help
         help_menu = wx.Menu()
@@ -186,56 +203,18 @@ class MainWindow(wx.Frame):
         panel.SetName("Main controls panel")
         outer = wx.BoxSizer(wx.VERTICAL)
 
-        # --- Frequency row ---
-        freq_row = wx.BoxSizer(wx.HORIZONTAL)
-        freq_label = wx.StaticText(panel, label=_("Frequency:"))
-        self._freq_ctrl = wx.TextCtrl(
-            panel,
-            value=fmt_freq(self._settings.frequency),
-            name="Frequency display",
-            size=(160, -1),
+        # === Notebook: VFO / Channels ===  (bands are a VFO dropdown + modal)
+        self._notebook = wx.Notebook(panel, name="Workspace")
+        self._build_vfo_page(self._notebook)          # page 0
+        self._memory_panel = ChannelsPanel(
+            self._notebook, self._channels,
+            on_load=self._on_channel_load,
+            get_current=self._get_current_vfo,
+            on_changed=self._on_channels_changed,
         )
-        self._freq_ctrl.SetEditable(False)
-
-        tune_up = wx.Button(panel, label="\u25b2", name="Tune up", size=(32, -1))
-        tune_dn = wx.Button(panel, label="\u25bc", name="Tune down", size=(32, -1))
-        tune_up.Bind(wx.EVT_BUTTON, lambda e: self._step_frequency(+1))
-        tune_dn.Bind(wx.EVT_BUTTON, lambda e: self._step_frequency(-1))
-        # Keep for mouse users but skip in keyboard tab order.
-        def _skip_focus(evt):
-            btn = evt.GetEventObject()
-            if wx.GetKeyState(wx.WXK_SHIFT):
-                btn.Navigate(wx.NavigationKeyEvent.IsBackward)
-            else:
-                btn.Navigate(wx.NavigationKeyEvent.IsForward)
-        for btn in (tune_up, tune_dn):
-            btn.Bind(wx.EVT_SET_FOCUS, _skip_focus)
-
-        step_label = wx.StaticText(panel, label=_("Step:"))
-        self._step_choice = wx.Choice(
-            panel, choices=[_(s) for s in STEP_LABELS], name="Tuning step"
-        )
-        self._step_choice.SetSelection(self._step_idx)
-        self._step_choice.Bind(wx.EVT_CHOICE, self._on_step_change)
-
-        for w in (freq_label, self._freq_ctrl, tune_up, tune_dn, step_label, self._step_choice):
-            freq_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
-        outer.Add(freq_row, 0, wx.ALL, 8)
-
-        # --- Mode / BW row ---
-        mode_row = wx.BoxSizer(wx.HORIZONTAL)
-        mode_label = wx.StaticText(panel, label=_("Mode:"))
-        self._mode_choice = wx.Choice(panel, choices=MODES, name="Demodulation mode")
-        self._mode_choice.SetStringSelection(self._settings.mode)
-        self._mode_choice.Bind(wx.EVT_CHOICE, self._on_mode_change)
-
-        bw_label = wx.StaticText(panel, label=_("BW:"))
-        self._bw_choice = wx.Choice(panel, choices=[], name="Filter bandwidth")
-        self._bw_choice.Bind(wx.EVT_CHOICE, self._on_bw_change)
-
-        for w in (mode_label, self._mode_choice, bw_label, self._bw_choice):
-            mode_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
-        outer.Add(mode_row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+        self._notebook.AddPage(self._memory_panel, _("Channels"))   # page 1
+        self._notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self._on_tab_changed)
+        outer.Add(self._notebook, 1, wx.EXPAND | wx.ALL, 8)
 
         # --- Start/Stop + Signal ---
         ctrl_row = wx.BoxSizer(wx.HORIZONTAL)
@@ -299,29 +278,74 @@ class MainWindow(wx.Frame):
         outer.Add(self._spectrum_panel, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
 
         panel.SetSizer(outer)
-
-        # Tab order
-        self._freq_ctrl.MoveBeforeInTabOrder(self._step_choice)
-        self._step_choice.MoveBeforeInTabOrder(self._mode_choice)
-        self._mode_choice.MoveBeforeInTabOrder(self._bw_choice)
-        self._bw_choice.MoveBeforeInTabOrder(self._start_btn)
-        self._start_btn.MoveBeforeInTabOrder(self._vol_slider)
-        self._vol_slider.MoveBeforeInTabOrder(self._mute_btn)
-        self._mute_btn.MoveBeforeInTabOrder(self._sq_slider)
-        self._sq_slider.MoveBeforeInTabOrder(self._sweep_btn)
-
-        # Prevent native Left/Right handling on widgets that would steal
-        # arrow keys from the spectrum cursor (horizontal sliders, choices).
-        def _eat_left_right(event: wx.KeyEvent) -> None:
-            code = event.GetKeyCode()
-            if code in (wx.WXK_LEFT, wx.WXK_RIGHT) and event.GetModifiers() in (0, wx.MOD_CONTROL):
-                return  # consumed — main _on_key handler will process
-            event.Skip()
-        for w in (self._step_choice, self._mode_choice, self._bw_choice,
-                  self._vol_slider, self._sq_slider, self._sweep_btn):
-            w.Bind(wx.EVT_KEY_DOWN, _eat_left_right)
-
         self._update_bw_choices(self._settings.mode)
+
+    def _build_vfo_page(self, notebook: wx.Notebook) -> None:
+        """Build the VFO tab: scene selector + frequency/step + mode/bw."""
+        page = wx.Panel(notebook)
+        page.SetName("VFO panel")
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        # Band selector: a button that pops up a grouped menu, so changing
+        # band is deliberate (not an always-live control that's easy to nudge).
+        band_row = wx.BoxSizer(wx.HORIZONTAL)
+        self._band_btn = wx.Button(page, name="Select band")
+        self._band_btn.Bind(wx.EVT_BUTTON, self._on_band_button)
+        band_row.Add(self._band_btn, 0, wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(band_row, 0, wx.ALL, 6)
+        self._refresh_band_button()
+
+        # Frequency row
+        freq_row = wx.BoxSizer(wx.HORIZONTAL)
+        freq_label = wx.StaticText(page, label=_("Frequency:"))
+        self._freq_ctrl = wx.TextCtrl(
+            page, value=fmt_freq(self._settings.frequency),
+            name="Frequency display", size=(160, -1),
+        )
+        self._freq_ctrl.SetEditable(False)
+        tune_up = wx.Button(page, label="▲", name="Tune up", size=(32, -1))
+        tune_dn = wx.Button(page, label="▼", name="Tune down", size=(32, -1))
+        tune_up.Bind(wx.EVT_BUTTON, lambda e: self._step_frequency(+1))
+        tune_dn.Bind(wx.EVT_BUTTON, lambda e: self._step_frequency(-1))
+
+        # Keep tune buttons for mouse users but skip in keyboard tab order.
+        def _skip_focus(evt):
+            btn = evt.GetEventObject()
+            if wx.GetKeyState(wx.WXK_SHIFT):
+                btn.Navigate(wx.NavigationKeyEvent.IsBackward)
+            else:
+                btn.Navigate(wx.NavigationKeyEvent.IsForward)
+        for btn in (tune_up, tune_dn):
+            btn.Bind(wx.EVT_SET_FOCUS, _skip_focus)
+
+        step_label = wx.StaticText(page, label=_("Step:"))
+        self._step_choice = wx.Choice(
+            page, choices=[_(s) for s in STEP_LABELS], name="Tuning step"
+        )
+        self._step_choice.SetSelection(self._step_idx)
+        self._step_choice.Bind(wx.EVT_CHOICE, self._on_step_change)
+        for w in (freq_label, self._freq_ctrl, tune_up, tune_dn, step_label, self._step_choice):
+            freq_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        sizer.Add(freq_row, 0, wx.ALL, 6)
+
+        # Modulation / BW row
+        mode_row = wx.BoxSizer(wx.HORIZONTAL)
+        mode_label = wx.StaticText(page, label=_("Modulation:"))
+        self._mode_choice = wx.Choice(page, choices=MODES, name="Modulation")
+        self._mode_choice.SetStringSelection(self._settings.mode)
+        self._mode_choice.Bind(wx.EVT_CHOICE, self._on_mode_change)
+        self._mode_settings_btn = wx.Button(page, label=_("Settings…"), name="Modulation settings")
+        self._mode_settings_btn.Bind(wx.EVT_BUTTON, lambda e: self._open_mode_settings())
+        bw_label = wx.StaticText(page, label=_("Bandwidth:"))
+        self._bw_choice = wx.Choice(page, choices=[], name="Filter bandwidth")
+        self._bw_choice.Bind(wx.EVT_CHOICE, self._on_bw_change)
+        for w in (mode_label, self._mode_choice, self._mode_settings_btn, bw_label, self._bw_choice):
+            mode_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        sizer.Add(mode_row, 0, wx.ALL, 6)
+        self._update_mode_settings_btn()
+
+        page.SetSizer(sizer)
+        notebook.AddPage(page, _("VFO"))
 
     def _build_status_bar(self) -> None:
         self._statusbar = self.CreateStatusBar(name="Status bar")
@@ -340,6 +364,8 @@ class MainWindow(wx.Frame):
         self._mute_btn.SetValue(self._settings.muted)
         self._sq_slider.SetValue(int(self._settings.squelch))
         self._sq_lbl.SetLabel(f"{self._settings.squelch:.0f} dBm")
+        # Reflect the restored band / mode / channel context immediately.
+        self._update_context_anchor()
 
     # ==================================================================
     # Frequency control
@@ -352,11 +378,9 @@ class MainWindow(wx.Frame):
         listen = int(freq_hz + self._cursor.demod_offset)
         wx.CallAfter(self._freq_ctrl.SetValue, fmt_freq(listen))
         wx.CallAfter(speech.output, fmt_freq(listen))
-        wx.CallAfter(
-            self._statusbar.SetStatusText,
-            _("Tuned to {freq}").format(freq=fmt_freq(listen)),
-        )
+        wx.CallAfter(self._update_context_anchor)
         wx.CallAfter(self._cursor._update_demod_marker)
+        wx.CallAfter(self._schedule_save)
 
     def _step_frequency(self, direction: int) -> None:
         step = STEPS[self._step_idx]
@@ -441,7 +465,8 @@ class MainWindow(wx.Frame):
         wfm_kw = self._radio.wfm_kwargs() if mode == "WFM" else {}
         nfm_kw = self._radio.nfm_kwargs() if mode == "NFM" else {}
         self._radio.set_mode(mode, wfm_kw, nfm_kw)
-        speech.output(_("Mode {mode}").format(mode=mode))
+        self._update_mode_settings_btn()
+        speech.output(_("Modulation {mode}").format(mode=mode))
 
     def _on_bw_change(self, event: wx.CommandEvent) -> None:
         mode = self._mode_choice.GetStringSelection()
@@ -460,7 +485,139 @@ class MainWindow(wx.Frame):
         wfm_kw = self._radio.wfm_kwargs() if mode == "WFM" else {}
         nfm_kw = self._radio.nfm_kwargs() if mode == "NFM" else {}
         self._radio.set_mode(mode, wfm_kw, nfm_kw)
-        speech.output(_("Mode {mode}").format(mode=mode))
+        self._update_mode_settings_btn()
+        speech.output(_("Modulation {mode}").format(mode=mode))
+
+    def _apply_mode_overrides(self, source) -> None:
+        """Apply a band/channel's non-None mode overrides to live settings.
+
+        Attribute names on the source match config.mode_params / Settings,
+        so the override simply replaces the global value for this session.
+        """
+        from config.mode_params import params_for
+        changed = False
+        for p in params_for(self._settings.mode):
+            val = getattr(source, p.key, None)
+            if val is not None:
+                setattr(self._settings, p.key, val)
+                changed = True
+        if changed:
+            self._radio.rebuild_wfm()
+            self._radio.rebuild_nfm()
+
+    def _update_mode_settings_btn(self) -> None:
+        """Enable the VFO Settings… button only if the modulation has settings."""
+        from config.mode_params import params_for
+        if hasattr(self, "_mode_settings_btn"):
+            self._mode_settings_btn.Enable(bool(params_for(self._settings.mode)))
+
+    def _open_mode_settings(self) -> None:
+        """Edit the current (live) modulation's settings."""
+        from config.mode_params import params_for
+        from ui.dialogs.mode_settings_dialog import ModeSettingsDialog
+        mode = self._settings.mode
+        if not params_for(mode):
+            return
+        dlg = ModeSettingsDialog(self, mode, self._settings, is_override=False)
+        if dlg.ShowModal() == wx.ID_OK:
+            self._radio.rebuild_wfm()
+            self._radio.rebuild_nfm()
+            speech.output(_("{mode} settings applied.").format(mode=mode))
+        dlg.Destroy()
+
+    def _set_bandwidth(self, value: int) -> None:
+        """Select a bandwidth value, syncing the choice control.
+
+        ``settings.bandwidth`` is not consumed by the DSP pipeline (demod
+        kwargs carry the filtering), so this just records the value and
+        reflects it in the UI for consistency.
+        """
+        self._settings.bandwidth = value
+        options = BW_OPTIONS.get(self._settings.mode, [])
+        for idx, (bw, _label) in enumerate(options):
+            if bw == value:
+                self._bw_choice.SetSelection(idx)
+                break
+
+    # ==================================================================
+    # Operating mode (VFO / MR), scenes and channels
+    # ==================================================================
+
+    def _page_nav(self, direction: int) -> None:
+        """PageUp/Down: channel step in MR mode, frequency step in VFO."""
+        res = self._opstate.step(
+            direction, self._settings.frequency, STEPS[self._step_idx]
+        )
+        if res.mode is OpMode.VFO:
+            if res.frequency is not None:
+                self._cursor.reset_offset()
+                self._tune(res.frequency)
+                if res.at_edge:
+                    speech.output(_("Band edge"))
+        elif res.channel is None:
+            speech.output(_("No channels in this map."))
+        else:
+            self._load_channel(res.channel)
+
+    def _apply_squelch_override(self, value) -> None:
+        """Apply a band/channel squelch override (dBm) to audio + UI."""
+        if value is None:
+            return
+        self._settings.squelch = value
+        self._audio.squelch = value
+        self._sq_slider.SetValue(int(value))
+        self._sq_lbl.SetLabel(f"{value:.0f} dBm")
+
+    def _load_channel(self, ch: Channel) -> None:
+        """Tune to a channel and announce number, label, frequency."""
+        self._cursor.reset_offset()
+        self._set_mode(ch.mode)
+        self._set_bandwidth(ch.bandwidth)
+        self._apply_mode_overrides(ch)
+        self._apply_squelch_override(ch.squelch)
+        self._tune(ch.frequency)
+        self._persist_op_state()
+        speech.output(
+            _("Channel {n}, {label}, {freq}").format(
+                n=ch.number, label=ch.label, freq=fmt_freq(ch.frequency)
+            )
+        )
+
+    def _toggle_vfo_mr(self) -> None:
+        """Toggle VFO <-> Memory by switching tab (which sets the mode)."""
+        sel = self._notebook.GetSelection()
+        self._notebook.SetSelection(0 if sel == 1 else 1)  # VFO <-> Channels
+
+    def _apply_scene(self, scene: Scene) -> None:
+        """Apply a scene's demod setup and tune into its band."""
+        self._opstate.set_scene(scene)
+        self._set_mode(scene.mode)
+        self._set_bandwidth(scene.bandwidth)
+        self._apply_mode_overrides(scene)
+        self._apply_squelch_override(scene.squelch)
+        landing = scene.landing_freq()
+        if landing is not None:
+            self._cursor.reset_offset()
+            self._tune(landing)
+        self._refresh_band_button()
+        self._update_context_anchor()
+        self._persist_op_state()
+        speech.output(_("Band {name}").format(name=scene.name))
+
+    def _cycle_scene(self, direction: int) -> None:
+        """Select the next/previous scene (VFO mode only)."""
+        if self._opstate.mode is not OpMode.VFO:
+            speech.output(_("Bands are available in VFO mode."))
+            return
+        scenes = self._scenes.get_all()
+        if not scenes:
+            return
+        names = [s.name for s in scenes]
+        try:
+            idx = names.index(self._opstate.scene.name)
+        except ValueError:
+            idx = 0
+        self._apply_scene(scenes[(idx + direction) % len(scenes)])
 
     # ==================================================================
     # Start / Stop
@@ -693,6 +850,36 @@ class MainWindow(wx.Frame):
             event.Skip()
             return
 
+        # Transport / audio controls work on every tab, whatever has focus.
+        global_actions = {
+            kb.START_STOP, kb.TOGGLE_MUTE,
+            kb.VOLUME_UP, kb.VOLUME_DOWN,
+            kb.SQUELCH_UP, kb.SQUELCH_DOWN,
+        }
+        if action in global_actions:
+            self._dispatch_action(action)
+            return
+
+        # Let arrow-using controls (scene/step/mode/bw dropdowns, sliders,
+        # spinners) handle the arrow keys themselves; cursor/frequency arrows
+        # act only when focus is on the spectrum, a button, or the panel.
+        if code in (wx.WXK_UP, wx.WXK_DOWN, wx.WXK_LEFT, wx.WXK_RIGHT) and isinstance(
+            focused, (wx.Choice, wx.ComboBox, wx.Slider, wx.SpinCtrl,
+                      wx.SpinCtrlDouble, wx.TreeCtrl, wx.ListCtrl)
+        ):
+            event.Skip()
+            return
+
+        # On the Channels/Scenes tabs, release the remaining plain keys
+        # (letters, Enter, Space, Page nav) to the focused list or form
+        # control. Function keys and Ctrl/Alt shortcuts work on every tab.
+        if self._notebook.GetSelection() != 0:  # 0 == VFO page
+            is_function_key = wx.WXK_F1 <= code <= wx.WXK_F24
+            has_cmd_modifier = bool(modifiers & (wx.MOD_CONTROL | wx.MOD_ALT))
+            if not is_function_key and not has_cmd_modifier:
+                event.Skip()
+                return
+
         # Layered mode selection: M then mode letter
         if self._mode_pending:
             self._mode_pending = False
@@ -729,6 +916,12 @@ class MainWindow(wx.Frame):
             kb.FREQ_DOWN_FAST:      lambda: self._step_frequency(-10),
             # Mode
             kb.MODE_SELECT_START:   self._start_mode_select,
+            # Channel / scene navigation (VFO / MR)
+            kb.PAGE_NAV_UP:         lambda: self._page_nav(+1),
+            kb.PAGE_NAV_DOWN:       lambda: self._page_nav(-1),
+            kb.TOGGLE_VFO_MR:       self._toggle_vfo_mr,
+            kb.SCENE_PREV:          lambda: self._cycle_scene(-1),
+            kb.SCENE_NEXT:          lambda: self._cycle_scene(+1),
             # Info
             kb.ANNOUNCE_INFO:       self._announce_info,
             # Volume / squelch
@@ -761,10 +954,9 @@ class MainWindow(wx.Frame):
             kb.OPEN_RF_DIALOG:      self._open_rf_dialog,
             kb.OPEN_SPECTRUM_DIALOG: self._open_spectrum_dialog,
             kb.OPEN_SCANNER_DIALOG: self._open_scanner_dialog,
-            kb.OPEN_BOOKMARKS_DIALOG: self._open_bookmarks_dialog,
+            kb.OPEN_CHANNELS_DIALOG: self._show_channels_tab,
+            kb.OPEN_BANDS_DIALOG:   self._open_bands_dialog,
             kb.OPEN_AUDIO_DIALOG:   self._open_audio_dialog,
-            kb.OPEN_WFM_DIALOG:     self._open_wfm_dialog,
-            kb.OPEN_NFM_DIALOG:     self._open_nfm_dialog,
             kb.OPEN_RTL_TCP_DIALOG: self._open_rtl_tcp_dialog,
             kb.OPEN_RECORDING_DIALOG: self._open_recording_dialog,
             kb.OPEN_USER_GUIDE:     lambda: self._on_open_user_guide(None),
@@ -897,23 +1089,6 @@ class MainWindow(wx.Frame):
         self._statusbar.SetStatusText(text)
 
     # ==================================================================
-    # Band jump
-    # ==================================================================
-
-    def _make_band_handler(self, name: str):
-        def handler(_event):
-            lo, hi, mode = get_band(name)
-            freq = centre_frequency(name)
-            self._tune(freq)
-            self._set_mode(mode)
-            speech.output(
-                _("Band: {name}, {freq}, mode {mode}").format(
-                    name=_(name), freq=fmt_freq(freq), mode=mode
-                )
-            )
-        return handler
-
-    # ==================================================================
     # Dialog openers
     # ==================================================================
 
@@ -961,14 +1136,152 @@ class MainWindow(wx.Frame):
 
     def _open_scanner_dialog(self) -> None:
         from ui.dialogs.scanner_dialog import ScannerDialog
-        self._open_or_raise("scanner", lambda: ScannerDialog(self, self._scanner))
-
-    def _open_bookmarks_dialog(self) -> None:
-        from ui.dialogs.bookmarks_dialog import BookmarksDialog
         self._open_or_raise(
-            "bookmarks",
-            lambda: BookmarksDialog(self, self._bookmarks, on_load=self._on_bookmark_load),
+            "scanner",
+            lambda: ScannerDialog(
+                self, self._scanner, self._scenes, self._channels,
+                set_mode_cb=self._set_mode,
+            ),
         )
+
+    def _show_channels_tab(self) -> None:
+        self._notebook.SetSelection(1)          # Channels page
+        self._memory_panel.SetFocus()
+
+    def _open_bands_dialog(self) -> None:
+        from ui.dialogs.bands_dialog import BandsDialog
+        self._open_or_raise(
+            "bands",
+            lambda: BandsDialog(
+                self, self._scenes,
+                on_apply=self._on_scene_apply,
+                get_current=self._get_current_vfo,
+                on_changed=self._on_scenes_changed,
+            ),
+        )
+
+    def _on_tab_changed(self, event) -> None:  # noqa: ANN001
+        """The active tab sets the operating mode (VFO / MR) and focus."""
+        sel = self._notebook.GetSelection()
+        self._opstate.mode = OpMode.MR if sel == 1 else OpMode.VFO  # 1 == Channels
+        self._update_context_anchor()
+        self._persist_op_state()
+        page = self._notebook.GetCurrentPage()
+        if page is not None:
+            page.SetFocus()
+        event.Skip()
+
+    def _update_context_anchor(self) -> None:
+        """Reflect the live operating context in the title bar and status bar.
+
+        VFO:  "<title> — VFO · <scene> · <freq>"
+        MR:   "<title> — MR · <map> · CH05 <label>"
+        """
+        if not hasattr(self, "_statusbar"):
+            return
+        st = self._opstate
+        if st.mode is OpMode.MR:
+            cmap = self._channels.active_map()
+            scope = cmap.name if cmap is not None else _("no map")
+            ch = st.current_channel()
+            if ch is not None:
+                ctx = _("Memory, {scope}, channel {n}, {label}").format(
+                    scope=scope, n=ch.number, label=ch.label
+                )
+            else:
+                ctx = _("Memory, {scope}").format(scope=scope)
+        else:
+            ctx = _("VFO, {scene}, {freq}").format(
+                scene=st.scene.name, freq=fmt_freq(self._settings.frequency)
+            )
+        self.SetTitle("{base} - {ctx}".format(base=self._base_title, ctx=ctx))
+        self._statusbar.SetStatusText(ctx)
+
+    def _persist_op_state(self) -> None:
+        """Write the operating context to disk now.
+
+        Called whenever the band / mode / channel context changes (and, debounced,
+        after tuning) so the last state survives a crash — _on_close only runs on a
+        clean exit, which the WinUSB teardown can't always guarantee.
+        """
+        try:
+            self._settings.op_mode = self._opstate.mode.value
+            self._settings.active_scene = self._opstate.scene.name
+            self._settings.active_channel = self._opstate.channel_index
+            self._settings.save()
+            self._channels.save()
+        except Exception:   # noqa: BLE001
+            logger.exception("failed to persist operating state")
+
+    def _schedule_save(self) -> None:
+        """Debounce a settings save ~2 s after the last tune (captures frequency)."""
+        try:
+            if self._save_later is not None and self._save_later.IsRunning():
+                self._save_later.Restart(2000)
+            else:
+                self._save_later = wx.CallLater(2000, self._persist_op_state)
+        except Exception:   # noqa: BLE001
+            pass
+
+    def _refresh_band_button(self) -> None:
+        """Show the active band on the VFO band button."""
+        self._band_btn.SetLabel(_("Band: {name}").format(name=self._opstate.scene.name))
+
+    def _on_band_button(self, _event) -> None:  # noqa: ANN001
+        """Pop up a grouped menu to choose the active band."""
+        from ui.panels import band_tree
+        scenes = self._scenes.get_all()
+        groups: dict = {}
+        for s in scenes:
+            groups.setdefault(s.group or band_tree.UNGROUPED, []).append(s)
+        ordered = [g for g in band_tree.group_order() if g in groups]
+        ordered += [g for g in groups if g not in ordered]
+        menu = wx.Menu()
+        self._band_menu_map = {}
+        for g in ordered:
+            sub = wx.Menu()
+            for s in groups[g]:
+                item = sub.Append(wx.ID_ANY, band_tree.band_summary(s))
+                self._band_menu_map[item.GetId()] = s
+            menu.AppendSubMenu(sub, g)
+        menu.Bind(wx.EVT_MENU, self._on_band_menu_select)
+        self._band_btn.PopupMenu(menu)
+        menu.Destroy()
+
+    def _on_band_menu_select(self, event) -> None:  # noqa: ANN001
+        scene = self._band_menu_map.get(event.GetId())
+        if scene is not None:
+            self._on_scene_apply(scene)
+
+    def _on_scenes_changed(self) -> None:
+        """Refresh the VFO band button after band edits."""
+        self._refresh_band_button()
+
+    def _on_scene_apply(self, scene: Scene) -> None:
+        """Apply a scene: switch to the VFO tab (-> VFO mode) and load the band."""
+        self._opstate.mode = OpMode.VFO
+        self._notebook.SetSelection(0)   # VFO tab
+        self._apply_scene(scene)
+
+    def _get_current_vfo(self) -> tuple[int, str, int]:
+        """Current (frequency, mode, bandwidth) for storing to a channel."""
+        return (self._settings.frequency, self._settings.mode, self._settings.bandwidth)
+
+    def _on_channels_changed(self) -> None:
+        """Keep the operating state's channel map in sync after edits."""
+        self._opstate.set_channel_map(self._channels.active_map())
+
+    def _on_channel_load(self, ch: Channel) -> None:
+        """Load a channel from the dialog: enter MR mode and tune to it."""
+        cmap = self._channels.active_map()
+        self._opstate.set_channel_map(cmap)
+        self._opstate.mode = OpMode.MR
+        if cmap is not None:
+            for i, c in enumerate(cmap.sorted_channels()):
+                if c.number == ch.number:
+                    self._opstate.channel_index = i
+                    break
+        self._load_channel(ch)
 
     def _open_audio_dialog(self) -> None:
         from ui.dialogs.audio_dialog import AudioDialog
@@ -981,20 +1294,6 @@ class MainWindow(wx.Frame):
         from ui.dialogs.recording_dialog import RecordingDialog
         dlg = RecordingDialog(self, self._settings)
         dlg.ShowModal()
-        dlg.Destroy()
-
-    def _open_wfm_dialog(self) -> None:
-        from ui.dialogs.wfm_dialog import WFMDialog
-        dlg = WFMDialog(self, self._settings)
-        if dlg.ShowModal() == wx.ID_OK:
-            self._on_wfm_settings_changed()
-        dlg.Destroy()
-
-    def _open_nfm_dialog(self) -> None:
-        from ui.dialogs.nfm_dialog import NFMDialog
-        dlg = NFMDialog(self, self._settings)
-        if dlg.ShowModal() == wx.ID_OK:
-            self._on_nfm_settings_changed()
         dlg.Destroy()
 
     def _open_rtl_tcp_dialog(self) -> None:
@@ -1056,18 +1355,6 @@ class MainWindow(wx.Frame):
     # Callbacks
     # ==================================================================
 
-    def _on_bookmark_load(self, bm: Bookmark) -> None:
-        self._tune(bm.frequency)
-        self._set_mode(bm.mode)
-
-    def _on_wfm_settings_changed(self) -> None:
-        """Apply WFM settings changes — rebuild demodulator if in WFM mode."""
-        self._radio.rebuild_wfm()
-
-    def _on_nfm_settings_changed(self) -> None:
-        """Apply NFM settings changes — rebuild demodulator if in NFM mode."""
-        self._radio.rebuild_nfm()
-
     def _on_rf_settings_changed(self, settings: Settings) -> None:
         self._settings = settings
         self._noise_blanker.enabled = settings.noise_blanker_enabled
@@ -1113,6 +1400,13 @@ class MainWindow(wx.Frame):
             self._statusbar.SetStatusText,
             _("Error: {msg}").format(msg=msg),
         )
+        # Tear the radio down on the UI thread so we don't keep issuing
+        # hardware calls on a device that has gone away (e.g. unplugged).
+        wx.CallAfter(self._stop_radio_on_error)
+
+    def _stop_radio_on_error(self) -> None:
+        if self._radio.running or self._radio.paused:
+            self._stop_radio()
 
     # ==================================================================
     # Shutdown
@@ -1122,11 +1416,20 @@ class MainWindow(wx.Frame):
         self.Close()
 
     def _on_close(self, event: wx.CloseEvent) -> None:
+        if self._save_later is not None:
+            try:
+                self._save_later.Stop()
+            except Exception:   # noqa: BLE001
+                pass
         self._cursor.stop()
         self._stop_recording()
         self._stop_radio()
+        self._settings.op_mode = self._opstate.mode.value
+        self._settings.active_scene = self._opstate.scene.name
+        self._settings.active_channel = self._opstate.channel_index
         self._settings.save()
-        self._bookmarks.save()
+        self._scenes.save()
+        self._channels.save()
         for dlg in self._dialogs.values():
             try:
                 dlg.Destroy()

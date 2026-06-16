@@ -27,6 +27,13 @@ OPEN_DEMOD_FREQ_DIALOG = "open_demod_freq_dialog"
 # --- Mode selection ---
 MODE_SELECT_START = "mode_select_start"
 
+# --- Channel / scene navigation (VFO / MR) ---
+PAGE_NAV_UP = "page_nav_up"
+PAGE_NAV_DOWN = "page_nav_down"
+TOGGLE_VFO_MR = "toggle_vfo_mr"
+SCENE_PREV = "scene_prev"
+SCENE_NEXT = "scene_next"
+
 # --- Radio control ---
 START_STOP = "start_stop"
 TOGGLE_PAUSE = "toggle_pause"
@@ -68,10 +75,9 @@ OPEN_HELP = "open_help"
 OPEN_RF_DIALOG = "open_rf_dialog"
 OPEN_SPECTRUM_DIALOG = "open_spectrum_dialog"
 OPEN_SCANNER_DIALOG = "open_scanner_dialog"
-OPEN_BOOKMARKS_DIALOG = "open_bookmarks_dialog"
+OPEN_CHANNELS_DIALOG = "open_channels_dialog"
+OPEN_BANDS_DIALOG = "open_bands_dialog"
 OPEN_AUDIO_DIALOG = "open_audio_dialog"
-OPEN_WFM_DIALOG = "open_wfm_dialog"
-OPEN_NFM_DIALOG = "open_nfm_dialog"
 OPEN_RTL_TCP_DIALOG = "open_rtl_tcp_dialog"
 OPEN_RECORDING_DIALOG = "open_recording_dialog"
 OPEN_USER_GUIDE = "open_user_guide"
@@ -112,11 +118,18 @@ def _build_keymap() -> dict[tuple[int, int], str]:
         # Info
         (ord("I"), NONE):            ANNOUNCE_INFO,
 
+        # Channel / scene navigation
+        (wx.WXK_PAGEUP, NONE):      PAGE_NAV_UP,
+        (wx.WXK_PAGEDOWN, NONE):    PAGE_NAV_DOWN,
+        (ord("V"), NONE):            TOGGLE_VFO_MR,
+        (ord("["), NONE):            SCENE_PREV,
+        (ord("]"), NONE):            SCENE_NEXT,
+
         # Volume / squelch
-        (wx.WXK_PAGEUP, NONE):      VOLUME_UP,
-        (wx.WXK_PAGEDOWN, NONE):    VOLUME_DOWN,
-        (wx.WXK_PAGEUP, S):         SQUELCH_UP,
-        (wx.WXK_PAGEDOWN, S):       SQUELCH_DOWN,
+        (wx.WXK_F11, NONE):         VOLUME_UP,
+        (wx.WXK_F12, NONE):         VOLUME_DOWN,
+        (wx.WXK_F11, S):            SQUELCH_UP,
+        (wx.WXK_F12, S):            SQUELCH_DOWN,
 
         # Sonification
         (wx.WXK_F5, NONE):          SNAPSHOT,
@@ -150,10 +163,9 @@ def _build_keymap() -> dict[tuple[int, int], str]:
         (ord("R"), M):               OPEN_RF_DIALOG,
         (ord("S"), M):               OPEN_SPECTRUM_DIALOG,
         (ord("N"), M):               OPEN_SCANNER_DIALOG,
-        (ord("B"), M):               OPEN_BOOKMARKS_DIALOG,
+        (ord("B"), M):               OPEN_CHANNELS_DIALOG,
+        (ord("B"), M | S):           OPEN_BANDS_DIALOG,
         (ord("D"), M):               OPEN_AUDIO_DIALOG,
-        (ord("W"), M):               OPEN_WFM_DIALOG,
-        (ord("N"), M | S):           OPEN_NFM_DIALOG,
         (ord("G"), M):               OPEN_RTL_TCP_DIALOG,
         (ord("E"), M):               OPEN_RECORDING_DIALOG,
         (ord("H"), M):               OPEN_USER_GUIDE,

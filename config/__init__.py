@@ -1,1 +1,1 @@
-"""config — Application configuration: bands, bookmarks, settings."""
+"""config — Application configuration: bands, channels, scenes, settings."""

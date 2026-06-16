@@ -55,6 +55,8 @@ IQ @ 2.4 MSPS → noise_blanker → decimate ×10 → 240 kSPS → mixer (VFO of
 
 `PyRtlSdrBackend`, `SoapySDRBackend`, `RtlTcpBackend`, `DummyBackend` — each implements `open()`, `close()`, `stream_loop()`, `set_frequency()`, etc.
 
+HF support: `set_direct_sampling(mode)` (RTL-only, `settings.direct_sampling`) and an **upconverter** offset (`settings.upconverter_offset`, e.g. 125 MHz Ham It Up). The upconverter offset is applied at the single tuning chokepoint `RadioController._hw_freq()` — the rest of the app keeps the real HF frequency.
+
 ### Keyboard handling
 
 `ui/keyboard_handler.py` maps `(keycode, modifiers) → action_name` → dispatched in `MainWindow._on_key()`.
@@ -62,6 +64,16 @@ IQ @ 2.4 MSPS → noise_blanker → decimate ×10 → 240 kSPS → mixer (VFO of
 ### Settings
 
 `config/settings.py` — `@dataclass` with JSON persistence (`settings.json`). All app state survives restarts.
+
+### Channels, bands & operating mode (Baofeng-style VFO/MR)
+
+The main window is a `wx.Notebook` with two tabs, **VFO** and **Channels**; the active tab **is** the operating mode (`core/operating_mode.py` `OperatingState`, `OpMode.VFO`/`MR`). The window title carries a live context anchor (`_update_context_anchor`). `V` toggles tabs/mode; PageUp/Down step channel (MR) or band-clamped frequency (VFO).
+
+- **Bands** = VFO presets. Model `Scene`/`SceneStore` in `config/scenes.py` (kept named "Scene" internally to avoid colliding with `config/bands.py`, which is the default-band seed table `(lo, hi, mode, bw, step, group[, overrides])`). User-facing term is **"Band"**. Persisted to `scenes.json`. The VFO tab picks a band via a button → grouped menu; the full editor is the **Bands dialog** (`ui/dialogs/bands_dialog.py` hosting `ui/panels/scenes_panel.py`, a `wx.TreeCtrl` grouped by service via `ui/panels/band_tree.py`). Ctrl+Shift+B.
+- **Channels** = numbered memory slots in named maps. `Channel`/`ChannelMap`/`ChannelMapStore` in `config/channels.py`, persisted to `channels.json`. Edited on the **Channels tab** (`ui/panels/channels_panel.py`). Ctrl+B.
+- Both `SceneStore.load()` and `ChannelMapStore.load()` **merge newly-shipped defaults by name**, so updates add bands/maps without clobbering user edits (trade-off: a deleted default reappears).
+- **Modulation settings are per-band/per-channel, not global.** `config/mode_params.py` declares each modulation's params; `Scene`/`Channel`/`Settings` share the attribute names. A `ModeSettingsDialog` (`ui/dialogs/mode_settings_dialog.py`) edits them — concrete for the VFO/live settings, `(default)`-aware overrides on a band/channel. Loading a band/channel pushes its non-None overrides into live `Settings` (`_apply_mode_overrides`). The UI says **"Modulation"**, not "Mode".
+- Bookmarks are **removed** (replaced by channels). The old global WFM/NFM dialogs are gone.
 
 ## pyrtlsdr quirks (critical)
 

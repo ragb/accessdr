@@ -1,9 +1,12 @@
 """
-ui/dialogs/scanner_dialog.py — Frequency scanner dialog.
+ui/dialogs/scanner_dialog.py — Band / channel-map scanner dialog.
 
-Presents start/end frequency and step fields, squelch threshold, a
-results list, and playback controls (Hold, Skip, Stop).
-Scan results are spoken as they arrive.
+Scans either a **band** (a bounded VFO preset's frequency range, using the
+band's own step) or a **channel map** (the discrete memory channels of a map).
+A free / unbounded band has no defined range, so it cannot be scanned.
+
+Found signals are spoken and listed as they arrive, with playback controls
+(Hold, Skip, Stop).
 """
 
 from __future__ import annotations
@@ -12,8 +15,16 @@ from typing import Callable, List, Optional
 
 import wx
 from accessibility import speech
+from config.channels import ChannelMapStore
+from config.scenes import SceneStore
 from core.scanner import Scanner, ScanResult
 from ui.formatting import fmt_freq
+
+# Fallback step when a band defines no step of its own.
+_DEFAULT_STEP_HZ = 100_000
+
+_SRC_BAND = 0
+_SRC_MAP = 1
 
 
 class ScannerDialog(wx.Frame):
@@ -23,18 +34,28 @@ class ScannerDialog(wx.Frame):
         self,
         parent: wx.Window,
         scanner: Scanner,
+        scenes: SceneStore,
+        channels: ChannelMapStore,
+        set_mode_cb: Optional[Callable[[str], None]] = None,
     ) -> None:
         super().__init__(
             parent,
-            title=_("Frequency Scanner"),
+            title=_("Scanner"),
             style=wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT,
         )
-        self.SetName("Frequency Scanner dialog")
+        self.SetName("Scanner dialog")
         self._scanner = scanner
         self._scanner.on_signal_found = self._on_signal_found
         self._scanner.on_scan_complete = self._on_scan_complete
+        self._set_mode = set_mode_cb or (lambda _m: None)
+
+        # Bands eligible for scanning are the bounded ones (a free band has no
+        # range).  Keep the Scene objects parallel to the choice entries.
+        self._bands = [s for s in scenes.get_all() if not s.unbounded]
+        self._maps = list(channels.maps)
+
         self._build_ui()
-        self.SetSize(520, 560)
+        self.SetSize(540, 580)
         self.Centre()
         speech.output(_("Scanner dialog opened."))
 
@@ -44,32 +65,56 @@ class ScannerDialog(wx.Frame):
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # --- Parameters ---
-        param_box = wx.StaticBox(panel, label=_("Scan Parameters"))
-        param_sizer = wx.StaticBoxSizer(param_box, wx.VERTICAL)
+        # --- Source selection ---
+        src_box = wx.StaticBox(panel, label=_("Scan Source"))
+        src_sizer = wx.StaticBoxSizer(src_box, wx.VERTICAL)
+
+        self._source = wx.RadioBox(
+            panel,
+            label=_("Scan"),
+            choices=[_("Band"), _("Channel map")],
+            majorDimension=1,
+            style=wx.RA_SPECIFY_ROWS,
+            name="Scan source",
+        )
+        self._source.Bind(wx.EVT_RADIOBOX, self._on_source_change)
+        src_sizer.Add(self._source, 0, wx.EXPAND | wx.ALL, 4)
+
         grid = wx.FlexGridSizer(cols=2, vgap=6, hgap=8)
         grid.AddGrowableCol(1)
 
-        grid.Add(wx.StaticText(panel, label=_("Start (MHz):")), 0, wx.ALIGN_CENTER_VERTICAL)
-        self._start = wx.TextCtrl(panel, value="88.0", name="Scan start frequency MHz")
-        grid.Add(self._start, 1, wx.EXPAND)
+        # Band picker (label before control for screen readers)
+        grid.Add(wx.StaticText(panel, label=_("Band:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._band_choice = wx.Choice(
+            panel, choices=[s.name for s in self._bands], name="Band to scan"
+        )
+        if self._bands:
+            self._band_choice.SetSelection(0)
+        self._band_choice.Bind(wx.EVT_CHOICE, lambda e: self._update_info())
+        grid.Add(self._band_choice, 1, wx.EXPAND)
 
-        grid.Add(wx.StaticText(panel, label=_("Stop (MHz):")), 0, wx.ALIGN_CENTER_VERTICAL)
-        self._stop = wx.TextCtrl(panel, value="108.0", name="Scan stop frequency MHz")
-        grid.Add(self._stop, 1, wx.EXPAND)
+        # Channel-map picker
+        grid.Add(wx.StaticText(panel, label=_("Channel map:")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._map_choice = wx.Choice(
+            panel, choices=[m.name for m in self._maps], name="Channel map to scan"
+        )
+        if self._maps:
+            self._map_choice.SetSelection(0)
+        self._map_choice.Bind(wx.EVT_CHOICE, lambda e: self._update_info())
+        grid.Add(self._map_choice, 1, wx.EXPAND)
 
-        grid.Add(wx.StaticText(panel, label=_("Step (kHz):")), 0, wx.ALIGN_CENTER_VERTICAL)
-        self._step = wx.TextCtrl(panel, value="100", name="Scan step kHz")
-        grid.Add(self._step, 1, wx.EXPAND)
-
+        # Squelch threshold
         grid.Add(wx.StaticText(panel, label=_("Squelch (dBm):")), 0, wx.ALIGN_CENTER_VERTICAL)
         self._squelch = wx.SpinCtrl(
             panel, value="-60", min=-120, max=0, name="Scan squelch threshold dBm"
         )
         grid.Add(self._squelch, 1, wx.EXPAND)
 
-        param_sizer.Add(grid, 0, wx.EXPAND | wx.ALL, 6)
-        sizer.Add(param_sizer, 0, wx.EXPAND | wx.ALL, 8)
+        src_sizer.Add(grid, 0, wx.EXPAND | wx.ALL, 6)
+
+        self._info = wx.StaticText(panel, label="", name="Scan range")
+        src_sizer.Add(self._info, 0, wx.EXPAND | wx.ALL, 4)
+        sizer.Add(src_sizer, 0, wx.EXPAND | wx.ALL, 8)
 
         # --- Controls ---
         ctrl_row = wx.BoxSizer(wx.HORIZONTAL)
@@ -89,8 +134,9 @@ class ScannerDialog(wx.Frame):
             style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.BORDER_SUNKEN,
             name="Scan results list",
         )
-        self._results_list.InsertColumn(0, _("Frequency"), width=160)
-        self._results_list.InsertColumn(1, _("Strength (dBm)"), width=140)
+        self._results_list.InsertColumn(0, _("Frequency"), width=150)
+        self._results_list.InsertColumn(1, _("Channel"), width=190)
+        self._results_list.InsertColumn(2, _("Strength (dBm)"), width=130)
         res_sizer.Add(self._results_list, 1, wx.EXPAND | wx.ALL, 4)
 
         clear_btn = wx.Button(panel, label=_("Clear Results"), name="Clear scan results")
@@ -111,28 +157,108 @@ class ScannerDialog(wx.Frame):
         self._stop_btn.Bind(wx.EVT_BUTTON, self._on_stop)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
 
+        # Default source: channel map only if there are no scannable bands.
+        self._source.SetSelection(_SRC_BAND if self._bands else _SRC_MAP)
+        self._sync_enabled()
+        self._update_info()
+
+    # ------------------------------------------------------------------
+
+    def _on_source_change(self, _event: wx.CommandEvent) -> None:
+        self._sync_enabled()
+        self._update_info()
+
+    def _sync_enabled(self) -> None:
+        is_band = self._source.GetSelection() == _SRC_BAND
+        self._band_choice.Enable(is_band)
+        self._map_choice.Enable(not is_band)
+
+    def _selected_band(self):
+        idx = self._band_choice.GetSelection()
+        if 0 <= idx < len(self._bands):
+            return self._bands[idx]
+        return None
+
+    def _selected_map(self):
+        idx = self._map_choice.GetSelection()
+        if 0 <= idx < len(self._maps):
+            return self._maps[idx]
+        return None
+
+    def _update_info(self) -> None:
+        if self._source.GetSelection() == _SRC_BAND:
+            band = self._selected_band()
+            if band is None:
+                self._info.SetLabel(_("No scannable bands. Define a bounded band first."))
+                return
+            step = band.step if band.step > 0 else _DEFAULT_STEP_HZ
+            self._info.SetLabel(
+                _("{start} to {stop}, step {step} kHz, {mode}").format(
+                    start=fmt_freq(band.freq_start),
+                    stop=fmt_freq(band.freq_end),
+                    step=step // 1000,
+                    mode=band.mode,
+                )
+            )
+        else:
+            cmap = self._selected_map()
+            if cmap is None:
+                self._info.SetLabel(_("No channel maps."))
+                return
+            count = len(cmap.sorted_channels())
+            self._info.SetLabel(
+                ngettext(
+                    "{count} channel.", "{count} channels.", count
+                ).format(count=count)
+            )
+
     # ------------------------------------------------------------------
 
     def _on_start(self, _event: wx.CommandEvent) -> None:
-        try:
-            start_hz = int(float(self._start.GetValue()) * 1_000_000)
-            stop_hz = int(float(self._stop.GetValue()) * 1_000_000)
-            step_hz = int(float(self._step.GetValue()) * 1_000)
-            squelch = float(self._squelch.GetValue())
-        except ValueError:
-            speech.output(_("Invalid scan parameters."))
-            return
-
+        squelch = float(self._squelch.GetValue())
         self._results_list.DeleteAllItems()
-        self._status.SetLabel(_("Scanning…"))
-        self._scanner.start(start_hz, stop_hz, step_hz, squelch)
-        speech.output(
-            _("Scan started from {start} to {stop}, step {step} kHz.").format(
-                start=fmt_freq(start_hz),
-                stop=fmt_freq(stop_hz),
-                step=step_hz // 1000,
+
+        if self._source.GetSelection() == _SRC_BAND:
+            band = self._selected_band()
+            if band is None:
+                speech.output(_("No band selected."))
+                return
+            step = band.step if band.step > 0 else _DEFAULT_STEP_HZ
+            self._set_mode(band.mode)
+            self._status.SetLabel(_("Scanning band {name}…").format(name=band.name))
+            self._scanner.start(band.freq_start, band.freq_end, step, squelch)
+            speech.output(
+                _("Scanning band {name}, {start} to {stop}.").format(
+                    name=band.name,
+                    start=fmt_freq(band.freq_start),
+                    stop=fmt_freq(band.freq_end),
+                )
             )
-        )
+        else:
+            cmap = self._selected_map()
+            if cmap is None:
+                speech.output(_("No channel map selected."))
+                return
+            chans = cmap.sorted_channels()
+            if not chans:
+                speech.output(_("This channel map is empty."))
+                return
+            # Set the demod mode from the first channel so a stop on a hit is
+            # audible.  (Detection itself is mode-independent — it reads the
+            # spectrum peak.)
+            self._set_mode(chans[0].mode)
+            freqs = [c.frequency for c in chans]
+            labels = [
+                _("CH{n} {label}").format(n=c.number, label=c.label).strip()
+                for c in chans
+            ]
+            self._status.SetLabel(_("Scanning map {name}…").format(name=cmap.name))
+            self._scanner.start_list(freqs, squelch, labels)
+            speech.output(
+                _("Scanning channel map {name}, {count} channels.").format(
+                    name=cmap.name, count=len(chans)
+                )
+            )
 
     def _on_stop(self, _event: wx.CommandEvent) -> None:
         self._scanner.stop()
@@ -147,12 +273,21 @@ class ScannerDialog(wx.Frame):
         idx = self._results_list.InsertItem(
             self._results_list.GetItemCount(), fmt_freq(result.freq_hz)
         )
-        self._results_list.SetItem(idx, 1, f"{result.strength_db:.1f}")
-        speech.output(
-            _("Signal found at {freq}, {db:.0f} dBm.").format(
-                freq=fmt_freq(result.freq_hz), db=result.strength_db
+        self._results_list.SetItem(idx, 1, result.label)
+        self._results_list.SetItem(idx, 2, f"{result.strength_db:.1f}")
+        if result.label:
+            speech.output(
+                _("Signal on {label}, {freq}, {db:.0f} dBm.").format(
+                    label=result.label, freq=fmt_freq(result.freq_hz),
+                    db=result.strength_db,
+                )
             )
-        )
+        else:
+            speech.output(
+                _("Signal found at {freq}, {db:.0f} dBm.").format(
+                    freq=fmt_freq(result.freq_hz), db=result.strength_db
+                )
+            )
 
     def _on_scan_complete(self, results: list) -> None:
         count = len(results)

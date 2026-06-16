@@ -107,7 +107,13 @@ class SDRBackend(ABC):
     def set_dithering(self, on: bool) -> None:
         """Enable/disable tuner frequency dithering (no-op for most backends)."""
 
-    def set_bias_tee(self, on: bool) -> None: ...
+    def set_bias_tee(self, on: bool, gpio: int = 0) -> None: ...
+    def set_direct_sampling(self, mode: int) -> None:
+        """Set direct-sampling mode: 0 = off, 1 = I-branch, 2 = Q-branch.
+
+        RTL2832U-specific (for HF without an upconverter); a no-op on
+        backends/devices that tune HF natively.
+        """
     def cancel_async(self) -> None:
         """Signal an async capture loop to stop (no-op for most backends)."""
 
@@ -129,11 +135,22 @@ class PyRtlSdrBackend(SDRBackend):
         self._rtl: Optional[_RtlSdrBase] = None
         self._dev_handle = None  # raw C void* for thread-safe calls
         self._capture_alive: bool = False
+        self._device_lost: bool = False  # set when the USB device disappears
 
     def open(self, device_index: int, config: dict) -> bool:
         try:
             self._rtl = _RtlSdrBase(device_index)
             self._dev_handle = self._rtl.dev_p
+            self._device_lost = False
+            # Take ownership of the device lifecycle: pyrtlsdr calls
+            # self.close() -> rtlsdr_close() from INSIDE read_bytes_async
+            # whenever rtlsdr_read_async returns < 0 (every cancel on
+            # Windows/WinUSB, and on any USB error / unplug).  That runs on the
+            # capture thread and access-violates.  close() is gated on
+            # device_opened, so clearing it permanently makes every pyrtlsdr
+            # close() a no-op; this backend then closes the device itself with a
+            # single raw rtlsdr_close() from the main thread (see close()).
+            self._rtl.device_opened = False
         except Exception as exc:   # noqa: BLE001
             logger.error("pyrtlsdr open failed: %s", exc)
             return False
@@ -165,35 +182,41 @@ class PyRtlSdrBackend(SDRBackend):
         self.set_offset_tuning(config.get("offset_tuning", False))
         self.set_tuner_bandwidth(config.get("tuner_bandwidth", 0))
         self.set_dithering(config.get("tuner_dithering", True))
-        self.set_bias_tee(config.get("bias_tee", False))
+        self.set_bias_tee(config.get("bias_tee", False), config.get("bias_tee_gpio", 0))
+        self.set_direct_sampling(config.get("direct_sampling", 0))
 
         logger.info("Opened RTL-SDR device %d", device_index)
         return True
 
     def close(self) -> None:
-        if self._rtl is not None:
-            if self._capture_alive:
-                logger.error(
-                    "close() called while async capture still alive — "
-                    "leaking USB handle to avoid BSOD"
-                )
-                self._rtl = None
-                self._dev_handle = None
-                return
-            try:
-                self._rtl.close()
-            except Exception:   # noqa: BLE001
-                pass
+        if self._rtl is None:
+            return
+        if self._capture_alive:
+            logger.error(
+                "close() called while async capture still alive — "
+                "leaking USB handle to avoid BSOD"
+            )
             self._rtl = None
             self._dev_handle = None
+            return
+        # Real close, done once from the caller's thread (main thread, after
+        # the capture thread has joined).  Skip it if the device was lost —
+        # the handle is already invalid and pyrtlsdr freed it.
+        if self._dev_handle is not None and not self._device_lost:
+            try:
+                _librtlsdr.rtlsdr_close(self._dev_handle)
+            except Exception:   # noqa: BLE001
+                pass
+        self._rtl = None
+        self._dev_handle = None
 
     def cancel_async(self) -> None:
         if self._dev_handle is not None:
             try:
-                # Set pyrtlsdr's flag first so its internal callback checker
-                # skips any trailing callbacks and read_bytes_async won't call
-                # self.close() on a negative return code path.
                 if self._rtl is not None:
+                    # read_async_canceling makes _bytes_converter_callback skip
+                    # any trailing sample callbacks.  pyrtlsdr's close()-on-cancel
+                    # is already neutered (device_opened cleared in open()).
                     self._rtl.read_async_canceling = True
                 _librtlsdr.rtlsdr_cancel_async(self._dev_handle)
             except Exception as exc:   # noqa: BLE001
@@ -220,6 +243,14 @@ class PyRtlSdrBackend(SDRBackend):
             self._rtl.read_samples_async(_on_samples, num_samples=chunk_size)
         except Exception as exc:   # noqa: BLE001
             if running():
+                # The read stopped while we still wanted samples — the device
+                # was lost (unplugged / USB reset).  Mark it lost and drop our
+                # cached handle so every later raw C setter is a safe no-op
+                # instead of dereferencing a freed/invalid handle (which
+                # access-violates).  pyrtlsdr's own close() here is already a
+                # no-op (device_opened cleared in open()).
+                self._device_lost = True
+                self._dev_handle = None
                 logger.error("pyrtlsdr async read error: %s", exc)
                 if on_error:
                     on_error(f"Stream error: {exc}")
@@ -299,12 +330,34 @@ class PyRtlSdrBackend(SDRBackend):
             except Exception as exc:   # noqa: BLE001
                 logger.warning("set_dithering failed: %s", exc)
 
-    def set_bias_tee(self, on: bool) -> None:
+    def set_bias_tee(self, on: bool, gpio: int = 0) -> None:
+        if self._dev_handle is None:
+            return
+        try:
+            gpio_fn = getattr(_librtlsdr, "rtlsdr_set_bias_tee_gpio", None)
+            if gpio_fn is not None and gpio != 0:
+                # The fixed rtlsdr_set_bias_tee() only drives GPIO 0; some
+                # dongles wire the bias-tee FET to a different pin.
+                result = gpio_fn(self._dev_handle, int(gpio), int(on))
+                pin = gpio
+            else:
+                result = _librtlsdr.rtlsdr_set_bias_tee(self._dev_handle, int(on))
+                pin = 0
+            if result < 0:
+                logger.warning(
+                    "set_bias_tee(%d) gpio %d returned %d", int(on), pin, result
+                )
+            else:
+                logger.info("Bias Tee %s (GPIO %d)", "ON" if on else "OFF", pin)
+        except Exception as exc:   # noqa: BLE001
+            logger.warning("set_bias_tee failed: %s", exc)
+
+    def set_direct_sampling(self, mode: int) -> None:
         if self._dev_handle is not None:
             try:
-                _librtlsdr.rtlsdr_set_bias_tee(self._dev_handle, int(on))
+                _librtlsdr.rtlsdr_set_direct_sampling(self._dev_handle, int(mode))
             except Exception as exc:   # noqa: BLE001
-                logger.warning("set_bias_tee failed: %s", exc)
+                logger.warning("set_direct_sampling failed: %s", exc)
 
     def get_valid_gains(self) -> List[float]:
         if self._rtl is not None:
@@ -346,6 +399,12 @@ class PyRtlSdrBackend(SDRBackend):
             if not hasattr(lib.rtlsdr_set_bias_tee, "argtypes"):
                 lib.rtlsdr_set_bias_tee.argtypes = [ctypes.c_void_p, ctypes.c_int]
                 lib.rtlsdr_set_bias_tee.restype = ctypes.c_int
+        except Exception:   # noqa: BLE001
+            pass
+        try:
+            if not hasattr(lib.rtlsdr_set_direct_sampling, "argtypes"):
+                lib.rtlsdr_set_direct_sampling.argtypes = [ctypes.c_void_p, ctypes.c_int]
+                lib.rtlsdr_set_direct_sampling.restype = ctypes.c_int
         except Exception:   # noqa: BLE001
             pass
         try:
@@ -529,6 +588,7 @@ class RtlTcpBackend(SDRBackend):
         if bw:
             self._send_cmd(_CMD_SET_TUNER_BANDWIDTH, bw)
         self._send_cmd(_CMD_SET_BIAS_TEE, int(config.get("bias_tee", False)))
+        self._send_cmd(_CMD_SET_DIRECT_SAMPLING, int(config.get("direct_sampling", 0)))
 
         return True
 
@@ -624,8 +684,12 @@ class RtlTcpBackend(SDRBackend):
         self._send_cmd(_CMD_SET_TUNER_BANDWIDTH, bw_hz)
         return bw_hz  # rtl_tcp can't report the actual applied BW
 
-    def set_bias_tee(self, on: bool) -> None:
+    def set_bias_tee(self, on: bool, gpio: int = 0) -> None:
+        # rtl_tcp's bias-tee command targets the server's fixed GPIO.
         self._send_cmd(_CMD_SET_BIAS_TEE, int(on))
+
+    def set_direct_sampling(self, mode: int) -> None:
+        self._send_cmd(_CMD_SET_DIRECT_SAMPLING, int(mode))
 
     def get_valid_gains(self) -> List[float]:
         return list(_R820T_GAINS)

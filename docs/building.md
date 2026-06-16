@@ -116,8 +116,11 @@ accessdr/
     sonification.py        # Spectrum-to-audio tone mapping
   config/
     settings.py            # JSON-persisted settings
-    bookmarks.py           # Bookmark storage
-    bands.py               # Band definitions
+    bands.py               # Default band plan definitions
+    scenes.py              # Band (VFO preset) model + persistence
+    channels.py            # Channel memory model + persistence
+    mode_params.py         # Per-modulation settings registry
+    modes.py               # Modulation, bandwidth, and step constants
     paths.py               # App data paths
   ui/
     main_window.py         # Primary window

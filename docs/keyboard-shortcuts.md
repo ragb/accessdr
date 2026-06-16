@@ -7,6 +7,7 @@
 | ++f2++ | Start / Stop radio |
 | ++space++ | Pause / Resume radio |
 | ++f3++ | Mute / Unmute |
+| ++r++ | Start / Stop recording |
 | ++i++ | Read signal strength, stereo/mono, RDS, CTCSS, squelch state |
 
 ## Tuning
@@ -27,16 +28,32 @@
 
 | Key | Action |
 |---|---|
-| ++page-up++ | Volume up (+5%) |
-| ++page-down++ | Volume down (-5%) |
-| ++shift+page-up++ | Squelch up (+3 dB) |
-| ++shift+page-down++ | Squelch down (-3 dB) |
+| ++f11++ | Volume up (+5%) |
+| ++f12++ | Volume down (-5%) |
+| ++shift+f11++ | Squelch up (+3 dB) |
+| ++shift+f12++ | Squelch down (-3 dB) |
+
+Volume, squelch, and mute work on every tab regardless of which control has focus.
+
+## Channels and Bands (VFO / MR)
+
+The radio works like a handheld: **VFO mode** for free tuning within a
+*band*, and **Memory (MR) mode** for stepping through numbered memory
+*channels*. The active notebook tab sets the mode.
+
+| Key | Action |
+|---|---|
+| ++v++ | Toggle VFO / Memory (MR) — switches the active tab |
+| ++page-up++ | Channel up (Memory) or frequency step up (VFO, clamped to band edges) |
+| ++page-down++ | Channel down (Memory) or frequency step down (VFO, clamped to band edges) |
+| ++"["++ | Previous band (VFO mode) |
+| ++"]"++ | Next band (VFO mode) |
 
 ## Demodulation Modes
 
-Press ++m++ first, then the mode letter:
+Press ++m++ first, then the modulation letter:
 
-| Key | Mode |
+| Key | Modulation |
 |---|---|
 | ++m++ ++w++ | Wide FM (broadcast) |
 | ++m++ ++n++ | Narrow FM |
@@ -75,17 +92,20 @@ Hold Ctrl to hear a continuous probe tone at the cursor's position — pitch ind
 
 When "demod follows cursor" is enabled (Shift+C), moving the cursor with Left/Right or Ctrl+arrows also shifts the demodulator to listen at the cursor's frequency via a software VFO offset. Press C to reset the cursor and offset to centre. Press Ctrl+T to retune the hardware LO to the cursor and clear the offset.
 
-## Dialogs
+## Dialogs and Tabs
 
-| Key | Dialog |
+| Key | Opens |
 |---|---|
-| ++ctrl+r++ | RF Settings (gain, PPM, sample rate) |
-| ++ctrl+s++ | Spectrum Settings |
+| ++ctrl+q++ | Enter Frequency |
+| ++ctrl+b++ | Channels tab (Memory) |
+| ++ctrl+shift+b++ | Bands… (band plan editor) |
 | ++ctrl+n++ | Scanner |
-| ++ctrl+b++ | Bookmarks |
+| ++ctrl+r++ | RF Settings (gain, PPM, sample rate, direct sampling, upconverter) |
+| ++ctrl+s++ | Spectrum Settings |
 | ++ctrl+d++ | Audio Settings (device, buffer size) |
-| ++ctrl+w++ | WFM Settings (de-emphasis, stereo, hi-blend, RDS) |
-| ++ctrl+g++ | Remote SDR Servers (add, edit, remove, test rtl_tcp servers) |
+| ++ctrl+e++ | Recording Settings |
+| ++ctrl+g++ | Remote SDR (add, edit, remove, test rtl_tcp servers) |
+| ++ctrl+h++ | User Guide |
 | ++f1++ | Keyboard Shortcuts help |
 
 ## Scanner (when open)
@@ -100,6 +120,4 @@ When "demod follows cursor" is enabled (Shift+C), moving the cursor with Left/Ri
 
 | Key | Action |
 |---|---|
-| ++alt+r++ | Open Radio menu (band presets) |
-| ++ctrl+shift+b++ | Save bookmark |
 | ++alt+f4++ | Quit |

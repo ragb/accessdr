@@ -466,6 +466,13 @@ class NFMDemodulator(Demodulator):
 class AMDemodulator(Demodulator):
     _CHANNEL_BW = 5_000  # 10 kHz AM channel
 
+    # Output gain after carrier normalization.  Normalized modulation is
+    # ±modulation_index (≈ ±0.3–1.0); this lifts typical AM to roughly the
+    # same loudness as the FM modes, which output ±1.0 at full deviation.
+    _OUTPUT_GAIN = 2.0
+    # Smoothing factor for the carrier-level estimate (per chunk EMA).
+    _AGC_ALPHA = 0.2
+
     def __init__(self, baseband_rate: int, audio_rate: int, **kwargs) -> None:
         super().__init__(baseband_rate, audio_rate)
         self._lp_sos = make_lowpass_iir(5_000, baseband_rate, order=4)
@@ -474,15 +481,32 @@ class AMDemodulator(Demodulator):
         self._dc_b = np.array([1.0, -1.0])
         self._dc_a = np.array([1.0, -0.9995])
         self._zi_dc = sp_signal.lfilter_zi(self._dc_b, self._dc_a) * 0.0
+        # Smoothed carrier amplitude for AM AGC (0 = not yet seeded).
+        self._carrier_level: float = 0.0
 
     def process(self, iq: np.ndarray) -> np.ndarray:
         iq = self._channel_filter(iq)
         envelope = np.abs(iq).astype(np.float64)
+
+        # AM AGC: the raw envelope scales with RF level, so without this the
+        # audio level swings with signal strength and is far quieter than the
+        # FM modes (which normalize via _disc_gain).  Divide by a smoothed
+        # carrier estimate so the recovered modulation has consistent loudness.
+        chunk_carrier = float(np.mean(envelope))
+        if self._carrier_level <= 0.0:
+            self._carrier_level = chunk_carrier
+        else:
+            self._carrier_level += self._AGC_ALPHA * (
+                chunk_carrier - self._carrier_level)
+        norm = self._carrier_level if self._carrier_level > 1e-6 else 1.0
+        envelope = envelope / norm
+
+        # DC block removes the (now ≈ 1.0) carrier, leaving the modulation.
         audio, self._zi_dc = sp_signal.lfilter(
             self._dc_b, self._dc_a, envelope, zi=self._zi_dc)
         audio, self._zi_lp = sp_signal.sosfilt(
             self._lp_sos, audio, zi=self._zi_lp)
-        return self._resample(audio)
+        return self._resample(audio * self._OUTPUT_GAIN)
 
 
 # ---------------------------------------------------------------------------

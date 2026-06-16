@@ -9,9 +9,10 @@ __pycache__/
 # Native DLLs (installed locally, not part of source)
 *.dll
 
-# Generated data
+# Generated data (per-user runtime state)
 settings.json
-bookmarks.json
+scenes.json
+channels.json
 
 # PyInstaller
 build/

@@ -18,6 +18,18 @@ Accessible via **Options > RF Settings** (++ctrl+r++).
 | `ppm` | 0 | Frequency correction in parts per million |
 | `step` | 1,000 Hz | Tuning step size |
 
+## Operating Mode (VFO / Memory)
+
+AccessDR works like a handheld: a **VFO** mode for free tuning within a band, and a **Memory (MR)** mode for stepping through numbered channels. The active notebook tab selects the mode, and the choice plus your position is restored on the next launch. See the [Channels and Bands](user-guide.md#channels-and-bands) section of the User Guide.
+
+| Setting | Default | Description |
+|---|---|---|
+| `op_mode` | VFO | Operating mode: `VFO` (band tuning) or `MR` (memory channels). |
+| `active_scene` | "" (Free / Full Range) | Name of the active band. Empty selects the built-in Free / Full Range band. |
+| `active_channel` | 0 | Index of the active channel within the active channel map (Memory mode). |
+
+The band plan is stored in `scenes.json` and the channel maps in `channels.json`, both in the same folder as `settings.json`. Edit them in the app via **Radio > Bands…** (++ctrl+shift+b++) and the **Channels** tab (++ctrl+b++).
+
 ## Audio Settings
 
 Accessible via **Options > Audio Settings** (++ctrl+d++).
@@ -32,7 +44,7 @@ Accessible via **Options > Audio Settings** (++ctrl+d++).
 
 ## Spectrum & Sonification
 
-Accessible via **Tools > Spectrum & Sonification** (++ctrl+s++).
+Accessible via **Options > Spectrum Settings** (++ctrl+s++).
 
 | Setting | Default | Description |
 |---|---|---|
@@ -53,6 +65,8 @@ Also accessible via **Options > RF Settings** (++ctrl+r++).
 | `noise_blanker_enabled` | false | Enable impulse noise blanker on raw IQ |
 | `noise_blanker_threshold` | 5.0 | Blanker threshold (multiplier above median magnitude) |
 | `bias_tee` | false | Enable Bias Tee DC power on antenna connector. WARNING: can damage incompatible devices. |
+| `direct_sampling` | 0 | RTL2832U direct-sampling mode for HF: 0 = off, 1 = I-branch, 2 = Q-branch. No effect on SDRs that tune HF natively. |
+| `upconverter_offset` | 0 | Hz added to the hardware LO when using an upconverter (e.g. 125000000 for Ham It Up). 0 = no upconverter. The app keeps showing the real HF frequency. |
 
 ## Waterfall Display
 
@@ -66,18 +80,18 @@ Accessible via **Options > Spectrum Settings** (++ctrl+s++).
 
 The waterfall is always displayed below the line graph. The top 40% of the spectrum panel shows the line graph, and the bottom 60% shows the waterfall spectrogram scrolling newest-at-top. All three colour schemes are designed to be safe for colour-blind users (CVD-safe).
 
-## NFM Settings
+## Modulation Settings
 
-Accessible via **Options > NFM Settings** (++ctrl+shift+n++).
+These are the **built-in defaults** for each modulation. They are no longer edited from a global menu dialog. Instead, each **Modulation:** selector (on the VFO tab, in the Bands form, and in the Channels form) has a **Settings…** button beside it, enabled only when the current modulation has settings. On the VFO tab the button edits these defaults; on a band or channel it edits per-band / per-channel **overrides** (where a blank/default value means "inherit the built-in default below"). See the [Modulation Settings](user-guide.md#modulation-settings) section of the User Guide.
+
+### NFM
 
 | Setting | Default | Description |
 |---|---|---|
 | `nfm_deviation` | 5000 Hz | FM deviation: 5000 Hz (standard 25 kHz channels) or 2500 Hz (PMR446 12.5 kHz channels) |
 | `nfm_ctcss_notch` | true | Remove detected CTCSS sub-audible tone from audio output. Eliminates the low-frequency hum on channels that use tone squelch. |
 
-## WFM Settings
-
-Accessible via **Options > WFM Settings** (++ctrl+w++).
+### WFM
 
 | Setting | Default | Description |
 |---|---|---|
@@ -85,6 +99,8 @@ Accessible via **Options > WFM Settings** (++ctrl+w++).
 | `wfm_stereo_mode` | auto | Stereo decoding: `auto` (pilot detection), `mono` (force mono), `stereo` (force stereo) |
 | `wfm_hiblend_enabled` | true | Reduce treble on weak signals to cut FM hiss |
 | `wfm_rds_enabled` | true | Decode RDS station name and radio text |
+
+AM, USB, LSB, CW, and DSB have no modulation-specific settings, and their Settings… button is disabled.
 
 ## Remote SDR (rtl_tcp)
 

@@ -27,12 +27,17 @@ class Settings:
     agc_mode: bool = False
     offset_tuning: bool = False
     bias_tee: bool = False
+    bias_tee_gpio: int = 0           # GPIO pin the bias-tee circuit is wired to
     tuner_bandwidth: int = 0         # Hz, 0 = auto
+    direct_sampling: int = 0         # 0 = off, 1 = I-branch, 2 = Q-branch (RTL HF)
+    upconverter_offset: int = 0      # Hz added to the hardware LO (0 = no upconverter)
     tuner_dithering: bool = True     # False = disable tuner dither (cleaner CW/SSB/digital)
 
     # Audio
     volume: float = 0.75             # 0.0 – 1.0
     squelch: float = -80.0           # dBm
+    squelch_hysteresis_db: float = 3.0   # close threshold is this much below open
+    squelch_hang_ms: float = 500.0       # hold-open tail after a signal drops
     muted: bool = False
     audio_device: Optional[str] = None
     recording_path: str = ""
@@ -75,6 +80,13 @@ class Settings:
 
     # VFO
     demod_follows_cursor: bool = False
+
+    # Operating mode (VFO / MR). active_scene is a scene name ("" = free
+    # scene); active_channel is the index within the active channel map
+    # (the map itself is persisted by ChannelMapStore).
+    op_mode: str = "VFO"
+    active_scene: str = ""
+    active_channel: int = 0
 
     # SDR buffer
     sdr_buffer_size: int = 65_536   # IQ samples per read (power of 2)

@@ -105,8 +105,10 @@ class RadioController:
             callbacks=callbacks,
         )
 
-        # Configure SDR hardware
-        self._sdr.set_frequency(self._settings.frequency)
+        # Configure SDR hardware. Direct sampling first: it changes the
+        # signal path, so the frequency below must be set in the right mode.
+        self._sdr.set_direct_sampling(self._settings.direct_sampling)
+        self._sdr.set_frequency(self._hw_freq(self._settings.frequency))
         self._sdr.set_sample_rate(self._settings.sample_rate)
         self._sdr.set_gain(self._settings.gain)
         self._sdr.set_ppm(self._settings.ppm)
@@ -117,6 +119,7 @@ class RadioController:
         else:
             self._sdr.set_tuner_bandwidth(0)  # auto
         self._sdr.set_dithering(self._settings.tuner_dithering)
+        self._sdr.bias_tee_gpio = self._settings.bias_tee_gpio
         self._sdr.set_bias_tee(self._settings.bias_tee)
 
         self._sdr.on_samples = self._pipeline.process
@@ -161,9 +164,17 @@ class RadioController:
     # Hardware / pipeline control
     # ------------------------------------------------------------------
 
+    def _hw_freq(self, freq_hz: int) -> int:
+        """Map a real (display) frequency to the hardware LO frequency.
+
+        With an upconverter, the dongle tunes ``freq + upconverter_offset``
+        while the rest of the app keeps the real HF frequency.
+        """
+        return freq_hz + self._settings.upconverter_offset
+
     def set_frequency(self, freq_hz: int) -> None:
-        """Tune SDR and notify pipeline of retune."""
-        self._sdr.set_frequency(freq_hz)
+        """Tune SDR (via upconverter offset) and notify pipeline of retune."""
+        self._sdr.set_frequency(self._hw_freq(freq_hz))
         if self._pipeline is not None:
             self._pipeline.notify_retune()
 
@@ -182,10 +193,14 @@ class RadioController:
     def apply_rf_settings(self) -> bool:
         """Apply RF settings to SDR hardware.
 
-        Returns True if a full restart is required (buffer size changed).
+        Returns True if a full restart is required (buffer size or direct
+        sampling changed — both alter the capture/signal path).
         """
         s = self._settings
-        need_restart = self._running and self._sdr.chunk_size != s.sdr_buffer_size
+        need_restart = self._running and (
+            self._sdr.chunk_size != s.sdr_buffer_size
+            or self._sdr.direct_sampling != s.direct_sampling
+        )
         self._sdr.chunk_size = s.sdr_buffer_size
         if not need_restart and self._running:
             self._sdr.set_gain(s.gain)
@@ -195,7 +210,10 @@ class RadioController:
             self._sdr.set_offset_tuning(s.offset_tuning)
             self._sdr.set_tuner_bandwidth(s.tuner_bandwidth)
             self._sdr.set_dithering(s.tuner_dithering)
+            self._sdr.bias_tee_gpio = s.bias_tee_gpio
             self._sdr.set_bias_tee(s.bias_tee)
+            # Re-tune so a changed upconverter offset takes effect now.
+            self._sdr.set_frequency(self._hw_freq(s.frequency))
         return need_restart
 
     @property

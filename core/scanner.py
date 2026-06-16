@@ -29,11 +29,16 @@ DWELL_SECONDS = 0.3             # seconds per step
 
 
 class ScanResult:
-    """A frequency where a signal was detected."""
+    """A frequency where a signal was detected.
 
-    def __init__(self, freq_hz: int, strength_db: float) -> None:
+    *label* names the target when scanning a channel map (e.g. "CH05 Calling"),
+    and is empty for a plain frequency-range / band scan.
+    """
+
+    def __init__(self, freq_hz: int, strength_db: float, label: str = "") -> None:
         self.freq_hz = freq_hz
         self.strength_db = strength_db
+        self.label = label
 
     def __repr__(self) -> str:
         return f"ScanResult({self.freq_hz / 1e6:.3f} MHz, {self.strength_db:.1f} dBm)"
@@ -85,7 +90,35 @@ class Scanner:
         step_hz: int,
         squelch_db: float = -80.0,
     ) -> None:
-        """Begin scanning from *start_hz* to *stop_hz* in *step_hz* steps."""
+        """Scan a frequency range from *start_hz* to *stop_hz* in *step_hz* steps.
+
+        Used for band scans (the band supplies start/stop/step).
+        """
+        if step_hz <= 0:
+            step_hz = 100_000
+        targets: List[Tuple[int, str]] = []
+        freq = start_hz
+        while freq <= stop_hz:
+            targets.append((freq, ""))
+            freq += step_hz
+        self.start_targets(targets, squelch_db)
+
+    def start_list(
+        self,
+        freqs: List[int],
+        squelch_db: float = -80.0,
+        labels: Optional[List[str]] = None,
+    ) -> None:
+        """Scan a discrete list of frequencies (channel-map / memory scan)."""
+        labels = labels or [""] * len(freqs)
+        self.start_targets(list(zip(freqs, labels)), squelch_db)
+
+    def start_targets(
+        self,
+        targets: List[Tuple[int, str]],
+        squelch_db: float = -80.0,
+    ) -> None:
+        """Scan an explicit list of ``(freq_hz, label)`` targets."""
         if self._running:
             self.stop()
 
@@ -96,7 +129,7 @@ class Scanner:
 
         self._thread = threading.Thread(
             target=self._scan_loop,
-            args=(start_hz, stop_hz, step_hz, squelch_db),
+            args=(list(targets), squelch_db),
             daemon=True,
             name="Scanner",
         )
@@ -127,13 +160,13 @@ class Scanner:
 
     def _scan_loop(
         self,
-        start_hz: int,
-        stop_hz: int,
-        step_hz: int,
+        targets: List[Tuple[int, str]],
         squelch_db: float,
     ) -> None:
-        freq = start_hz
-        while self._running and freq <= stop_hz:
+        i = 0
+        n = len(targets)
+        while self._running and i < n:
+            freq, label = targets[i]
             self._set_freq(freq)
 
             if self.on_frequency_change:
@@ -156,7 +189,7 @@ class Scanner:
             # Check signal
             strength = self._get_signal()
             if strength >= squelch_db:
-                result = ScanResult(freq_hz=freq, strength_db=strength)
+                result = ScanResult(freq_hz=freq, strength_db=strength, label=label)
                 self.results.append(result)
                 logger.info("Signal found: %s", result)
                 if self.on_signal_found:
@@ -164,7 +197,7 @@ class Scanner:
                 # Hold briefly on found signal
                 time.sleep(1.5)
 
-            freq += step_hz
+            i += 1
 
         self._running = False
         if self.on_scan_complete:
