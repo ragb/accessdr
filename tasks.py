@@ -267,7 +267,9 @@ def build_help(c: Context) -> None:
 
     text = open(src, encoding="utf-8").read()
     text = _keys_to_kbd(text)
-    body = md.markdown(text, extensions=["tables"])
+    # "toc" gives every heading a slug id so the in-document links (and the
+    # [TOC] marker) actually resolve; "tables" for the reference tables.
+    body = md.markdown(text, extensions=["tables", "toc"])
     html = _HTML_TEMPLATE.format(title="AccessDR User Guide", body=body)
 
     out = os.path.join(HELP_OUT_DIR, "user-guide.html")

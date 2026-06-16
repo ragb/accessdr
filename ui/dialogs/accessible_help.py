@@ -30,8 +30,6 @@ def _about_body_html() -> str:
         '<a href="https://github.com/ragb/accessdr/blob/master/LICENSE">MIT</a></p>'
         "<p><strong>{project_label}:</strong> "
         '<a href="https://github.com/ragb/accessdr">github.com/ragb/accessdr</a></p>'
-        "<p><strong>{deps_label}:</strong><br>"
-        "wxPython, NumPy, SciPy, pyrtlsdr, sounddevice, accessible_output2</p>"
     ).format(
         version_label=_("Version"),
         version=__version__,
@@ -39,7 +37,6 @@ def _about_body_html() -> str:
         author_label=_("Author"),
         license_label=_("License"),
         project_label=_("Project"),
-        deps_label=_("Dependencies"),
     )
 
 
@@ -67,6 +64,28 @@ def _user_guide_body() -> str | None:
     return match.group(1) if match else text
 
 
+# In-document (#anchor) links: handle them in JS so they scroll AND move
+# screen-reader focus to the target.  Without this the WebView treats a
+# fragment click as a navigation that doesn't reliably scroll a SetPage'd
+# document.  External http(s) links are left alone (the dialog opens those in
+# the system browser).
+_ANCHOR_JS = """
+<script>
+document.addEventListener('click', function (e) {
+  var a = e.target.closest && e.target.closest('a[href^="#"]');
+  if (!a) return;
+  e.preventDefault();
+  var id = decodeURIComponent(a.getAttribute('href').slice(1));
+  var el = id ? document.getElementById(id) : document.body;
+  if (!el) return;
+  el.scrollIntoView();
+  if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+  el.focus();
+}, true);
+</script>
+"""
+
+
 def show_user_guide(parent) -> bool:
     """Show the user guide as an accessible HTML dialog.
 
@@ -78,6 +97,6 @@ def show_user_guide(parent) -> bool:
     from wx_accessible_webview import AccessibleHtmlDialog
 
     AccessibleHtmlDialog(
-        parent, _("User Guide — AccessDR"), body, size=(860, 700)
+        parent, _("User Guide — AccessDR"), body + _ANCHOR_JS, size=(860, 700)
     ).show_modal()
     return True

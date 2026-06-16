@@ -1,5 +1,7 @@
 # User Guide
 
+[TOC]
+
 ## Tuning
 
 ### Frequency Entry
@@ -183,6 +185,14 @@ Volume and squelch sliders are also available in the main window. The mute toggl
 
 The **squelch** silences audio when the signal drops below a threshold. This is useful for scanning or monitoring — you only hear audio when someone is transmitting. Set it just above the noise level so that only real signals open the squelch. A value of -80 dBm is a good starting point; raise it if you hear too much noise.
 
+The squelch behaves like a real radio rather than a hard on/off gate, so it doesn't chop speech between syllables or click on every brief fade:
+
+- **Hang time** — after the signal drops, the audio is held open for a short tail (default 500 ms) before muting, bridging momentary fades and gaps between words.
+- **Hysteresis** — it opens at your threshold but closes a few dB lower (default 3 dB), so it doesn't chatter right at the edge.
+- **Soft attack/release** — it opens and fades closed smoothly instead of cutting abruptly.
+
+Moving the squelch control takes effect immediately (the new threshold is applied at once, without waiting out the previous hang). You can tune the **Squelch Hang (ms)** and **Squelch Hysteresis (dB)** in **Options > Audio Settings** (++ctrl+d++) — set the hang to 0 for an instant cut, or higher if the audio drops too quickly between overs.
+
 ## Signal Information
 
 Press ++i++ at any time to hear a spoken status report including:
@@ -275,9 +285,13 @@ The noise blanker suppresses short impulse noise (electrical interference, ignit
 
 ### Bias Tee
 
-The Bias Tee option supplies **4.5 V DC power** through the coaxial antenna connector. This is used to power external low-noise amplifiers (LNAs), active antennas, or bias-T powered filters directly from the SDR dongle — no separate power supply needed.
+The Bias Tee option supplies **DC power** (typically 4.5 V) through the coaxial antenna connector, used to power external low-noise amplifiers (LNAs), active antennas, or bias-T powered filters directly from the SDR dongle — no separate power supply needed. **It only does anything on a dongle that actually has the bias-tee circuit.**
 
-**Supported devices:** RTL-SDR Blog V3 and other dongles with built-in bias-T circuitry. The NESDR SMArt V5 also supports bias-T.
+**Supported devices:** GPIO-switched bias tee works on the RTL-SDR Blog V3 (and similar) where the bias-tee FET is wired to a tuner GPIO pin (pin 0 by convention).
+
+**Not all dongles have one.** The plain **Nooelec NESDR SMArt** has **no** bias-tee circuit — toggling this does nothing on it. Nooelec's bias-tee models are the **SMArTee** variants, and on those the bias tee is **always on in hardware** (no software switch). If you have a SMArt and need to power an LNA, use an external inline bias-tee injector.
+
+**Bias Tee GPIO pin:** the standard bias-tee command drives GPIO pin 0. If your dongle has a bias tee wired to a different pin, set the **Bias Tee GPIO pin** field (0–7) in the RF Settings until the amplifier powers up.
 
 **WARNING:** Enabling Bias Tee on a device or antenna that does not support it can cause **permanent hardware damage**. A passive antenna may be shorted by the DC voltage. Only enable this if you know your entire signal chain (dongle, cables, antenna/LNA) is designed for bias-T power.
 
@@ -304,7 +318,7 @@ The settings are **per band and per channel, not global.** There is no global WF
 - On the **VFO tab**, the Settings… button edits the live built-in defaults for the current modulation; changes apply immediately if you are receiving in that modulation.
 - In the **Bands** and **Channels** forms, the Settings… button edits **overrides** for that band or channel. Each setting can be left at its default ("inherit the built-in default") or overridden. Band overrides are applied when you load the band; channel overrides when you load the channel. Remember to **Save** the band or channel after editing its modulation settings.
 
-See the [WFM mode description](#wfm--wideband-fm) and [NFM mode description](#nfm--narrowband-fm) above for what each individual setting does.
+See the [WFM mode description](#wfm-wideband-fm) and [NFM mode description](#nfm-narrowband-fm) above for what each individual setting does.
 
 ## Spectrum
 
@@ -389,19 +403,25 @@ Open the Spectrum Settings dialog with ++ctrl+s++ to adjust:
 
 ## Scanner
 
-The scanner automatically steps through a frequency range, pausing on active signals.
+The scanner steps automatically and pauses on active signals. Rather than typing raw start/stop frequencies, you scan one of the things you have already defined — a **band** or a **channel map** — so the scan inherits the right range, step, and modulation.
 
-1. Open the Scanner dialog with ++ctrl+n++
-2. Set the start frequency, stop frequency, and step size
-3. Set the squelch threshold — signals above this level will be flagged
-4. Start the scan
+Open the Scanner dialog with ++ctrl+n++. At the top, choose the **Scan source**:
+
+- **Band** — pick one of your [bands](#bands-vfo-presets) from the dropdown. The scan sweeps that band's frequency range using the band's own step, and sets the band's modulation so a stop on a hit is audible. The info line shows the range, step, and modulation that will be used. Free / unbounded bands have no edges, so they cannot be scanned and are not listed.
+- **Channel map** — pick a [channel map](#channels-memory). The scan visits that map's discrete memory channels in order (a Baofeng-style memory scan), not a continuous range. Each found signal is reported with its channel number and label.
+
+Set the **squelch threshold** — channels/frequencies whose signal rises above this level are flagged and spoken as they are found. Then press **Start Scan**.
+
+The radio must be **running** for the scanner to detect anything, since it reads the live spectrum level. Detection itself is modulation-independent (it measures signal energy), so a channel map that mixes modulations is still scanned correctly; the audio modulation is set once from the band (or the map's first channel).
+
+Found signals appear in the results list with frequency, channel label (for channel-map scans), and strength, and are announced as they arrive.
 
 ### Scanner Controls
 
 | Key | Action |
 |---|---|
 | ++h++ | Hold on the current frequency (toggle) |
-| ++k++ | Skip to the next frequency |
+| ++k++ | Skip to the next frequency / channel |
 | ++escape++ | Stop the scan |
 
 When a signal is found, the scanner pauses briefly so you can listen, then continues.
