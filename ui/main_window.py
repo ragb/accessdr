@@ -1331,25 +1331,24 @@ class MainWindow(wx.Frame):
         self._open_or_raise("help", lambda: HelpDialog(self))
 
     def _on_open_user_guide(self, _event) -> None:
-        import webbrowser
-        from config.paths import help_dir
-        path = os.path.join(help_dir(), "user-guide.html")
-        if os.path.isfile(path):
-            webbrowser.open(path)
-        else:
+        # Defer off the menu/key handler: the accessible HTML dialog creates a
+        # WebView2 (COM), which faults if built inside an input-synchronous call.
+        wx.CallAfter(self._open_user_guide)
+
+    def _open_user_guide(self) -> None:
+        from ui.dialogs.accessible_help import show_user_guide
+        if not show_user_guide(self):
             speech.output(_("User guide not found. Run 'invoke build-help' first."))
 
     def _on_open_help(self, _event) -> None:
         self._open_help_dialog()
 
     def _on_open_about(self, _event) -> None:
-        self._open_about_dialog()
+        wx.CallAfter(self._open_about_dialog)
 
     def _open_about_dialog(self) -> None:
-        from ui.dialogs.about_dialog import AboutDialog
-        dlg = AboutDialog(self)
-        dlg.ShowModal()
-        dlg.Destroy()
+        from ui.dialogs.accessible_help import show_about
+        show_about(self)
 
     # ==================================================================
     # Callbacks
