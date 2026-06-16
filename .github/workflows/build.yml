@@ -22,7 +22,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install test dependencies
-        run: pip install numpy scipy pytest
+        # Full runtime deps: the panel/dialog/tree tests import wx, and the
+        # DSP/audio tests pull numpy/scipy/sounddevice.  pyrtlsdr imports are
+        # guarded, so the missing librtlsdr DLL doesn't break collection.
+        run: pip install -e . pytest
 
       - name: Run tests
         run: pytest -v
