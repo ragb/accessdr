@@ -8,10 +8,9 @@ and key dependencies in an HTML panel.
 from __future__ import annotations
 
 import wx
-import wx.html
 
-from accessibility import speech
 from accessdr_version import __version__
+from ui.dialogs.html_view import make_webview, webview_available
 
 
 class AboutDialog(wx.Dialog):
@@ -32,10 +31,19 @@ class AboutDialog(wx.Dialog):
     def _build_ui(self) -> None:
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        html = wx.html.HtmlWindow(self, size=(420, 300))
-        html.SetBorders(10)
-        html.SetPage(self._build_html())
-        sizer.Add(html, 1, wx.EXPAND | wx.ALL, 8)
+        html = self._build_html()
+        if webview_available():
+            # Accessible HTML via wx.html2.WebView (Edge/WebView2) — the screen
+            # reader reads the rendered page natively, no manual announcement.
+            view = make_webview(self, name="About AccessDR")
+            view.SetPage(html, "")
+            view.SetMinSize((440, 320))
+        else:
+            import wx.html as _wxhtml
+            view = _wxhtml.HtmlWindow(self, size=(440, 320))
+            view.SetBorders(10)
+            view.SetPage(html)
+        sizer.Add(view, 1, wx.EXPAND | wx.ALL, 8)
 
         btn_sizer = wx.StdDialogButtonSizer()
         ok_btn = wx.Button(self, wx.ID_OK)
@@ -47,14 +55,6 @@ class AboutDialog(wx.Dialog):
         self.SetSizer(sizer)
         self.Bind(wx.EVT_BUTTON, self._on_ok, id=wx.ID_OK)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
-
-        # Announce dialog content to screen reader
-        speech.output(
-            _("AccessDR version {version}. "
-              "Accessible SDR radio application. "
-              "Created by Rui Batista. "
-              "License: MIT.").format(version=__version__)
-        )
 
     def _build_html(self) -> str:
         return (
