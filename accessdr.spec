@@ -26,6 +26,13 @@ _ver_nums = re.findall(r"\d+", _version) or ["0"]
 _ver_parts = (_ver_nums + ["0", "0", "0", "0"])[:4]
 _ver_tuple = tuple(int(x) for x in _ver_parts)
 
+# WebView2Loader.dll ships with wxPython and is required for the Edge/WebView2
+# backend that wx-accessible-webview uses for the accessible About / User Guide
+# dialogs.  PyInstaller doesn't reliably bundle it, so add it explicitly.
+import wx as _wx_pkg
+_webview2_dll = os.path.join(os.path.dirname(_wx_pkg.__file__), "WebView2Loader.dll")
+_extra_binaries = [(_webview2_dll, ".")] if os.path.isfile(_webview2_dll) else []
+
 a = Analysis(
     ["main.py"],
     pathex=[PROJ],
@@ -33,12 +40,19 @@ a = Analysis(
         (os.path.join(PROJ, "rtlsdr.dll"), "."),
         (os.path.join(PROJ, "pthreadVC2.dll"), "."),
         (os.path.join(PROJ, "msvcr100.dll"), "."),
-    ],
+    ] + _extra_binaries,
     datas=[
         (os.path.join(PROJ, "locale"), "locale"),
         (os.path.join(PROJ, "build", "help"), "help"),
     ],
     hiddenimports=[
+        # wx-accessible-webview (accessible About / User Guide dialogs)
+        "wx_accessible_webview",
+        "wx_accessible_webview.dialog",
+        "wx_accessible_webview.webview",
+        "wx_accessible_webview.chat",
+        "wx_accessible_webview._common",
+        "wx.html2",
         # accessible_output2 — handled by hook, but list explicitly too
         "accessible_output2",
         "accessible_output2.outputs",

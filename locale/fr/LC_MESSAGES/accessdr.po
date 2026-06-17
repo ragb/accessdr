@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: accessdr 0.5.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-16 15:51+0100\n"
+"POT-Creation-Date: 2026-06-16 17:22+0100\n"
 "PO-Revision-Date: 2026-05-24 18:23+0200\n"
 "Last-Translator: Michel Such <michel.such@free.fr>\n"
 "Language: fr\n"
@@ -318,7 +318,7 @@ msgstr "&À propos d'&AccessDR"
 msgid "&Help"
 msgstr "&Aide"
 
-#: ui/dialogs/help_dialog.py:77 ui/main_window.py:215
+#: ui/dialogs/help_dialog.py:73 ui/main_window.py:215
 msgid "Channels"
 msgstr ""
 
@@ -663,21 +663,21 @@ msgstr ""
 msgid "Remote: {name} ({host}:{port})"
 msgstr "Distant : {name} ({host}:{port})"
 
-#: ui/dialogs/help_dialog.py:165 ui/main_window.py:1340
+#: ui/dialogs/help_dialog.py:163 ui/main_window.py:1341
 msgid "User guide not found. Run 'invoke build-help' first."
 msgstr "Guide utilisateur non trouvé. Exécutez d'abord 'invoke build-help'."
 
-#: ui/main_window.py:1371
+#: ui/main_window.py:1370
 #, python-brace-format
 msgid "IF bandwidth {bw:.0f} kHz"
 msgstr ""
 
-#: ui/main_window.py:1398
+#: ui/main_window.py:1397
 #, python-brace-format
 msgid "SDR error: {msg}"
 msgstr "Erreur SDR: {msg}"
 
-#: ui/main_window.py:1401
+#: ui/main_window.py:1400
 #, python-brace-format
 msgid "Error: {msg}"
 msgstr "Erreur: {msg}"
@@ -716,44 +716,35 @@ msgstr "Aucun pic détecté."
 msgid "Peaks: "
 msgstr "Pics: "
 
-#: ui/dialogs/about_dialog.py:24
-msgid "About AccessDR"
-msgstr "À propos d'AccessDR"
-
-#: ui/dialogs/about_dialog.py:53
-#, python-brace-format
-msgid ""
-"AccessDR version {version}. Accessible SDR radio application. Created by "
-"Rui Batista. License: MIT."
-msgstr ""
-"AccessDR version {version}. Application accessible pour Radio SDR. Créée "
-"par Rui Batista. Licence: MIT."
-
-#: ui/dialogs/about_dialog.py:74
+#: ui/dialogs/accessible_help.py:34
 msgid "Version"
 msgstr "Version"
 
-#: ui/dialogs/about_dialog.py:76
+#: ui/dialogs/accessible_help.py:36
 msgid "Accessible SDR radio application for blind and visually impaired users."
 msgstr "Application radio SDR accessible aux utilisateurs aveugles et malvoyants."
 
-#: ui/dialogs/about_dialog.py:77
+#: ui/dialogs/accessible_help.py:37
 msgid "Author"
 msgstr "Auteur"
 
-#: ui/dialogs/about_dialog.py:78
+#: ui/dialogs/accessible_help.py:38
 msgid "License"
 msgstr "Licence"
 
-#: ui/dialogs/about_dialog.py:79
+#: ui/dialogs/accessible_help.py:39
 msgid "Project"
 msgstr "Projet"
 
-#: ui/dialogs/about_dialog.py:80
-msgid "Dependencies"
-msgstr "Dépendances"
+#: ui/dialogs/accessible_help.py:48
+msgid "About AccessDR"
+msgstr "À propos d'AccessDR"
 
-#: ui/dialogs/audio_dialog.py:27 ui/dialogs/help_dialog.py:79
+#: ui/dialogs/accessible_help.py:100
+msgid "User Guide — AccessDR"
+msgstr ""
+
+#: ui/dialogs/audio_dialog.py:27 ui/dialogs/help_dialog.py:75
 msgid "Audio Settings"
 msgstr "Paramètres Audio"
 
@@ -777,11 +768,11 @@ msgstr ""
 msgid "Squelch Hysteresis (dB):"
 msgstr ""
 
-#: ui/dialogs/bands_dialog.py:33 ui/dialogs/help_dialog.py:78
+#: ui/dialogs/bands_dialog.py:33 ui/dialogs/help_dialog.py:74
 msgid "Bands"
 msgstr ""
 
-#: ui/dialogs/bands_dialog.py:45 ui/dialogs/help_dialog.py:144
+#: ui/dialogs/bands_dialog.py:45 ui/dialogs/help_dialog.py:140
 #: ui/dialogs/rtl_tcp_dialog.py:146
 msgid "Close"
 msgstr "Fermer"
@@ -790,271 +781,271 @@ msgstr "Fermer"
 msgid "Bands dialog opened."
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:18
+#: ui/dialogs/help_dialog.py:14
 msgid "--- Main Window ---"
 msgstr "--- Fenêtre Principale ---"
 
-#: ui/dialogs/help_dialog.py:19
+#: ui/dialogs/help_dialog.py:15
 msgid "Start / Stop radio"
 msgstr "Démarrer / Arrêter la radio"
 
-#: ui/dialogs/help_dialog.py:20
+#: ui/dialogs/help_dialog.py:16
 msgid "Pause / Resume radio"
 msgstr "Pause / redémarrage radio"
 
-#: ui/dialogs/help_dialog.py:21
+#: ui/dialogs/help_dialog.py:17
 msgid "Report LO frequency"
 msgstr "Annoncer la fréquence LO"
 
-#: ui/dialogs/help_dialog.py:22
+#: ui/dialogs/help_dialog.py:18
 msgid "Report listening frequency"
 msgstr "Annoncer la fréquence écoutée"
 
-#: ui/dialogs/help_dialog.py:23
+#: ui/dialogs/help_dialog.py:19
 msgid "Enter LO frequency"
 msgstr "Entrez la fréquence LO"
 
-#: ui/dialogs/help_dialog.py:24
+#: ui/dialogs/help_dialog.py:20
 msgid "Enter listening frequency"
 msgstr "Entrez la fréquence à écouter"
 
-#: ui/dialogs/help_dialog.py:25
+#: ui/dialogs/help_dialog.py:21
 msgid "Tune up by step"
 msgstr "Accorder vers le haut par pas"
 
-#: ui/dialogs/help_dialog.py:26
+#: ui/dialogs/help_dialog.py:22
 msgid "Tune down by step"
 msgstr "Accorder vers le bas par pas"
 
-#: ui/dialogs/help_dialog.py:27
+#: ui/dialogs/help_dialog.py:23
 msgid "Tune up by 10× step"
 msgstr "Accorder vers le haut par pas de 10×"
 
-#: ui/dialogs/help_dialog.py:28
+#: ui/dialogs/help_dialog.py:24
 msgid "Tune down by 10× step"
 msgstr "Accorder vers le bar pas pas de 10×"
 
-#: ui/dialogs/help_dialog.py:29
+#: ui/dialogs/help_dialog.py:25
 msgid "Cycle step size"
 msgstr "Faire défiler les tailles de pas"
 
-#: ui/dialogs/help_dialog.py:30
+#: ui/dialogs/help_dialog.py:26
 msgid "Volume up"
 msgstr "Monter volume"
 
-#: ui/dialogs/help_dialog.py:31
+#: ui/dialogs/help_dialog.py:27
 msgid "Volume down"
 msgstr "Baisser volume"
 
-#: ui/dialogs/help_dialog.py:32
+#: ui/dialogs/help_dialog.py:28
 msgid "Squelch up"
 msgstr "Monter le squelch"
 
-#: ui/dialogs/help_dialog.py:33
+#: ui/dialogs/help_dialog.py:29
 msgid "Squelch down"
 msgstr "Baisser le squelch"
 
-#: ui/dialogs/help_dialog.py:34
+#: ui/dialogs/help_dialog.py:30
 msgid "Mute / Unmute"
 msgstr "Activer/désactiver le son"
 
-#: ui/dialogs/help_dialog.py:35
+#: ui/dialogs/help_dialog.py:31
 msgid "Toggle recording"
 msgstr "Activer/désactiver l'enregistrement"
 
-#: ui/dialogs/help_dialog.py:36
+#: ui/dialogs/help_dialog.py:32
 msgid "Read signal strength"
 msgstr "Lire la force du signal"
 
-#: ui/dialogs/help_dialog.py:38
+#: ui/dialogs/help_dialog.py:34
 msgid "--- Channels / Bands (VFO / MR) ---"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:39
+#: ui/dialogs/help_dialog.py:35
 msgid "Channel up (MR) / frequency step up (VFO)"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:40
+#: ui/dialogs/help_dialog.py:36
 msgid "Channel down (MR) / frequency step down (VFO)"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:41
+#: ui/dialogs/help_dialog.py:37
 msgid "Toggle VFO / Memory mode"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:42
+#: ui/dialogs/help_dialog.py:38
 msgid "Previous band (VFO)"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:43
+#: ui/dialogs/help_dialog.py:39
 msgid "Next band (VFO)"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:45
+#: ui/dialogs/help_dialog.py:41
 msgid "--- Modulation (press M, then letter) ---"
 msgstr "--- Modulation (pressez M, puis une lettre) ---"
 
-#: ui/dialogs/help_dialog.py:46
+#: ui/dialogs/help_dialog.py:42
 msgid "Wide FM"
 msgstr "FM large"
 
-#: ui/dialogs/help_dialog.py:47
+#: ui/dialogs/help_dialog.py:43
 msgid "Narrow FM"
 msgstr "FM étroite"
 
-#: ui/dialogs/help_dialog.py:54
+#: ui/dialogs/help_dialog.py:50
 msgid "--- Spectrum / Sonification ---"
 msgstr "--- Spectre / Sonification ---"
 
-#: ui/dialogs/help_dialog.py:55
+#: ui/dialogs/help_dialog.py:51
 msgid "Speak top peaks"
 msgstr "Annoncer les pics supérieurs"
 
-#: ui/dialogs/help_dialog.py:56
+#: ui/dialogs/help_dialog.py:52
 msgid "Describe spectrum"
 msgstr "Décrire le spectre"
 
-#: ui/dialogs/help_dialog.py:57
+#: ui/dialogs/help_dialog.py:53
 msgid "Zoom in spectrum"
 msgstr "Zoomer dans le spectre"
 
-#: ui/dialogs/help_dialog.py:58
+#: ui/dialogs/help_dialog.py:54
 msgid "Zoom out spectrum"
 msgstr "Zoomer hors du spectre"
 
-#: ui/dialogs/help_dialog.py:59
+#: ui/dialogs/help_dialog.py:55
 msgid "Reset zoom"
 msgstr "Réinitialiser le zoom"
 
-#: ui/dialogs/help_dialog.py:60
+#: ui/dialogs/help_dialog.py:56
 msgid "Sonification snapshot sweep"
 msgstr "Balayage instantané de sonification"
 
-#: ui/dialogs/help_dialog.py:61
+#: ui/dialogs/help_dialog.py:57
 msgid "Toggle continuous sweep"
 msgstr "Activer/désactiver le balayage en continu"
 
-#: ui/dialogs/help_dialog.py:63
+#: ui/dialogs/help_dialog.py:59
 msgid "--- Spectrum Cursor ---"
 msgstr "--- Curseur du Spectre ---"
 
-#: ui/dialogs/help_dialog.py:64
+#: ui/dialogs/help_dialog.py:60
 msgid "Probe tone at cursor"
 msgstr "Tonalité de sonde au niveau du curseur"
 
-#: ui/dialogs/help_dialog.py:65
+#: ui/dialogs/help_dialog.py:61
 msgid "Move cursor while probing"
 msgstr "Déplacer le curseur durant le sondage"
 
-#: ui/dialogs/help_dialog.py:66
+#: ui/dialogs/help_dialog.py:62
 msgid "Step cursor left"
 msgstr "Déplacer le curseur vers la gauche"
 
-#: ui/dialogs/help_dialog.py:67
+#: ui/dialogs/help_dialog.py:63
 msgid "Step cursor right"
 msgstr "Déplacer le curseur vers la droite"
 
-#: ui/dialogs/help_dialog.py:68
+#: ui/dialogs/help_dialog.py:64
 msgid "Reset cursor to centre, clear offset"
 msgstr "Remettre le curseur au centre, supprimer le décalage"
 
-#: ui/dialogs/help_dialog.py:69
+#: ui/dialogs/help_dialog.py:65
 msgid "Speak cursor frequency and power"
 msgstr "Annoncer la fréquence et la puissance du curseur"
 
-#: ui/dialogs/help_dialog.py:70
+#: ui/dialogs/help_dialog.py:66
 msgid "Tune LO to cursor, clear offset"
 msgstr "Accorder LO au curseur, effacer le décalage"
 
-#: ui/dialogs/help_dialog.py:71
+#: ui/dialogs/help_dialog.py:67
 msgid "Toggle demod follows cursor"
 msgstr "Activer/désactiver démodulation suit curseur"
 
-#: ui/dialogs/help_dialog.py:73
+#: ui/dialogs/help_dialog.py:69
 msgid "--- Dialogs ---"
 msgstr "--- Dialogues ---"
 
-#: ui/dialogs/help_dialog.py:74 ui/dialogs/rf_dialog.py:53
+#: ui/dialogs/help_dialog.py:70 ui/dialogs/rf_dialog.py:53
 msgid "RF Settings"
 msgstr "Paramètres RF"
 
-#: ui/dialogs/help_dialog.py:75 ui/dialogs/spectrum_dialog.py:27
+#: ui/dialogs/help_dialog.py:71 ui/dialogs/spectrum_dialog.py:27
 msgid "Spectrum Settings"
 msgstr "Paramètres du Spectre"
 
-#: ui/dialogs/help_dialog.py:76 ui/dialogs/scanner_dialog.py:43
+#: ui/dialogs/help_dialog.py:72 ui/dialogs/scanner_dialog.py:43
 msgid "Scanner"
 msgstr "Scanner"
 
-#: ui/dialogs/help_dialog.py:80 ui/dialogs/recording_dialog.py:21
+#: ui/dialogs/help_dialog.py:76 ui/dialogs/recording_dialog.py:21
 msgid "Recording Settings"
 msgstr "Paramètres d'enregistrement"
 
-#: ui/dialogs/help_dialog.py:81
+#: ui/dialogs/help_dialog.py:77
 msgid "Modulation settings (per band/channel)"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:81
+#: ui/dialogs/help_dialog.py:77
 msgid "“Modulation settings…” button"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:82
+#: ui/dialogs/help_dialog.py:78
 msgid "Remote SDR settings"
 msgstr "Paramètres SDR distant"
 
-#: ui/dialogs/help_dialog.py:83
+#: ui/dialogs/help_dialog.py:79
 msgid "Help (this window)"
 msgstr "Aide (cette fenêtre)"
 
-#: ui/dialogs/help_dialog.py:85
+#: ui/dialogs/help_dialog.py:81
 msgid "--- Scanner (when open) ---"
 msgstr "--- Scanner (si ouvert) ---"
 
-#: ui/dialogs/help_dialog.py:86
+#: ui/dialogs/help_dialog.py:82
 msgid "Hold on frequency"
 msgstr "Garder la fréquence"
 
-#: ui/dialogs/help_dialog.py:87
+#: ui/dialogs/help_dialog.py:83
 msgid "Skip to next"
 msgstr "Aller au suivant"
 
-#: ui/dialogs/help_dialog.py:88
+#: ui/dialogs/help_dialog.py:84
 msgid "Stop scan"
 msgstr "Arrêter le balayage"
 
-#: ui/dialogs/help_dialog.py:90
+#: ui/dialogs/help_dialog.py:86
 msgid "--- General ---"
 msgstr "--- Général ---"
 
-#: ui/dialogs/help_dialog.py:91
+#: ui/dialogs/help_dialog.py:87
 msgid "Open Radio menu (bands, scanner)"
 msgstr ""
 
-#: ui/dialogs/help_dialog.py:92
+#: ui/dialogs/help_dialog.py:88
 msgid "Quit"
 msgstr "Quitter"
 
-#: ui/dialogs/help_dialog.py:102
+#: ui/dialogs/help_dialog.py:98
 msgid "Keyboard Shortcuts — AccessDR"
 msgstr "Raccourcis clavier — AccessDR"
 
-#: ui/dialogs/help_dialog.py:119
+#: ui/dialogs/help_dialog.py:115
 msgid "AccessDR Keyboard Shortcuts"
 msgstr "Raccourcis clavier d'AccessDR"
 
-#: ui/dialogs/help_dialog.py:129
+#: ui/dialogs/help_dialog.py:125
 msgid "Action"
 msgstr "Action"
 
-#: ui/dialogs/help_dialog.py:130
+#: ui/dialogs/help_dialog.py:126
 msgid "Key(s)"
 msgstr "Touche(s)"
 
-#: ui/dialogs/help_dialog.py:139
+#: ui/dialogs/help_dialog.py:135
 msgid "Open User Guide"
 msgstr "Ouvrir le Guide de l'Utilisateur"
 
-#: ui/dialogs/help_dialog.py:168
+#: ui/dialogs/help_dialog.py:166
 msgid "Keyboard Shortcuts for AccessDR."
 msgstr "Raccourcis clavier pour AccessDR."
 
@@ -2095,4 +2086,16 @@ msgstr ""
 
 #~ msgid "Scan started from {start} to {stop}, step {step} kHz."
 #~ msgstr "Balayage en cours de {start} à {stop}, pas {step} kHz."
+
+#~ msgid ""
+#~ "AccessDR version {version}. Accessible SDR "
+#~ "radio application. Created by Rui "
+#~ "Batista. License: MIT."
+#~ msgstr ""
+#~ "AccessDR version {version}. Application "
+#~ "accessible pour Radio SDR. Créée par "
+#~ "Rui Batista. Licence: MIT."
+
+#~ msgid "Dependencies"
+#~ msgstr "Dépendances"
 

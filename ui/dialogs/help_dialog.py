@@ -7,12 +7,8 @@ The full shortcut list is also spoken aloud when the dialog opens.
 
 from __future__ import annotations
 
-import os
-import webbrowser
-
 import wx
 from accessibility import speech
-from config.paths import help_dir
 
 SHORTCUTS = [
     (N_("--- Main Window ---"), ""),
@@ -158,10 +154,12 @@ class HelpDialog(wx.Frame):
             event.Skip()
 
     def _on_open_guide(self, _event: wx.CommandEvent) -> None:
-        path = os.path.join(help_dir(), "user-guide.html")
-        if os.path.isfile(path):
-            webbrowser.open(path)
-        else:
+        # Defer off the button handler (WebView2 COM init guard).
+        wx.CallAfter(self._open_guide)
+
+    def _open_guide(self) -> None:
+        from ui.dialogs.accessible_help import show_user_guide
+        if not show_user_guide(self.GetParent() or self):
             speech.output(_("User guide not found. Run 'invoke build-help' first."))
 
     def _announce(self) -> None:
