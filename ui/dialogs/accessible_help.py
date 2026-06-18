@@ -100,3 +100,106 @@ def show_user_guide(parent) -> bool:
         parent, _("User Guide — AccessDR"), body + _ANCHOR_JS, size=(860, 700)
     ).show_modal()
     return True
+
+
+# ---------------------------------------------------------------------------
+# Keyboard shortcuts — grouped by where each key is live, mirroring the
+# context sets in ui.keyboard_handler (Global / VFO / Memory).  Labels are
+# N_()-marked for extraction and translated at render time.
+# ---------------------------------------------------------------------------
+
+SHORTCUT_GROUPS = [
+    (N_("Global (any mode)"), [
+        (N_("Start / Stop radio"), "F2"),
+        (N_("Pause / Resume radio"), "Space"),
+        (N_("Mute / Unmute"), "F3"),
+        (N_("Volume up / down"), "F11 / F12"),
+        (N_("Squelch sensitivity up / down"), "Shift+F11 / Shift+F12"),
+        (N_("Squelch on / off"), "Ctrl+Shift+A"),
+        (N_("Monitor (hold to defeat squelch)"), "L  (or F4)"),
+        (N_("Read signal / status info"), "I"),
+        (N_("Toggle VFO / Memory mode"), "V"),
+        (N_("Channel up / down (Memory), or frequency step (VFO)"), "Page Up / Page Down"),
+        (N_("Toggle recording"), "R"),
+        (N_("Quit"), "Alt+F4"),
+    ]),
+    (N_("VFO — Tuning"), [
+        (N_("Report LO frequency"), "Q"),
+        (N_("Report listening frequency"), "O"),
+        (N_("Enter LO frequency"), "Ctrl+Q"),
+        (N_("Enter listening frequency"), "Ctrl+O"),
+        (N_("Tune up / down by step"), "Up / Down"),
+        (N_("Tune up / down by 10x step"), "Shift+Up / Shift+Down"),
+        (N_("Cycle step size"), "S"),
+        (N_("Previous / next band"), "[  /  ]"),
+    ]),
+    (N_("VFO — Modulation (press M, then a letter)"), [
+        (N_("Wide FM"), "M  W"),
+        (N_("Narrow FM"), "M  N"),
+        ("AM", "M  A"),
+        ("USB", "M  U"),
+        ("LSB", "M  L"),
+        ("CW", "M  C"),
+        ("DSB", "M  D"),
+    ]),
+    (N_("VFO — Spectrum and Cursor"), [
+        (N_("Speak top peaks"), "F"),
+        (N_("Describe spectrum"), "G"),
+        (N_("Zoom in / out"), "+  /  -"),
+        (N_("Reset zoom"), "Backspace"),
+        (N_("Sonification snapshot sweep"), "F5"),
+        (N_("Toggle continuous sweep"), "Ctrl+F5"),
+        (N_("Probe tone at cursor (hold)"), "Ctrl"),
+        (N_("Move cursor while probing"), "Ctrl+Left / Ctrl+Right"),
+        (N_("Step cursor left / right"), "Left / Right"),
+        (N_("Reset cursor to centre, clear offset"), "C"),
+        (N_("Speak cursor frequency and power"), "T"),
+        (N_("Tune LO to cursor, clear offset"), "Ctrl+T"),
+        (N_("Toggle demod follows cursor"), "Shift+C"),
+    ]),
+    (N_("Dialogs"), [
+        (N_("RF Settings"), "Ctrl+R"),
+        (N_("Spectrum Settings"), "Ctrl+S"),
+        (N_("Audio Settings"), "Ctrl+D"),
+        (N_("Recording Settings"), "Ctrl+E"),
+        (N_("Scanner"), "Ctrl+N"),
+        (N_("Channels"), "Ctrl+B"),
+        (N_("Bands"), "Ctrl+Shift+B"),
+        (N_("Remote SDR settings"), "Ctrl+G"),
+        (N_("User Guide"), "Ctrl+H"),
+        (N_("Keyboard Shortcuts (this window)"), "F1"),
+    ]),
+    (N_("Scanner (when open)"), [
+        (N_("Hold on frequency"), "H"),
+        (N_("Skip to next"), "K"),
+        (N_("Stop scan"), "Escape"),
+    ]),
+]
+
+
+def _shortcuts_body_html() -> str:
+    """Render the grouped shortcuts as an HTML body fragment (one table/group)."""
+    from html import escape
+
+    out = []
+    for group_title, rows in SHORTCUT_GROUPS:
+        out.append("<h2>{}</h2>".format(escape(_(group_title))))
+        out.append("<table><thead><tr><th>{}</th><th>{}</th></tr></thead><tbody>".format(
+            escape(_("Action")), escape(_("Key(s)"))
+        ))
+        for label, key in rows:
+            out.append("<tr><td>{}</td><td><kbd>{}</kbd></td></tr>".format(
+                escape(_(label)), escape(key)
+            ))
+        out.append("</tbody></table>")
+    return "\n".join(out)
+
+
+def show_shortcuts(parent) -> None:
+    """Show the keyboard-shortcut reference as an accessible HTML dialog."""
+    from wx_accessible_webview import AccessibleHtmlDialog
+
+    AccessibleHtmlDialog(
+        parent, _("Keyboard Shortcuts — AccessDR"),
+        _shortcuts_body_html(), size=(720, 640),
+    ).show_modal()

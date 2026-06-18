@@ -39,6 +39,7 @@ class CursorController:
         tune_cb: Callable[[int], None],
         duck_cb: Callable[[float], None],
         freq_ctrl: wx.TextCtrl,
+        is_active_cb: Callable[[], bool] = lambda: True,
     ) -> None:
         self._parent = parent
         self._settings = settings
@@ -48,6 +49,8 @@ class CursorController:
         self._tune_cb = tune_cb
         self._duck_cb = duck_cb
         self._freq_ctrl = freq_ctrl
+        # The cursor/probe only operate where the spectrum is shown (VFO mode).
+        self._is_active_cb = is_active_cb
 
         # Cursor state
         self._cursor_pos: float = 0.5
@@ -141,7 +144,7 @@ class CursorController:
 
     def _on_timer(self, _event: wx.TimerEvent) -> None:
         """50 ms tick: poll Ctrl for probe start/stop, arrows for movement."""
-        if wx.GetActiveWindow() is not self._parent:
+        if wx.GetActiveWindow() is not self._parent or not self._is_active_cb():
             if self._cursor_active:
                 self.stop_probe()
             self._ctrl_was_down = False

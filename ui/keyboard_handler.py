@@ -87,6 +87,47 @@ OPEN_USER_GUIDE = "open_user_guide"
 CLOSE_WINDOW = "close_window"
 
 
+# ---------------------------------------------------------------------------
+# Context sets — which actions are live in which operating mode.
+#
+# The active notebook tab is the operating mode (VFO vs Memory).  Cursor and
+# spectrum controls only make sense in VFO (the spectrum is hidden in Memory),
+# so they are gated there; the always-relevant controls work in both modes.
+# These are the single source of truth for both _on_key gating and the
+# grouped keyboard-shortcuts help.
+# ---------------------------------------------------------------------------
+
+# Work in both modes (radio control, volume/squelch/mute, info, mode toggle,
+# recording, and every menu/dialog opener).
+GLOBAL_ACTIONS = frozenset({
+    START_STOP, TOGGLE_MUTE, TOGGLE_RECORDING, ANNOUNCE_INFO,
+    VOLUME_UP, VOLUME_DOWN,
+    SQUELCH_UP, SQUELCH_DOWN, SQUELCH_TOGGLE, SQUELCH_MONITOR,
+    TOGGLE_VFO_MR, CLOSE_WINDOW, OPEN_HELP,
+    # Page nav steps the frequency in VFO and the channel in Memory.
+    PAGE_NAV_UP, PAGE_NAV_DOWN,
+    OPEN_RF_DIALOG, OPEN_SPECTRUM_DIALOG, OPEN_SCANNER_DIALOG,
+    OPEN_CHANNELS_DIALOG, OPEN_BANDS_DIALOG, OPEN_AUDIO_DIALOG,
+    OPEN_RTL_TCP_DIALOG, OPEN_RECORDING_DIALOG, OPEN_USER_GUIDE,
+    OPEN_FREQ_DIALOG, OPEN_DEMOD_FREQ_DIALOG,
+})
+
+# VFO only: spectrum, cursor, and free-tuning actions.
+VFO_ACTIONS = frozenset({
+    SPEAK_PEAKS, DESCRIBE_SPECTRUM, ZOOM_IN, ZOOM_OUT, ZOOM_RESET,
+    SNAPSHOT, TOGGLE_SWEEP,
+    CURSOR_LEFT, CURSOR_RIGHT, CURSOR_CTRL_LEFT, CURSOR_CTRL_RIGHT,
+    RESET_CURSOR, SPEAK_CURSOR, TUNE_TO_CURSOR, TOGGLE_DEMOD_FOLLOWS,
+    FREQ_UP, FREQ_DOWN, FREQ_UP_FAST, FREQ_DOWN_FAST, CYCLE_STEP,
+    MODE_SELECT_START, SCENE_PREV, SCENE_NEXT,
+    ANNOUNCE_LO, ANNOUNCE_LISTEN,
+})
+
+# Memory (Channels) only, beyond the globals: nothing extra today (page nav
+# and the mode toggle are global). Kept for symmetry / future channel actions.
+CHANNELS_ACTIONS = frozenset()
+
+
 def _build_keymap() -> dict[tuple[int, int], str]:
     """Build the (keycode, modifiers) → action mapping.
 
