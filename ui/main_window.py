@@ -149,6 +149,9 @@ class MainWindow(wx.Frame):
 
         self._apply_settings_to_ui()
 
+        # Background check for a newer release (installed build only).
+        wx.CallAfter(self._maybe_check_updates_on_startup)
+
     # ==================================================================
     # UI construction
     # ==================================================================
@@ -192,9 +195,11 @@ class MainWindow(wx.Frame):
         help_menu = wx.Menu()
         item_guide = help_menu.Append(wx.ID_ANY, _("&User Guide…\tCtrl+H"))
         help_menu.Append(wx.ID_HELP, _("&Keyboard Shortcuts…\tF1"))
+        item_update = help_menu.Append(wx.ID_ANY, _("Check for &Updates…"))
         help_menu.AppendSeparator()
         help_menu.Append(wx.ID_ABOUT, _("&About AccessDR"))
         self.Bind(wx.EVT_MENU, self._on_open_user_guide, item_guide)
+        self.Bind(wx.EVT_MENU, lambda e: self._check_for_updates(manual=True), item_update)
         mb.Append(help_menu, _("&Help"))
 
         self.SetMenuBar(mb)
@@ -1422,6 +1427,72 @@ class MainWindow(wx.Frame):
     def _open_about_dialog(self) -> None:
         from ui.dialogs.accessible_help import show_about
         show_about(self)
+
+    # ==================================================================
+    # Automatic updates
+    # ==================================================================
+
+    def _maybe_check_updates_on_startup(self) -> None:
+        """Auto-check for updates — only in the installed (frozen) build."""
+        from config.paths import is_frozen
+        if is_frozen() and self._settings.auto_check_updates:
+            self._check_for_updates(manual=False)
+
+    def _check_for_updates(self, manual: bool) -> None:
+        """Query GitHub releases off-thread; show the result on the UI thread."""
+        import threading
+        from accessdr_version import __version__
+
+        def worker() -> None:
+            from core import updater
+            try:
+                info = updater.check_for_update(__version__)
+                wx.CallAfter(self._on_update_result, info, None, manual)
+            except Exception as exc:   # noqa: BLE001
+                wx.CallAfter(self._on_update_result, None, str(exc), manual)
+
+        threading.Thread(target=worker, daemon=True, name="UpdateCheck").start()
+
+    def _on_update_result(self, info, error, manual: bool) -> None:
+        if error is not None:
+            if manual:
+                wx.MessageBox(
+                    _("Could not check for updates:\n{err}").format(err=error),
+                    _("Check for Updates"), wx.OK | wx.ICON_INFORMATION, self,
+                )
+            return
+        if info is None:
+            if manual:
+                wx.MessageBox(
+                    _("You are running the latest version of AccessDR."),
+                    _("Up to Date"), wx.OK | wx.ICON_INFORMATION, self,
+                )
+            return
+        # On the silent startup check, honour a previously skipped version.
+        if not manual and info.version == self._settings.skipped_update_version:
+            return
+
+        from accessdr_version import __version__
+        from config.paths import is_frozen
+        from ui.dialogs.update_dialog import (
+            UpdateDialog, download_and_install, RESULT_INSTALL, RESULT_SKIP,
+        )
+        dlg = UpdateDialog(self, info, __version__)
+        result = dlg.ShowModal()
+        dlg.Destroy()
+        if result == RESULT_SKIP:
+            self._settings.skipped_update_version = info.version
+            self._settings.save()
+        elif result == RESULT_INSTALL:
+            if not is_frozen():
+                wx.MessageBox(
+                    _("Updates can only be installed in the packaged build of "
+                      "AccessDR. Download it from the project's releases page."),
+                    _("Update"), wx.OK | wx.ICON_INFORMATION, self,
+                )
+                return
+            if download_and_install(self, info):
+                self.Close()   # exit so the installer can replace files
 
     # ==================================================================
     # Callbacks

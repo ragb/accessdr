@@ -24,6 +24,8 @@ dependencies = [
     "scipy>=1.10.0",
     "sounddevice>=0.4.6",
     "accessible_output2>=0.17",
+    # PEP 440 version comparison for the GitHub-release update checker.
+    "packaging>=21.0",
     # Accessible HTML dialogs (About, User Guide) — semantic HTML + ARIA in a
     # WebView that NVDA/JAWS read reliably, with a text fallback.
     "wx-accessible-webview>=0.2.0",
