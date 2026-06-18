@@ -1,0 +1,2330 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="User guide for AccessDR, an accessible SDR radio application for blind and visually impaired users">
+      
+      
+      
+        <link rel="canonical" href="https://ragb.github.io/accessdr/user-guide/">
+      
+      
+        <link rel="prev" href="../getting-started/">
+      
+      
+        <link rel="next" href="../keyboard-shortcuts/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/icon.png">
+      <meta name="generator" content="zensical-0.0.45">
+    
+    
+      
+        <title>User Guide - AccessDR Documentation</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.fba56155.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.dfe2e883.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#user-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="./.." title="AccessDR Documentation" class="md-header__button md-logo" aria-label="AccessDR Documentation" data-md-component="logo">
+      
+  <img src="../assets/icon.png" alt="AccessDR Documentation">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            AccessDR Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              User Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="light-blue"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/ragb/accessdr" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ragb/accessdr
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="./.." title="AccessDR Documentation" class="md-nav__button md-logo" aria-label="AccessDR Documentation" data-md-component="logo">
+      
+  <img src="../assets/icon.png" alt="AccessDR Documentation">
+
+    </a>
+    AccessDR Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ragb/accessdr" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ragb/accessdr
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Getting Started
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  User Guide
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  User Guide
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Tuning
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tuning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#frequency-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Frequency Entry
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Step Tuning
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pause-resume" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pause / Resume
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-main-window" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The main window
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#channels-and-bands" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Channels and Bands
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Channels and Bands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-context-anchor" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The context anchor
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bands-vfo-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Bands (VFO presets)
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bands (VFO presets)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-bands-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Bands dialog
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#channels-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Channels (memory)
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#demodulation-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Demodulation Modes
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Demodulation Modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wfm-wideband-fm" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        WFM — Wideband FM
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nfm-narrowband-fm" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NFM — Narrowband FM
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#am-amplitude-modulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        AM — Amplitude Modulation
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usb-upper-sideband" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        USB — Upper Sideband
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lsb-lower-sideband" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        LSB — Lower Sideband
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cw-continuous-wave-morse-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        CW — Continuous Wave (Morse Code)
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dsb-double-sideband" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        DSB — Double Sideband
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#volume-mute-and-squelch" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Volume, Mute, and Squelch
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signal-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Signal Information
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rf-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        RF Settings
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RF Settings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sdr-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        SDR Device
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sample-rate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Sample Rate
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rf-gain" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        RF Gain
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ppm-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PPM Correction
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rtl-agc" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        RTL AGC
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offset-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Offset Tuning
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#if-bandwidth" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        IF Bandwidth
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#direct-sampling" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Direct Sampling
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#upconverter" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Upconverter
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#noise-blanker" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Noise Blanker
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bias-tee" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Bias Tee
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modulation-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Modulation Settings
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spectrum" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Spectrum
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Spectrum">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Shortcuts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#waterfall-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Waterfall Display
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sonification" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Sonification
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#zoom" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Zoom
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cursor-and-probe-tone" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Cursor and Probe Tone
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#software-vfo-offset" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Software VFO Offset
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sonification-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Sonification Settings
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scanner" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Scanner
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scanner">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scanner-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Scanner Controls
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#remote-sdr-rtl_tcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Remote SDR (rtl_tcp)
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Remote SDR (rtl_tcp)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setting-up-a-remote-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Setting Up a Remote Server
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-servers" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Managing Servers
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selecting-a-remote-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Selecting a Remote Server
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Limitations
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keyboard-shortcuts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Keyboard Shortcuts
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Settings Reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Building from Source
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Tuning
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tuning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#frequency-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Frequency Entry
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Step Tuning
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pause-resume" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pause / Resume
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-main-window" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The main window
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#channels-and-bands" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Channels and Bands
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Channels and Bands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-context-anchor" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The context anchor
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bands-vfo-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Bands (VFO presets)
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bands (VFO presets)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-bands-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Bands dialog
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#channels-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Channels (memory)
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#demodulation-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Demodulation Modes
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Demodulation Modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wfm-wideband-fm" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        WFM — Wideband FM
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nfm-narrowband-fm" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NFM — Narrowband FM
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#am-amplitude-modulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        AM — Amplitude Modulation
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usb-upper-sideband" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        USB — Upper Sideband
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lsb-lower-sideband" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        LSB — Lower Sideband
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cw-continuous-wave-morse-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        CW — Continuous Wave (Morse Code)
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dsb-double-sideband" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        DSB — Double Sideband
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#volume-mute-and-squelch" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Volume, Mute, and Squelch
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signal-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Signal Information
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rf-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        RF Settings
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RF Settings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sdr-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        SDR Device
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sample-rate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Sample Rate
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rf-gain" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        RF Gain
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ppm-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PPM Correction
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rtl-agc" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        RTL AGC
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offset-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Offset Tuning
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#if-bandwidth" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        IF Bandwidth
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#direct-sampling" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Direct Sampling
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#upconverter" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Upconverter
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#noise-blanker" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Noise Blanker
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bias-tee" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Bias Tee
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modulation-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Modulation Settings
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spectrum" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Spectrum
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Spectrum">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Shortcuts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#waterfall-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Waterfall Display
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sonification" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Sonification
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#zoom" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Zoom
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cursor-and-probe-tone" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Cursor and Probe Tone
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#software-vfo-offset" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Software VFO Offset
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sonification-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Sonification Settings
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scanner" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Scanner
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scanner">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scanner-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Scanner Controls
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#remote-sdr-rtl_tcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Remote SDR (rtl_tcp)
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Remote SDR (rtl_tcp)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setting-up-a-remote-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Setting Up a Remote Server
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-servers" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Managing Servers
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selecting-a-remote-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Selecting a Remote Server
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Limitations
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+  
+
+
+<h1 id="user-guide">User Guide<a class="headerlink" href="#user-guide" title="Permanent link">&para;</a></h1>
+<div class="toc">
+<ul>
+<li><a href="#user-guide">User Guide</a><ul>
+<li><a href="#tuning">Tuning</a><ul>
+<li><a href="#frequency-entry">Frequency Entry</a></li>
+<li><a href="#step-tuning">Step Tuning</a></li>
+<li><a href="#pause-resume">Pause / Resume</a></li>
+</ul>
+</li>
+<li><a href="#the-main-window">The main window</a></li>
+<li><a href="#channels-and-bands">Channels and Bands</a><ul>
+<li><a href="#the-context-anchor">The context anchor</a></li>
+<li><a href="#bands-vfo-presets">Bands (VFO presets)</a><ul>
+<li><a href="#the-bands-dialog">The Bands dialog</a></li>
+</ul>
+</li>
+<li><a href="#channels-memory">Channels (memory)</a></li>
+</ul>
+</li>
+<li><a href="#demodulation-modes">Demodulation Modes</a><ul>
+<li><a href="#wfm-wideband-fm">WFM — Wideband FM</a></li>
+<li><a href="#nfm-narrowband-fm">NFM — Narrowband FM</a></li>
+<li><a href="#am-amplitude-modulation">AM — Amplitude Modulation</a></li>
+<li><a href="#usb-upper-sideband">USB — Upper Sideband</a></li>
+<li><a href="#lsb-lower-sideband">LSB — Lower Sideband</a></li>
+<li><a href="#cw-continuous-wave-morse-code">CW — Continuous Wave (Morse Code)</a></li>
+<li><a href="#dsb-double-sideband">DSB — Double Sideband</a></li>
+</ul>
+</li>
+<li><a href="#volume-mute-and-squelch">Volume, Mute, and Squelch</a></li>
+<li><a href="#signal-information">Signal Information</a></li>
+<li><a href="#rf-settings">RF Settings</a><ul>
+<li><a href="#sdr-device">SDR Device</a></li>
+<li><a href="#sample-rate">Sample Rate</a></li>
+<li><a href="#rf-gain">RF Gain</a></li>
+<li><a href="#ppm-correction">PPM Correction</a></li>
+<li><a href="#rtl-agc">RTL AGC</a></li>
+<li><a href="#offset-tuning">Offset Tuning</a></li>
+<li><a href="#if-bandwidth">IF Bandwidth</a></li>
+<li><a href="#direct-sampling">Direct Sampling</a></li>
+<li><a href="#upconverter">Upconverter</a></li>
+<li><a href="#noise-blanker">Noise Blanker</a></li>
+<li><a href="#bias-tee">Bias Tee</a></li>
+</ul>
+</li>
+<li><a href="#modulation-settings">Modulation Settings</a></li>
+<li><a href="#spectrum">Spectrum</a><ul>
+<li><a href="#shortcuts">Shortcuts</a></li>
+<li><a href="#waterfall-display">Waterfall Display</a></li>
+<li><a href="#sonification">Sonification</a></li>
+<li><a href="#zoom">Zoom</a></li>
+<li><a href="#cursor-and-probe-tone">Cursor and Probe Tone</a></li>
+<li><a href="#software-vfo-offset">Software VFO Offset</a></li>
+<li><a href="#sonification-settings">Sonification Settings</a></li>
+</ul>
+</li>
+<li><a href="#scanner">Scanner</a><ul>
+<li><a href="#scanner-controls">Scanner Controls</a></li>
+</ul>
+</li>
+<li><a href="#remote-sdr-rtl_tcp">Remote SDR (rtl_tcp)</a><ul>
+<li><a href="#setting-up-a-remote-server">Setting Up a Remote Server</a></li>
+<li><a href="#managing-servers">Managing Servers</a></li>
+<li><a href="#selecting-a-remote-server">Selecting a Remote Server</a></li>
+<li><a href="#limitations">Limitations</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="tuning">Tuning<a class="headerlink" href="#tuning" title="Permanent link">&para;</a></h2>
+<h3 id="frequency-entry">Frequency Entry<a class="headerlink" href="#frequency-entry" title="Permanent link">&para;</a></h3>
+<p>Press <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-q">Q</kbd></span> to open the LO frequency entry dialog. Press <span class="keys"><kbd class="key-q">Q</kbd></span> to hear the current LO frequency, or <span class="keys"><kbd class="key-o">O</kbd></span> to hear the listening (demod) frequency. Press <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-o">O</kbd></span> to enter a listening frequency directly — AccessDR calculates the offset from the LO automatically.</p>
+<p>Enter a frequency in one of these formats:</p>
+<ul>
+<li><strong>MHz</strong> (most common): <code>98.1</code> or <code>98.1 MHz</code></li>
+<li><strong>kHz</strong>: values between 30,000 and 30,000,000 are treated as kHz</li>
+<li><strong>Hz</strong>: values above 30,000,000 are treated as Hz</li>
+</ul>
+<p>Press <span class="keys"><kbd class="key-enter">Enter</kbd></span> to confirm or <span class="keys"><kbd class="key-escape">Esc</kbd></span> to cancel.</p>
+<h3 id="step-tuning">Step Tuning<a class="headerlink" href="#step-tuning" title="Permanent link">&para;</a></h3>
+<p>Use <span class="keys"><kbd class="key-arrow-up">Up</kbd></span> and <span class="keys"><kbd class="key-arrow-down">Down</kbd></span> to tune by the current step size. Hold <span class="keys"><kbd class="key-shift">Shift</kbd></span> to tune by 10x the step size.</p>
+<p>Press <span class="keys"><kbd class="key-s">S</kbd></span> to cycle through step sizes:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Use case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 Hz</td>
+<td>Fine CW/SSB tuning</td>
+</tr>
+<tr>
+<td>10 Hz</td>
+<td>SSB tuning</td>
+</tr>
+<tr>
+<td>100 Hz</td>
+<td>SSB/AM fine tuning</td>
+</tr>
+<tr>
+<td>1 kHz</td>
+<td>AM broadcast</td>
+</tr>
+<tr>
+<td>10 kHz</td>
+<td>Default general tuning</td>
+</tr>
+<tr>
+<td>100 kHz</td>
+<td>FM broadcast scanning</td>
+</tr>
+<tr>
+<td>1 MHz</td>
+<td>Quick band scanning</td>
+</tr>
+</tbody>
+</table>
+<p>In VFO mode, <span class="keys"><kbd class="key-page-up">Page Up</kbd></span> and <span class="keys"><kbd class="key-page-down">Page Down</kbd></span> also step the frequency by the current step, but clamp at the edges of the current band (you hear "Band edge" when you reach them).</p>
+<h3 id="pause-resume">Pause / Resume<a class="headerlink" href="#pause-resume" title="Permanent link">&para;</a></h3>
+<p>Press <span class="keys"><kbd class="key-space">Space</kbd></span> to <strong>pause</strong> the radio — IQ capture and audio stop, but the last spectrum snapshot remains visible and navigable. Cursor movement, probe tone, peaks, zoom and all other spectrum features continue to work on the frozen data. Press <span class="keys"><kbd class="key-space">Space</kbd></span> again to <strong>resume</strong> reception. Press <span class="keys"><kbd class="key-f2">F2</kbd></span> while paused to fully stop the radio and release the device.</p>
+<h2 id="the-main-window">The main window<a class="headerlink" href="#the-main-window" title="Permanent link">&para;</a></h2>
+<p>A <strong>toolbar</strong> runs across the top of the window and is available at all times, in every mode. It holds the controls you always need: <strong>Start/Stop</strong>, the <strong>Volume</strong> slider, the <strong>Mute</strong> toggle, and the <strong>Squelch</strong> sensitivity slider with its on/off toggle (see <a href="#volume-mute-and-squelch">Volume, Mute, and Squelch</a>).</p>
+<p>Below the toolbar is a notebook with two tabs — VFO and Channels — and, <strong>on the VFO tab only</strong>, the spectrum display. The status bar at the bottom shows your live operating context and, while receiving, a continuously-updated signal readout (the same information the <span class="keys"><kbd class="key-i">I</kbd></span> key speaks — see <a href="#signal-information">Signal Information</a>).</p>
+<h2 id="channels-and-bands">Channels and Bands<a class="headerlink" href="#channels-and-bands" title="Permanent link">&para;</a></h2>
+<p>AccessDR works like a Baofeng/handheld transceiver, with two operating modes surfaced as the two tabs of the notebook:</p>
+<ul>
+<li><strong>VFO tab</strong> — free tuning within a <strong>band</strong>, with the spectrum display and its cursor/sonification tools. Selecting this tab puts the radio in <strong>VFO mode</strong>.</li>
+<li><strong>Channels tab</strong> — stepping through numbered memory <strong>channels</strong>. Selecting this tab puts the radio in <strong>Memory (MR) mode</strong>. The spectrum and its tools are hidden here (they only apply to free tuning).</li>
+</ul>
+<p><strong>The active tab <em>is</em> the operating mode.</strong> Press <span class="keys"><kbd class="key-v">V</kbd></span> to toggle between the two tabs (and therefore between VFO and Memory mode). On the Channels tab, <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-b">B</kbd></span> jumps straight to it and focuses the channel list.</p>
+<p>Because the spectrum is VFO-only, the <strong>spectrum and cursor shortcuts work only in VFO mode</strong>; the toolbar controls and the radio-wide keys (start/stop, volume, mute, squelch, info, recording, the menus and dialogs) work in <strong>both</strong> modes. Press <span class="keys"><kbd class="key-f1">F1</kbd></span> at any time for the full keyboard reference, grouped by where each key is live.</p>
+<h3 id="the-context-anchor">The context anchor<a class="headerlink" href="#the-context-anchor" title="Permanent link">&para;</a></h3>
+<p>The window title always shows your live operating context, so a screen reader announces exactly where you are whenever the title is read:</p>
+<ul>
+<li>In VFO mode: <code>AccessDR - VFO, FM Radio, 98.100 MHz</code> (operating mode, band name, frequency).</li>
+<li>In Memory mode: <code>AccessDR - Memory, PMR446, channel 1, PMR 1</code> (operating mode, channel-map name, channel number, channel label).</li>
+</ul>
+<p>The same context starts the status bar line; while the radio is running, the status bar extends it with the live signal readout (see <a href="#signal-information">Signal Information</a>).</p>
+<h3 id="bands-vfo-presets">Bands (VFO presets)<a class="headerlink" href="#bands-vfo-presets" title="Permanent link">&para;</a></h3>
+<p>A <strong>band</strong> is a VFO preset: a frequency range plus a default modulation, bandwidth, tuning step, an optional default landing frequency, and optional per-modulation overrides — all grouped by service category. Loading a band switches to the VFO tab, tunes to the band's default frequency (its centre, unless you set otherwise), and applies the band's modulation and bandwidth.</p>
+<p>On the VFO tab, choose a band with the <strong>"Band: …" button</strong>, which pops up a grouped menu — one submenu per service category. Making band changes deliberate (a menu, not an always-live dropdown) avoids nudging the band by accident.</p>
+<p>In VFO mode you can also cycle bands from the keyboard: <span class="keys"><kbd>[</kbd></span> for the previous band and <span class="keys"><kbd>]</kbd></span> for the next.</p>
+<p>A special <strong>Free / Full Range</strong> band (in the <em>General</em> group) has no edges — it reproduces classic free-style VFO tuning across the whole tunable range.</p>
+<p>The built-in band plan ships with:</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Bands</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Broadcast</td>
+<td>AM Radio (MW), FM Radio</td>
+</tr>
+<tr>
+<td>Shortwave</td>
+<td>90m, 75m, 60m, 49m, 41m, 31m, 25m, 22m, 19m, 16m, 13m</td>
+</tr>
+<tr>
+<td>Amateur</td>
+<td>160m, 80m, 40m, 30m, 20m, 17m, 15m, 12m, 10m, 6m</td>
+</tr>
+<tr>
+<td>Aircraft / Marine</td>
+<td>Airband, Marine</td>
+</tr>
+<tr>
+<td>PMR / CB</td>
+<td>CB 27m, PMR446, UHF CB</td>
+</tr>
+<tr>
+<td>Weather / Other</td>
+<td>NOAA WX, GSM Up, GSM Down, DECT</td>
+</tr>
+<tr>
+<td>General</td>
+<td>Free / Full Range</td>
+</tr>
+</tbody>
+</table>
+<p>(The Amateur group also covers the VHF/UHF 2m and 70cm bands.)</p>
+<h4 id="the-bands-dialog">The Bands dialog<a class="headerlink" href="#the-bands-dialog" title="Permanent link">&para;</a></h4>
+<p>Open the full band editor with <strong>Radio &gt; Bands…</strong> (<span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-shift">Shift</kbd><span>+</span><kbd class="key-b">B</kbd></span>). It presents the band plan as a tree grouped by service (Broadcast, Shortwave, Amateur, Aircraft / Marine, PMR / CB, Weather / Other, and General). A tree is read naturally by screen readers — group level, expand/collapse, and leaf labels that include each band's range and modulation.</p>
+<p>From the dialog you can:</p>
+<ul>
+<li><strong>Apply</strong> a selected band (tunes the VFO into it).</li>
+<li><strong>Save</strong> or edit a band — name, group, start/end edges (blank = unbounded), modulation, bandwidth, tuning step (or "Follow tuning step"), an optional default landing frequency, an optional squelch override, and per-modulation overrides via the <strong>Settings…</strong> button.</li>
+<li><strong>Store Current VFO</strong> as a new band, seeding the form from your current frequency and modulation.</li>
+<li><strong>Delete</strong> a band, or <strong>Import…</strong> / <strong>Export…</strong> the whole band plan as JSON.</li>
+</ul>
+<p>Newly shipped default bands are merged into your saved plan on upgrade, so updates add bands without overwriting your own edits.</p>
+<h3 id="channels-memory">Channels (memory)<a class="headerlink" href="#channels-memory" title="Permanent link">&para;</a></h3>
+<p>A <strong>channel</strong> is a numbered memory slot — like a memory on a Baofeng or Yaesu handheld. Each channel has a number, a label, a frequency, a modulation, a bandwidth, and optional per-modulation overrides. Channels are grouped into named <strong>channel maps</strong>, and the radio steps through the channels of the active map when in Memory mode.</p>
+<p>The Channels tab is the channel editor. Open it by selecting the tab, pressing <span class="keys"><kbd class="key-v">V</kbd></span> to toggle into Memory mode, or pressing <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-b">B</kbd></span> (which focuses the channel list). From the tab you can:</p>
+<ul>
+<li><strong>Switch maps</strong> with the Channel Map dropdown, or create one with <strong>New Map</strong> and remove one with <strong>Delete Map</strong> (the last remaining map cannot be deleted).</li>
+<li><strong>Add or edit a channel</strong> in the form — number, label, frequency (MHz or kHz), modulation, bandwidth, and per-modulation overrides via the <strong>Settings…</strong> button. Saving a channel <em>upserts</em> by number (saving over an existing number replaces it). Press <strong>Save Channel</strong> to store it.</li>
+<li><strong>Store Current VFO</strong> to capture your current frequency and modulation into the next free channel number — then type a label and save.</li>
+<li><strong>Load Selected</strong> to tune to the highlighted channel (this also enters Memory mode). Activating a row in the list (Enter or double-click) does the same.</li>
+<li><strong>Move Up</strong> / <strong>Move Down</strong> to reorder a channel by swapping its number with its neighbour.</li>
+<li><strong>Delete Selected</strong> to remove a channel, or <strong>Import…</strong> / <strong>Export…</strong> a single map as JSON.</li>
+</ul>
+<p>Three maps ship by default:</p>
+<table>
+<thead>
+<tr>
+<th>Map</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>My Channels</td>
+<td>Empty — your own scratch map</td>
+</tr>
+<tr>
+<td>PMR446</td>
+<td>16 channels, 12.5 kHz spacing from 446.00625 MHz, NFM</td>
+</tr>
+<tr>
+<td>CB (CEPT FM)</td>
+<td>40 channels, CEPT FM CB plan, NFM</td>
+</tr>
+</tbody>
+</table>
+<p>In Memory mode, <span class="keys"><kbd class="key-page-up">Page Up</kbd></span> and <span class="keys"><kbd class="key-page-down">Page Down</kbd></span> step to the next and previous channel in the active map and announce the channel number, label, and frequency.</p>
+<h2 id="demodulation-modes">Demodulation Modes<a class="headerlink" href="#demodulation-modes" title="Permanent link">&para;</a></h2>
+<p>Press <span class="keys"><kbd class="key-m">M</kbd></span> to enter mode selection, then press the mode letter:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="keys"><kbd class="key-m">M</kbd></span> <span class="keys"><kbd class="key-w">W</kbd></span></td>
+<td>WFM — Wideband FM</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-m">M</kbd></span> <span class="keys"><kbd class="key-n">N</kbd></span></td>
+<td>NFM — Narrowband FM</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-m">M</kbd></span> <span class="keys"><kbd class="key-a">A</kbd></span></td>
+<td>AM — Amplitude Modulation</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-m">M</kbd></span> <span class="keys"><kbd class="key-u">U</kbd></span></td>
+<td>USB — Upper Sideband</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-m">M</kbd></span> <span class="keys"><kbd class="key-l">L</kbd></span></td>
+<td>LSB — Lower Sideband</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-m">M</kbd></span> <span class="keys"><kbd class="key-c">C</kbd></span></td>
+<td>CW — Continuous Wave (Morse)</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-m">M</kbd></span> <span class="keys"><kbd class="key-d">D</kbd></span></td>
+<td>DSB — Double Sideband</td>
+</tr>
+</tbody>
+</table>
+<p>Each mode has selectable filter bandwidths in the main window's BW dropdown.</p>
+<h3 id="wfm-wideband-fm">WFM — Wideband FM<a class="headerlink" href="#wfm-wideband-fm" title="Permanent link">&para;</a></h3>
+<p>The standard mode for <strong>FM broadcast radio</strong> (87.5–108 MHz). Uses a 200 kHz channel and includes stereo decoding — AccessDR automatically detects and announces stereo or mono. This is the default mode and the best starting point for new users. Typical bandwidth: 150–200 kHz.</p>
+<p>WFM includes several sub-features, configured via the <strong>Settings…</strong> button next to the Modulation selector (see <a href="#modulation-settings">Modulation Settings</a>):</p>
+<ul>
+<li><strong>De-emphasis</strong> — compensates for the FM pre-emphasis curve. Set to Auto (detects your region), 50 us (Europe/Asia), or 75 us (Americas/South Korea). Wrong de-emphasis makes audio sound too bright or too dull.</li>
+<li><strong>Stereo mode</strong> — Auto detects the 19 kHz pilot and blends between mono and stereo based on signal quality. Force Mono disables stereo decoding (quieter on weak signals). Force Stereo always decodes stereo regardless of signal quality.</li>
+<li><strong>Hi-blend</strong> — automatically reduces treble on weak stereo signals to cut FM hiss. Disable if you prefer full-bandwidth audio regardless of signal strength.</li>
+<li><strong>RDS decoding</strong> — extracts station name (PS), radio text (RT), and program type from the RDS subcarrier at 57 kHz. When enabled, the station name is announced automatically on tune. Press <span class="keys"><kbd class="key-i">I</kbd></span> to hear RDS info. Disable to save a small amount of CPU.</li>
+</ul>
+<h3 id="nfm-narrowband-fm">NFM — Narrowband FM<a class="headerlink" href="#nfm-narrowband-fm" title="Permanent link">&para;</a></h3>
+<p>Used by most <strong>two-way radio</strong> systems: amateur (ham) radio repeaters, PMR446 walkie-talkies, marine VHF, NOAA weather radio, taxi and business radios, and public safety communications. NFM channels are much narrower than broadcast FM (12.5 or 25 kHz), so you will hear a single voice conversation rather than a music station. Set the step size to 12.5 or 25 kHz when scanning for NFM signals.</p>
+<p>NFM includes <strong>CTCSS tone detection</strong> — when a repeater or radio system uses a sub-audible tone (67.0–254.1 Hz) for access control, AccessDR detects and reports the tone. Press <span class="keys"><kbd class="key-i">I</kbd></span> to hear the detected CTCSS tone along with signal information.</p>
+<p>A <strong>CTCSS notch filter</strong> automatically removes the detected sub-audible tone from the audio output, eliminating the low-frequency hum that can be distracting on speakers or headphones with good bass response. The notch filter is enabled by default and can be toggled via the <strong>Settings…</strong> button next to the Modulation selector (see <a href="#modulation-settings">Modulation Settings</a>).</p>
+<h3 id="am-amplitude-modulation">AM — Amplitude Modulation<a class="headerlink" href="#am-amplitude-modulation" title="Permanent link">&para;</a></h3>
+<p>Used for <strong>AM broadcast radio</strong> (530 kHz–1.71 MHz), <strong>aviation communications</strong> (108–137 MHz air band), and <strong>shortwave broadcasts</strong>. AM is simpler than FM and works well over long distances, which is why it is used for aircraft and international broadcasting. Typical bandwidth: 6–10 kHz.</p>
+<h3 id="usb-upper-sideband">USB — Upper Sideband<a class="headerlink" href="#usb-upper-sideband" title="Permanent link">&para;</a></h3>
+<p>A form of <strong>single sideband</strong> (SSB) modulation used by amateur (ham) radio operators on <strong>HF frequencies above 10 MHz</strong> and on <strong>VHF/UHF</strong>. SSB transmits only one half of the AM signal, making it more power-efficient and spectrally compact. Conversations sound distorted if you are slightly off frequency — tune in 100 Hz or 10 Hz steps until voices sound natural. Typical bandwidth: 2.7 kHz.</p>
+<h3 id="lsb-lower-sideband">LSB — Lower Sideband<a class="headerlink" href="#lsb-lower-sideband" title="Permanent link">&para;</a></h3>
+<p>The mirror image of USB, used by amateur radio operators on <strong>HF frequencies below 10 MHz</strong> (e.g. the 80m and 40m bands). The convention is: LSB below 10 MHz, USB above 10 MHz. Tuning technique is the same as USB. Typical bandwidth: 2.7 kHz.</p>
+<h3 id="cw-continuous-wave-morse-code">CW — Continuous Wave (Morse Code)<a class="headerlink" href="#cw-continuous-wave-morse-code" title="Permanent link">&para;</a></h3>
+<p>Used for <strong>Morse code</strong> (CW) transmissions. CW uses an extremely narrow filter (250–500 Hz) centred on a single tone, so you hear individual dits and dahs clearly while rejecting nearby signals. Common on amateur HF bands, especially during contests and low-power (QRP) operation. Tune slowly in 10 Hz or 1 Hz steps to centre the tone.</p>
+<h3 id="dsb-double-sideband">DSB — Double Sideband<a class="headerlink" href="#dsb-double-sideband" title="Permanent link">&para;</a></h3>
+<p>Similar to AM but <strong>without carrier filtering</strong>. Useful for receiving AM signals that don't quite fit the standard AM demodulator, or for experimenting. In practice, most users will use AM mode instead. Typical bandwidth: 6–10 kHz.</p>
+<h2 id="volume-mute-and-squelch">Volume, Mute, and Squelch<a class="headerlink" href="#volume-mute-and-squelch" title="Permanent link">&para;</a></h2>
+<p>These controls live on the <strong>toolbar</strong> (top of the window) and are available in both VFO and Memory modes. The keyboard shortcuts work everywhere too:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="keys"><kbd class="key-f11">F11</kbd></span> / <span class="keys"><kbd class="key-f12">F12</kbd></span></td>
+<td>Volume up / down</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-f3">F3</kbd></span></td>
+<td>Mute / Unmute</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-shift">Shift</kbd><span>+</span><kbd class="key-f11">F11</kbd></span> / <span class="keys"><kbd class="key-shift">Shift</kbd><span>+</span><kbd class="key-f12">F12</kbd></span></td>
+<td>Squelch sensitivity up / down</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-shift">Shift</kbd><span>+</span><kbd class="key-a">A</kbd></span></td>
+<td>Squelch on / off</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-l">L</kbd></span> (hold)</td>
+<td>Monitor — temporarily open a closed squelch to listen</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>squelch</strong> silences audio until a real signal is present, so you only hear transmissions, not the noise between them — useful for monitoring and scanning.</p>
+<p>The squelch is <strong>automatic and adaptive</strong>: rather than a fixed level in dBm, you set a <strong>sensitivity from 0 to 10</strong>, and AccessDR tracks the channel and decides when a signal is really present. It uses a different measure per mode — the above-audio noise in the FM discriminator for WFM/NFM, the carrier-to-noise ratio for AM, and an adaptive noise-floor for SSB/CW — so the same sensitivity behaves sensibly across modes.</p>
+<ul>
+<li><strong>0</strong> is the most sensitive (opens for the weakest signals; lets more noise through).</li>
+<li><strong>10</strong> is the tightest (only strong, clear signals open it).</li>
+<li>Start around <strong>5</strong> and adjust: raise it if noise is breaking squelch, lower it if weak signals are being cut off.</li>
+</ul>
+<p>Use the <strong>Off</strong> toggle (or <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-shift">Shift</kbd><span>+</span><kbd class="key-a">A</kbd></span>) to disable squelch entirely and hear everything. Hold <strong>Monitor</strong> (<span class="keys"><kbd class="key-l">L</kbd></span>) to momentarily listen through a closed squelch — handy for checking a marginal channel without changing the setting.</p>
+<p>The gate opens and closes smoothly (a short hold-open tail and hysteresis) so it doesn't chop speech between syllables or click on brief fades; moving the sensitivity takes effect immediately.</p>
+<h2 id="signal-information">Signal Information<a class="headerlink" href="#signal-information" title="Permanent link">&para;</a></h2>
+<p>Press <span class="keys"><kbd class="key-i">I</kbd></span> at any time to hear a spoken status report. It reports <strong>the same information shown live in the status bar</strong>, so the spoken report and the on-screen readout always match:</p>
+<ul>
+<li>Operating context (VFO band / Memory channel) and frequency</li>
+<li>Signal strength in dBFS with S-meter reading (S0–S9+30)</li>
+<li>Stereo or Mono (in WFM mode)</li>
+<li>RDS station name (in WFM mode, when available)</li>
+<li>CTCSS tone frequency (in NFM mode, when detected)</li>
+<li>Squelch state (open / closed) and sensitivity, or "off"</li>
+<li>Mute state</li>
+<li>Demod offset and listening frequency (when a software VFO offset is active)</li>
+<li>Recording filename (when recording)</li>
+</ul>
+<p>While receiving, the status bar updates continuously; <span class="keys"><kbd class="key-i">I</kbd></span> simply speaks the current line on demand.</p>
+<h2 id="rf-settings">RF Settings<a class="headerlink" href="#rf-settings" title="Permanent link">&para;</a></h2>
+<p>Open the RF Settings dialog with <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-r">R</kbd></span> to configure hardware parameters.</p>
+<h3 id="sdr-device">SDR Device<a class="headerlink" href="#sdr-device" title="Permanent link">&para;</a></h3>
+<p>If you have multiple RTL-SDR dongles connected, select which one to use here. Most users will only have one device listed.</p>
+<h3 id="sample-rate">Sample Rate<a class="headerlink" href="#sample-rate" title="Permanent link">&para;</a></h3>
+<p>The rate at which the SDR digitises radio signals, measured in samples per second. Higher rates capture a wider slice of spectrum but require more CPU. The default of 2,400 kHz (2.4 MSPS) is a good balance — it captures ±1.2 MHz around the tuned frequency and works well on most computers. Lower rates like 1,024 kHz reduce CPU usage but narrow the visible spectrum.</p>
+<h3 id="rf-gain">RF Gain<a class="headerlink" href="#rf-gain" title="Permanent link">&para;</a></h3>
+<p>Controls how much the tuner amplifies the incoming signal before digitising it. When the radio is running, the dropdown shows the exact gain steps supported by your tuner hardware (e.g. 0.0 dB, 0.9 dB, 1.4 dB, ... up to 49.6 dB for the R820T tuner).</p>
+<ul>
+<li><strong>Too low</strong>: weak signals disappear into the noise floor — you won't hear anything.</li>
+<li><strong>Too high</strong>: strong signals overload the ADC, causing distortion and spurious signals that aren't really there.</li>
+<li><strong>Starting point</strong>: 30–40 dB is usually good for FM broadcast. Lower gains (15–25 dB) work better for strong local signals. Higher gains (40+ dB) help with weak or distant signals.</li>
+</ul>
+<p>When RTL AGC is enabled, the gain dropdown is disabled because gain is controlled automatically.</p>
+<h3 id="ppm-correction">PPM Correction<a class="headerlink" href="#ppm-correction" title="Permanent link">&para;</a></h3>
+<p>Compensates for the frequency error in your dongle's crystal oscillator. Most RTL-SDR dongles are off by a few parts per million (PPM), which means the displayed frequency doesn't exactly match the real frequency. A typical value is between -50 and +50 PPM. If stations seem slightly off-frequency, adjust this value until they are centred. You can calibrate using a known signal like a local FM station.</p>
+<h3 id="rtl-agc">RTL AGC<a class="headerlink" href="#rtl-agc" title="Permanent link">&para;</a></h3>
+<p>Enables the RTL2832U chip's <strong>automatic gain control</strong>. When turned on, the hardware adjusts gain dynamically to keep the signal level optimal. This is convenient for scanning across bands with very different signal strengths, but can introduce pumping (gain changes causing volume swings). For manual control and best results on a single frequency, leave AGC off and set the gain manually.</p>
+<h3 id="offset-tuning">Offset Tuning<a class="headerlink" href="#offset-tuning" title="Permanent link">&para;</a></h3>
+<p>Eliminates the <strong>DC spike</strong> — a narrow spurious signal that appears at the exact centre of the spectrum. This spike is an artefact of the direct-conversion receiver architecture and is not a real signal. Offset tuning shifts the tuner's local oscillator slightly so the spike falls outside the passband. Enable this if you see a persistent signal at the centre frequency that doesn't go away when you change gain. Some tuners or drivers may not support this feature.</p>
+<h3 id="if-bandwidth">IF Bandwidth<a class="headerlink" href="#if-bandwidth" title="Permanent link">&para;</a></h3>
+<p>Sets the hardware <strong>intermediate frequency (IF) filter</strong> bandwidth inside the R820T tuner. This is the analogue filter applied before the signal is digitised.</p>
+<ul>
+<li><strong>Auto</strong> (default): AccessDR selects a suitable bandwidth based on the current demodulation mode — 300 kHz for WFM, 100 kHz for NFM/AM/SSB/CW.</li>
+<li><strong>Manual values</strong> (250 kHz – 2 MHz): override the automatic selection. A narrower IF bandwidth rejects out-of-band interference and can improve reception of weak signals next to strong ones, but setting it too narrow will cut off the signal you are trying to receive.</li>
+</ul>
+<p>In most cases, Auto is the best choice. Manual IF bandwidth is useful when you have a strong interfering signal near the frequency you are listening to.</p>
+<h3 id="direct-sampling">Direct Sampling<a class="headerlink" href="#direct-sampling" title="Permanent link">&para;</a></h3>
+<p>Lets RTL-SDR dongles receive <strong>HF</strong> (roughly 0.1–28 MHz — shortwave, CB at 27 MHz, AM/MW and LW broadcast) <strong>without an upconverter</strong>, by sampling the ADC directly and bypassing the R820T tuner.</p>
+<ul>
+<li><strong>Off</strong> (default): normal tuner operation (~24 MHz and up). Use this for FM, airband, VHF/UHF, PMR446, etc.</li>
+<li><strong>Q-branch (HF)</strong>: the usual direct-sampling input for HF on RTL-SDR Blog V3 and similar dongles.</li>
+<li><strong>I-branch</strong>: the alternate ADC input; some dongles are wired for this instead.</li>
+</ul>
+<p><strong>Important caveats:</strong></p>
+<ul>
+<li>Direct sampling is an <strong>RTL2832U-only</strong> feature. SDRs reached over SoapySDR (Airspy, SDRplay, etc.) tune HF natively and ignore this setting.</li>
+<li>It only works if your specific dongle is <strong>wired for it</strong> — the RTL-SDR Blog V3 has the input built in; many dongles need a hardware mod. Reception is <strong>noisy</strong> and benefits from a band-pass/low-pass filter.</li>
+<li>Changing this restarts the capture stream. Remember to switch it <strong>back to Off</strong> for normal VHF/UHF use.</li>
+</ul>
+<h3 id="upconverter">Upconverter<a class="headerlink" href="#upconverter" title="Permanent link">&para;</a></h3>
+<p>An <strong>upconverter</strong> (Nooelec Ham It Up, SpyVerter, etc.) is the cleaner way to receive HF on an RTL dongle. It mixes the whole HF range <em>up</em> by a fixed local-oscillator (LO) frequency so the R820T tuner receives it normally — no aliasing, far quieter than direct sampling, and it covers the full HF range including <strong>CB (27 MHz)</strong> and the <strong>10m band</strong>.</p>
+<p>Set <strong>Upconverter LO</strong> to your converter's LO in MHz:</p>
+<ul>
+<li><strong>125 MHz</strong> — Nooelec Ham It Up (the most common).</li>
+<li><strong>120 MHz</strong> — SpyVerter.</li>
+<li><strong>0</strong> — no upconverter (default).</li>
+</ul>
+<p>When set, AccessDR adds the offset to the hardware tuning frequency automatically while <strong>continuing to show and accept the real HF frequency</strong>. So you simply tune to 27.185 MHz (CB channel 19) or 7.1 MHz (40m) as normal, and the app commands the dongle to LO + that frequency behind the scenes. The HF bands and channel maps (AM Radio, CB) work directly through it.</p>
+<p>Use either an upconverter <strong>or</strong> direct sampling, not both — leave Direct Sampling <strong>Off</strong> when an upconverter LO is set.</p>
+<h3 id="noise-blanker">Noise Blanker<a class="headerlink" href="#noise-blanker" title="Permanent link">&para;</a></h3>
+<p>The noise blanker suppresses short impulse noise (electrical interference, ignition noise, power line clicks) from the raw IQ signal before demodulation. Enable it in <strong>Options &gt; RF Settings</strong> (<span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-r">R</kbd></span>).</p>
+<ul>
+<li><strong>Threshold</strong> controls sensitivity — a lower value blanks more aggressively. The default of 5.0 means any sample exceeding 5x the median signal magnitude is treated as an impulse. Raise the threshold if the blanker clips normal signal peaks; lower it if impulse noise persists.</li>
+<li>Blanked samples are replaced by linear interpolation from neighbouring clean samples, avoiding the clicks that hard zeroing would produce.</li>
+</ul>
+<h3 id="bias-tee">Bias Tee<a class="headerlink" href="#bias-tee" title="Permanent link">&para;</a></h3>
+<p>The Bias Tee option supplies <strong>DC power</strong> (typically 4.5 V) through the coaxial antenna connector, used to power external low-noise amplifiers (LNAs), active antennas, or bias-T powered filters directly from the SDR dongle — no separate power supply needed. <strong>It only does anything on a dongle that actually has the bias-tee circuit.</strong></p>
+<p><strong>Supported devices:</strong> GPIO-switched bias tee works on the RTL-SDR Blog V3 (and similar) where the bias-tee FET is wired to a tuner GPIO pin (pin 0 by convention).</p>
+<p><strong>Not all dongles have one.</strong> The plain <strong>Nooelec NESDR SMArt</strong> has <strong>no</strong> bias-tee circuit — toggling this does nothing on it. Nooelec's bias-tee models are the <strong>SMArTee</strong> variants, and on those the bias tee is <strong>always on in hardware</strong> (no software switch). If you have a SMArt and need to power an LNA, use an external inline bias-tee injector.</p>
+<p><strong>Bias Tee GPIO pin:</strong> the standard bias-tee command drives GPIO pin 0. If your dongle has a bias tee wired to a different pin, set the <strong>Bias Tee GPIO pin</strong> field (0–7) in the RF Settings until the amplifier powers up.</p>
+<p><strong>WARNING:</strong> Enabling Bias Tee on a device or antenna that does not support it can cause <strong>permanent hardware damage</strong>. A passive antenna may be shorted by the DC voltage. Only enable this if you know your entire signal chain (dongle, cables, antenna/LNA) is designed for bias-T power.</p>
+<p><strong>When to use:</strong></p>
+<ul>
+<li>Powering an LNA mounted at the antenna (e.g. LNA4ALL, Nooelec SAWbird)</li>
+<li>Powering an active GPS, ADS-B, or L-band antenna</li>
+<li>Powering a bias-T fed bandpass filter</li>
+</ul>
+<p>A confirmation dialog will appear each time you enable this setting to prevent accidental activation.</p>
+<h2 id="modulation-settings">Modulation Settings<a class="headerlink" href="#modulation-settings" title="Permanent link">&para;</a></h2>
+<p>Some modulations carry extra, modulation-specific settings. Rather than a single global dialog, each <strong>Modulation:</strong> selector — on the <strong>VFO tab</strong>, in the <strong>Bands</strong> form, and in the <strong>Channels</strong> form — has a <strong>Settings…</strong> button beside it. The button is <strong>enabled only when the current modulation actually has settings</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Modulation</th>
+<th>Settings</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WFM</td>
+<td>De-emphasis, Stereo, HF noise cut (hi-blend), RDS decoding</td>
+</tr>
+<tr>
+<td>NFM</td>
+<td>Deviation (Hz), Remove CTCSS tone</td>
+</tr>
+<tr>
+<td>AM, USB, LSB, CW, DSB</td>
+<td>None — the Settings… button is disabled</td>
+</tr>
+</tbody>
+</table>
+<p>The settings are <strong>per band and per channel, not global.</strong> There is no global WFM or NFM settings dialog any more.</p>
+<ul>
+<li>On the <strong>VFO tab</strong>, the Settings… button edits the live built-in defaults for the current modulation; changes apply immediately if you are receiving in that modulation.</li>
+<li>In the <strong>Bands</strong> and <strong>Channels</strong> forms, the Settings… button edits <strong>overrides</strong> for that band or channel. Each setting can be left at its default ("inherit the built-in default") or overridden. Band overrides are applied when you load the band; channel overrides when you load the channel. Remember to <strong>Save</strong> the band or channel after editing its modulation settings.</li>
+</ul>
+<p>See the <a href="#wfm-wideband-fm">WFM mode description</a> and <a href="#nfm-narrowband-fm">NFM mode description</a> above for what each individual setting does.</p>
+<h2 id="spectrum">Spectrum<a class="headerlink" href="#spectrum" title="Permanent link">&para;</a></h2>
+<p>The spectrum display shows signal power across the SDR's bandwidth. AccessDR provides multiple ways to explore the spectrum: sonification sweeps, an interactive cursor with probe tone, zoom, and peak detection. All spectrum features work on paused (frozen) data as well as live data.</p>
+<p>The spectrum belongs to free tuning, so it is shown <strong>only on the VFO tab</strong> — and the shortcuts below are live <strong>only in VFO mode</strong>. On the Channels tab the spectrum (and its cursor, sweep, peaks, and zoom) are hidden; those keys fall through to the channel list. The <strong>Sweep</strong> button (continuous sonification) is also VFO-only, and a running sweep stops automatically if you switch to the Channels tab.</p>
+<h3 id="shortcuts">Shortcuts<a class="headerlink" href="#shortcuts" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="keys"><kbd class="key-f">F</kbd></span></td>
+<td>Speak top spectrum peaks</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-g">G</kbd></span></td>
+<td>Describe current spectrum range</td>
+</tr>
+<tr>
+<td>++=++ / <span class="keys"><kbd class="key-plus">+</kbd></span></td>
+<td>Zoom in (halve span)</td>
+</tr>
+<tr>
+<td>++-++</td>
+<td>Zoom out (double span)</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-backspace">Backspace</kbd></span></td>
+<td>Reset zoom to full spectrum</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-f5">F5</kbd></span></td>
+<td>Sonification snapshot sweep</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-f5">F5</kbd></span></td>
+<td>Toggle continuous sweep</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-control">Ctrl</kbd></span> (hold)</td>
+<td>Play probe tone at cursor</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-arrow-left">Left</kbd></span> / <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-arrow-right">Right</kbd></span></td>
+<td>Move cursor while probing</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-arrow-left">Left</kbd></span> / <span class="keys"><kbd class="key-arrow-right">Right</kbd></span></td>
+<td>Step cursor and announce position</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-t">T</kbd></span></td>
+<td>Speak cursor frequency, power, and S-meter reading</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-c">C</kbd></span></td>
+<td>Reset cursor to centre, clear demod offset</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-t">T</kbd></span></td>
+<td>Tune LO to cursor frequency, clear offset</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-shift">Shift</kbd><span>+</span><kbd class="key-c">C</kbd></span></td>
+<td>Toggle "demod follows cursor" mode</td>
+</tr>
+</tbody>
+</table>
+<h3 id="waterfall-display">Waterfall Display<a class="headerlink" href="#waterfall-display" title="Permanent link">&para;</a></h3>
+<p>Below the line graph, a <strong>waterfall</strong> (spectrogram) scrolls vertically with the newest data at the top. Each horizontal line represents one FFT snapshot, with colour encoding signal power — brighter colours mean stronger signals. This makes it easy to spot intermittent transmissions, drifting signals, and patterns over time.</p>
+<p>The waterfall uses colour-vision-deficiency-safe colour schemes. Open <strong>Options &gt; Spectrum Settings</strong> (<span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-s">S</kbd></span>) to choose between:</p>
+<ul>
+<li><strong>Viridis</strong> — perceptually uniform with monotonic luminance, safe for all forms of colour blindness</li>
+<li><strong>Magma</strong> — high-contrast dark-to-bright scheme</li>
+<li><strong>Grayscale</strong> — pure black-to-white, universally accessible</li>
+</ul>
+<p>Adjust the <strong>dB floor</strong> (brightness) and <strong>dB ceiling</strong> (contrast) to control which signals are visible. A lower floor reveals weaker signals; a narrower range between floor and ceiling increases contrast.</p>
+<h3 id="sonification">Sonification<a class="headerlink" href="#sonification" title="Permanent link">&para;</a></h3>
+<p>Sonification converts the FFT spectrum into audio, letting you "hear" the spectrum:</p>
+<ul>
+<li>The spectrum is swept from left to right using <strong>stereo panning</strong> — left ear = low end, right ear = high end</li>
+<li><strong>Pitch</strong> encodes signal power — stronger signals produce a higher pitch, weak signals a low pitch</li>
+<li>Signals below the noise floor are silent, so only real signals are audible</li>
+</ul>
+<p>Press <span class="keys"><kbd class="key-f5">F5</kbd></span> for a <strong>snapshot sweep</strong> — a single left-to-right pass. Press <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-f5">F5</kbd></span> to toggle <strong>continuous sweep</strong> — repeats until you press <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-f5">F5</kbd></span> again. Sonification activates automatically when you start a sweep.</p>
+<h3 id="zoom">Zoom<a class="headerlink" href="#zoom" title="Permanent link">&para;</a></h3>
+<p>Zoom narrows the visible and sonified range so closely-spaced signals are easier to distinguish. Press ++=++ to zoom in, ++-++ to zoom out, and <span class="keys"><kbd class="key-backspace">Backspace</kbd></span> to reset. Press <span class="keys"><kbd class="key-g">G</kbd></span> to hear the current range.</p>
+<p>Zoom levels: 1x (full) → 2x → 4x → 8x → 16x → 32x. At 2.4 MSPS, 32x zoom gives a ~75 kHz span — still useful for NFM or AM signals.</p>
+<p>The visual spectrum panel always shows the full bandwidth, with yellow dashed lines marking the zoom boundaries and dimmed regions outside the zoom.</p>
+<h3 id="cursor-and-probe-tone">Cursor and Probe Tone<a class="headerlink" href="#cursor-and-probe-tone" title="Permanent link">&para;</a></h3>
+<p>The spectrum cursor lets you explore specific points in the spectrum interactively.</p>
+<p><strong>Probe tone:</strong> Hold <span class="keys"><kbd class="key-control">Ctrl</kbd></span> to hear a continuous tone at the cursor's position. Pitch encodes signal power (same mapping as sweep sonification) and stereo pan encodes frequency position (left = low, right = high). While Ctrl is held, press <span class="keys"><kbd class="key-arrow-left">Left</kbd></span> / <span class="keys"><kbd class="key-arrow-right">Right</kbd></span> to move through the spectrum. Release the arrows to stop moving — the tone continues. Release Ctrl to stop the tone entirely.</p>
+<p><strong>Stepping:</strong> Press <span class="keys"><kbd class="key-arrow-left">Left</kbd></span> / <span class="keys"><kbd class="key-arrow-right">Right</kbd></span> without Ctrl to step the cursor one position and hear the frequency, power, and S-meter reading announced via speech. Press <span class="keys"><kbd class="key-t">T</kbd></span> to re-announce the current cursor position at any time.</p>
+<p><strong>Peaks:</strong> Press <span class="keys"><kbd class="key-f">F</kbd></span> to hear the top spectrum peaks announced as frequency and power level. The number of peaks reported is configurable in the Spectrum Settings dialog (<span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-s">S</kbd></span>).</p>
+<p>You can also click on the spectrum panel with the mouse to jump the cursor to that position. The cursor respects zoom — when zoomed in, the range narrows to the visible spectrum.</p>
+<h3 id="software-vfo-offset">Software VFO Offset<a class="headerlink" href="#software-vfo-offset" title="Permanent link">&para;</a></h3>
+<p>By default, the demodulator processes the signal at the hardware LO (centre frequency). Press <span class="keys"><kbd class="key-shift">Shift</kbd><span>+</span><kbd class="key-c">C</kbd></span> to enable <strong>"demod follows cursor"</strong> mode — moving the cursor also shifts the demodulator to listen at the cursor's frequency. This works like clicking on a waterfall in HDSDR or SDR++ to move a software VFO.</p>
+<p>The offset is applied by a software mixer in the DSP chain. The hardware LO does not move, so the full spectrum remains visible and the probe tone works normally.</p>
+<p>Press <span class="keys"><kbd class="key-c">C</kbd></span> to reset the cursor and offset to centre. Press <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-t">T</kbd></span> to retune the hardware LO to the cursor and clear the offset. The offset is clamped to ±120 kHz (half the baseband rate). A yellow dashed "D" marker appears on the spectrum panel to show where the demodulator is listening. Press <span class="keys"><kbd class="key-i">I</kbd></span> to hear the current offset and listening frequency.</p>
+<h3 id="sonification-settings">Sonification Settings<a class="headerlink" href="#sonification-settings" title="Permanent link">&para;</a></h3>
+<p>Open the Spectrum Settings dialog with <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-s">S</kbd></span> to adjust:</p>
+<ul>
+<li><strong>Weak signal pitch</strong> — the pitch for signals at the noise floor (default 200 Hz)</li>
+<li><strong>Strong signal pitch</strong> — the pitch for the strongest signals (default 4000 Hz)</li>
+<li><strong>Sweep speed</strong> — how long one full left-to-right sweep takes (default 5 seconds; slower speeds give more time to distinguish closely-spaced signals)</li>
+</ul>
+<h2 id="scanner">Scanner<a class="headerlink" href="#scanner" title="Permanent link">&para;</a></h2>
+<p>The scanner steps automatically and pauses on active signals. Rather than typing raw start/stop frequencies, you scan one of the things you have already defined — a <strong>band</strong> or a <strong>channel map</strong> — so the scan inherits the right range, step, and modulation.</p>
+<p>Open the Scanner dialog with <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-n">N</kbd></span>. At the top, choose the <strong>Scan source</strong>:</p>
+<ul>
+<li><strong>Band</strong> — pick one of your <a href="#bands-vfo-presets">bands</a> from the dropdown. The scan sweeps that band's frequency range using the band's own step, and sets the band's modulation so a stop on a hit is audible. The info line shows the range, step, and modulation that will be used. Free / unbounded bands have no edges, so they cannot be scanned and are not listed.</li>
+<li><strong>Channel map</strong> — pick a <a href="#channels-memory">channel map</a>. The scan visits that map's discrete memory channels in order (a Baofeng-style memory scan), not a continuous range. Each found signal is reported with its channel number and label.</li>
+</ul>
+<p>Set the <strong>squelch threshold</strong> — channels/frequencies whose signal rises above this level are flagged and spoken as they are found. Then press <strong>Start Scan</strong>.</p>
+<p>The radio must be <strong>running</strong> for the scanner to detect anything, since it reads the live spectrum level. Detection itself is modulation-independent (it measures signal energy), so a channel map that mixes modulations is still scanned correctly; the audio modulation is set once from the band (or the map's first channel).</p>
+<p>Found signals appear in the results list with frequency, channel label (for channel-map scans), and strength, and are announced as they arrive.</p>
+<h3 id="scanner-controls">Scanner Controls<a class="headerlink" href="#scanner-controls" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="keys"><kbd class="key-h">H</kbd></span></td>
+<td>Hold on the current frequency (toggle)</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-k">K</kbd></span></td>
+<td>Skip to the next frequency / channel</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-escape">Esc</kbd></span></td>
+<td>Stop the scan</td>
+</tr>
+</tbody>
+</table>
+<p>When a signal is found, the scanner pauses briefly so you can listen, then continues.</p>
+<h2 id="remote-sdr-rtl_tcp">Remote SDR (rtl_tcp)<a class="headerlink" href="#remote-sdr-rtl_tcp" title="Permanent link">&para;</a></h2>
+<p>AccessDR can receive IQ data from a remote <code>rtl_tcp</code> server instead of a locally connected USB dongle. This is useful when the antenna and SDR dongle are in a different location — for example a Raspberry Pi on the roof running <code>rtl_tcp</code>, streaming data to your PC over the network.</p>
+<h3 id="setting-up-a-remote-server">Setting Up a Remote Server<a class="headerlink" href="#setting-up-a-remote-server" title="Permanent link">&para;</a></h3>
+<p>On the remote machine (e.g. Raspberry Pi), start <code>rtl_tcp</code>:</p>
+<div class="highlight"><pre><span></span><code>rtl_tcp<span class="w"> </span>-a<span class="w"> </span><span class="m">0</span>.0.0.0
+</code></pre></div>
+<p>This listens on port 1234 by default. Use <code>-p</code> to change the port.</p>
+<h3 id="managing-servers">Managing Servers<a class="headerlink" href="#managing-servers" title="Permanent link">&para;</a></h3>
+<p>Open the Remote SDR Servers dialog with <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-g">G</kbd></span> to manage your server list:</p>
+<ul>
+<li><strong>Add</strong> — enter a name (e.g. "Roof Pi"), host address (IP or hostname), and port</li>
+<li><strong>Edit</strong> — modify the name, host, or port of a selected server</li>
+<li><strong>Remove</strong> — delete a selected server from the list</li>
+<li><strong>Test Connection</strong> — verify that the server is reachable and responding with a valid rtl_tcp handshake</li>
+</ul>
+<p>Changes are saved immediately on each action. You can configure zero or more servers.</p>
+<h3 id="selecting-a-remote-server">Selecting a Remote Server<a class="headerlink" href="#selecting-a-remote-server" title="Permanent link">&para;</a></h3>
+<p>Configured servers appear in the RF Settings device dropdown (<span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-r">R</kbd></span>) alongside local USB devices. Select a remote server to switch to it — the radio will restart using the rtl_tcp backend. Select a local device to switch back.</p>
+<p>When receiving from a remote server, the status bar shows the server name and the spoken status (<span class="keys"><kbd class="key-i">I</kbd></span>) includes the remote connection info.</p>
+<h3 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Latency</strong> — network latency adds delay to the audio. A local network (LAN or Wi-Fi) works well; a slow internet connection may cause dropouts.</li>
+<li><strong>Bandwidth</strong> — rtl_tcp streams raw IQ data at the full sample rate. At 2.4 MSPS, this is about 4.8 MB/s (38 Mbit/s). Ensure your network can handle this.</li>
+<li><strong>Single client</strong> — a standard rtl_tcp server supports one client at a time.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://zensical.org/" target="_blank" rel="noopener">
+      Zensical
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/ragb/accessdr" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["navigation.sections","navigation.expand","navigation.top","search.highlight","content.code.copy"],"search":"../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.6e5f0216.min.js"></script>
+      
+    
+  </body>
+</html>
