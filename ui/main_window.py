@@ -114,6 +114,7 @@ class MainWindow(wx.Frame):
         self._sweeping: bool = False               # continuous sweep running
         self._mode_pending: bool = False           # waiting for mode letter after M
         self._above_threshold: bool = False        # auto-announce threshold state
+        self._status_frame: int = 0                 # status-bar refresh throttle
         self._recording_path: str = ""               # current recording file path
         self._save_later = None                     # debounced settings save (wx.CallLater)
 
@@ -121,6 +122,7 @@ class MainWindow(wx.Frame):
         self._dialogs: dict = {}
 
         self._build_menu()
+        self._build_toolbar()
         self._build_ui()
         self._build_status_bar()
 
@@ -131,12 +133,14 @@ class MainWindow(wx.Frame):
             self._spectrum_panel, self._spectrum_ctrl,
             tune_cb=self._tune, duck_cb=self._audio.duck,
             freq_ctrl=self._freq_ctrl,
+            is_active_cb=lambda: self._notebook.GetSelection() == 0,
         )
         self._spectrum_panel.set_cursor_click_callback(self._cursor.on_spectrum_click)
         self._action_table = self._build_dispatch_table()
         # Align the initial tab with the restored operating mode (without
         # firing a page-changed event), then show the context anchor.
         self._notebook.ChangeSelection(1 if self._opstate.mode is OpMode.MR else 0)
+        self._set_vfo_widgets_visible(self._opstate.mode is OpMode.VFO)
         self._update_context_anchor()
 
         self.Bind(wx.EVT_CLOSE, self._on_close)
@@ -200,9 +204,67 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_open_help, id=wx.ID_HELP)
         self.Bind(wx.EVT_MENU, self._on_open_about, id=wx.ID_ABOUT)
 
+    def _build_toolbar(self) -> None:
+        """Persistent native toolbar: Start/Stop, Volume, Mute, Squelch.
+
+        A frame toolbar is independent of the notebook, so these always-needed
+        controls stay visible in both VFO and Memory modes.
+        """
+        tb = self.CreateToolBar(wx.TB_HORIZONTAL | wx.TB_TEXT)
+        self._toolbar = tb
+
+        # Start / Stop (accessible button; label flips between Start and Stop)
+        self._start_btn = wx.Button(tb, label=_("▶ Start"), name="Start radio")
+        self._start_btn.Bind(wx.EVT_BUTTON, self._on_start_stop)
+        tb.AddControl(self._start_btn)
+        tb.AddSeparator()
+
+        # Volume
+        tb.AddControl(wx.StaticText(tb, label=_("Volume:")))
+        self._vol_slider = wx.Slider(
+            tb, value=int(self._settings.volume * 100),
+            minValue=0, maxValue=100, style=wx.SL_HORIZONTAL,
+            name="Volume slider", size=(120, -1),
+        )
+        self._vol_slider.Bind(wx.EVT_SLIDER, self._on_volume)
+        tb.AddControl(self._vol_slider)
+        self._mute_btn = wx.ToggleButton(tb, label=_("Mute (M)"), name="Mute toggle")
+        self._mute_btn.SetValue(self._settings.muted)
+        self._mute_btn.Bind(wx.EVT_TOGGLEBUTTON, self._on_mute)
+        tb.AddControl(self._mute_btn)
+        tb.AddSeparator()
+
+        # Squelch (sensitivity slider + on/off toggle)
+        tb.AddControl(wx.StaticText(tb, label=_("Squelch:")))
+        self._sq_slider = wx.Slider(
+            tb, value=self._settings.squelch_sensitivity,
+            minValue=0, maxValue=10, style=wx.SL_HORIZONTAL,
+            name="Squelch sensitivity slider", size=(120, -1),
+        )
+        self._sq_slider.Bind(wx.EVT_SLIDER, self._on_squelch)
+        tb.AddControl(self._sq_slider)
+        self._sq_lbl = wx.StaticText(
+            tb, label=str(self._settings.squelch_sensitivity),
+            name="Squelch sensitivity display",
+        )
+        tb.AddControl(self._sq_lbl)
+        self._sq_off_btn = wx.ToggleButton(
+            tb, label=_("Off (Ctrl+Shift+A)"), name="Squelch off toggle",
+        )
+        self._sq_off_btn.SetValue(not self._settings.squelch_enabled)
+        self._sq_off_btn.Bind(wx.EVT_TOGGLEBUTTON, self._on_squelch_off_toggle)
+        tb.AddControl(self._sq_off_btn)
+        if not self._settings.squelch_enabled:
+            self._sq_slider.Enable(False)
+            self._sq_lbl.SetLabel(_("Off"))
+
+        self._monitor_active: bool = False
+        tb.Realize()
+
     def _build_ui(self) -> None:
         panel = wx.Panel(self)
         panel.SetName("Main controls panel")
+        self._main_panel = panel
         outer = wx.BoxSizer(wx.VERTICAL)
 
         # === Notebook: VFO / Channels ===  (bands are a VFO dropdown + modal)
@@ -218,68 +280,7 @@ class MainWindow(wx.Frame):
         self._notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self._on_tab_changed)
         outer.Add(self._notebook, 1, wx.EXPAND | wx.ALL, 8)
 
-        # --- Start/Stop + Signal ---
-        ctrl_row = wx.BoxSizer(wx.HORIZONTAL)
-        self._start_btn = wx.Button(panel, label=_("\u25b6 Start"), name="Start radio")
-        self._start_btn.Bind(wx.EVT_BUTTON, self._on_start_stop)
-        self._signal_lbl = wx.StaticText(
-            panel, label=_("Signal: —"), name="Signal strength display"
-        )
-        for w in (self._start_btn, self._signal_lbl):
-            ctrl_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
-        outer.Add(ctrl_row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
-
-        # --- Volume row ---
-        vol_row = wx.BoxSizer(wx.HORIZONTAL)
-        vol_label = wx.StaticText(panel, label=_("Volume:"))
-        self._vol_slider = wx.Slider(
-            panel, value=int(self._settings.volume * 100),
-            minValue=0, maxValue=100,
-            style=wx.SL_HORIZONTAL,
-            name="Volume slider",
-            size=(140, -1),
-        )
-        self._vol_slider.Bind(wx.EVT_SLIDER, self._on_volume)
-        self._mute_btn = wx.ToggleButton(panel, label=_("Mute (M)"), name="Mute toggle")
-        self._mute_btn.SetValue(self._settings.muted)
-        self._mute_btn.Bind(wx.EVT_TOGGLEBUTTON, self._on_mute)
-
-        for w in (vol_label, self._vol_slider, self._mute_btn):
-            vol_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 6)
-        outer.Add(vol_row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
-
-        # --- Squelch row ---
-        sq_row = wx.BoxSizer(wx.HORIZONTAL)
-        sq_label = wx.StaticText(panel, label=_("Squelch:"))
-        self._sq_slider = wx.Slider(
-            panel, value=self._settings.squelch_sensitivity,
-            minValue=0, maxValue=10,
-            style=wx.SL_HORIZONTAL,
-            name="Squelch sensitivity slider",
-            size=(140, -1),
-        )
-        self._sq_slider.Bind(wx.EVT_SLIDER, self._on_squelch)
-        self._sq_lbl = wx.StaticText(
-            panel,
-            label=str(self._settings.squelch_sensitivity),
-            name="Squelch sensitivity display",
-        )
-        self._sq_off_btn = wx.ToggleButton(
-            panel,
-            label=_("Off (Ctrl+Shift+A)"),
-            name="Squelch off toggle",
-        )
-        self._sq_off_btn.SetValue(not self._settings.squelch_enabled)
-        self._sq_off_btn.Bind(wx.EVT_TOGGLEBUTTON, self._on_squelch_off_toggle)
-        if not self._settings.squelch_enabled:
-            self._sq_slider.Enable(False)
-            self._sq_lbl.SetLabel(_("Off"))
-        for w in (sq_label, self._sq_slider, self._sq_lbl, self._sq_off_btn):
-            sq_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 6)
-        outer.Add(sq_row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
-        self._monitor_active: bool = False
-
-        # --- Sweep toggle button ---
+        # --- Sweep toggle button (VFO-only; shown/hidden with the spectrum) ---
         sweep_row = wx.BoxSizer(wx.HORIZONTAL)
         self._sweep_btn = wx.ToggleButton(
             panel, label=_("Start Sweep (Ctrl+F5)"), name="Toggle continuous sweep"
@@ -662,7 +663,6 @@ class MainWindow(wx.Frame):
     def _stop_radio(self) -> None:
         self._radio.stop()
         self._cursor.set_pipeline(None)
-        self._signal_lbl.SetLabel(_("Signal: —"))
         self._start_btn.SetLabel(_("\u25b6 Start"))
         self._statusbar.SetStatusText(_("Stopped."))
         speech.output(_("Radio stopped."))
@@ -672,14 +672,8 @@ class MainWindow(wx.Frame):
     # ==================================================================
 
     def _on_stereo_change(self, stereo: bool) -> None:
-        """Called on UI thread when WFM stereo state changes."""
-        label = _("Stereo") if stereo else _("Mono")
-        listen = self._cursor.listening_freq()
-        self._statusbar.SetStatusText(
-            _("Receiving — {freq} [{label}]").format(
-                freq=fmt_freq(listen), label=label
-            ),
-        )
+        """WFM stereo state changed — refresh the live status bar."""
+        self._refresh_status_bar()
 
     def _on_rds_station(self, name: str) -> None:
         """Called on UI thread when RDS station name changes."""
@@ -689,14 +683,12 @@ class MainWindow(wx.Frame):
         """Called on UI thread with updated spectrum data."""
         self._last_spectrum = spectrum
 
-        # Update signal strength display
+        # Signal strength — also drives the live status bar (throttled ~4 Hz)
         strength = self._audio.signal_db
         s_unit = s_meter(strength)
-        self._signal_lbl.SetLabel(
-            _("Signal: {db:.1f} dBFS  [{s_unit}]").format(
-                db=strength, s_unit=s_unit,
-            )
-        )
+        self._status_frame = (self._status_frame + 1) % 8
+        if self._status_frame == 0:
+            self._statusbar.SetStatusText(self._build_status_report())
 
         # Feed spectrum panel
         self._spectrum_panel.set_data(
@@ -885,38 +877,7 @@ class MainWindow(wx.Frame):
             event.Skip()
             return
 
-        # Transport / audio controls work on every tab, whatever has focus.
-        global_actions = {
-            kb.START_STOP, kb.TOGGLE_MUTE,
-            kb.VOLUME_UP, kb.VOLUME_DOWN,
-            kb.SQUELCH_UP, kb.SQUELCH_DOWN,
-            kb.SQUELCH_TOGGLE, kb.SQUELCH_MONITOR,
-        }
-        if action in global_actions:
-            self._dispatch_action(action)
-            return
-
-        # Let arrow-using controls (scene/step/mode/bw dropdowns, sliders,
-        # spinners) handle the arrow keys themselves; cursor/frequency arrows
-        # act only when focus is on the spectrum, a button, or the panel.
-        if code in (wx.WXK_UP, wx.WXK_DOWN, wx.WXK_LEFT, wx.WXK_RIGHT) and isinstance(
-            focused, (wx.Choice, wx.ComboBox, wx.Slider, wx.SpinCtrl,
-                      wx.SpinCtrlDouble, wx.TreeCtrl, wx.ListCtrl)
-        ):
-            event.Skip()
-            return
-
-        # On the Channels/Scenes tabs, release the remaining plain keys
-        # (letters, Enter, Space, Page nav) to the focused list or form
-        # control. Function keys and Ctrl/Alt shortcuts work on every tab.
-        if self._notebook.GetSelection() != 0:  # 0 == VFO page
-            is_function_key = wx.WXK_F1 <= code <= wx.WXK_F24
-            has_cmd_modifier = bool(modifiers & (wx.MOD_CONTROL | wx.MOD_ALT))
-            if not is_function_key and not has_cmd_modifier:
-                event.Skip()
-                return
-
-        # Layered mode selection: M then mode letter
+        # Layered mode selection (M then a mode letter) consumes the next key.
         if self._mode_pending:
             self._mode_pending = False
             char = chr(code).upper() if 32 <= code < 128 else ""
@@ -926,11 +887,30 @@ class MainWindow(wx.Frame):
                 speech.output(_("Modulation selection cancelled."))
             return
 
-        if action is None:
+        # Global actions (transport, audio, info, mode toggle, recording,
+        # menus/dialogs) work on every tab, whatever has focus.
+        if action in kb.GLOBAL_ACTIONS:
+            self._dispatch_action(action)
+            return
+
+        # Let arrow-using controls (dropdowns, sliders, spinners, lists)
+        # handle the arrow keys themselves.
+        if code in (wx.WXK_UP, wx.WXK_DOWN, wx.WXK_LEFT, wx.WXK_RIGHT) and isinstance(
+            focused, (wx.Choice, wx.ComboBox, wx.Slider, wx.SpinCtrl,
+                      wx.SpinCtrlDouble, wx.TreeCtrl, wx.ListCtrl)
+        ):
             event.Skip()
             return
 
-        # Dispatch table — maps action names to handler calls.
+        # Per-mode gating: cursor/spectrum/tuning keys are live only in VFO,
+        # channel stepping only in Memory.  Anything not allowed for the active
+        # tab is released to the focused control (Channels list type-ahead, the
+        # form fields, etc.).
+        on_vfo = self._notebook.GetSelection() == 0
+        allowed = kb.VFO_ACTIONS if on_vfo else kb.CHANNELS_ACTIONS
+        if action is None or action not in allowed:
+            event.Skip()
+            return
         self._dispatch_action(action)
 
     def _build_dispatch_table(self) -> dict[str, Callable]:
@@ -997,7 +977,7 @@ class MainWindow(wx.Frame):
             kb.OPEN_RTL_TCP_DIALOG: self._open_rtl_tcp_dialog,
             kb.OPEN_RECORDING_DIALOG: self._open_recording_dialog,
             kb.OPEN_USER_GUIDE:     lambda: self._on_open_user_guide(None),
-            kb.OPEN_HELP:           self._open_help_dialog,
+            kb.OPEN_HELP:           lambda: wx.CallAfter(self._open_shortcuts),
         }
 
     def _on_key_up(self, event: wx.KeyEvent) -> None:
@@ -1046,12 +1026,15 @@ class MainWindow(wx.Frame):
         if not self._settings.demod_follows_cursor:
             self._cursor.reset_offset()
 
-    def _announce_info(self) -> None:
-        """Speak current signal information (I key)."""
+    def _build_status_report(self) -> str:
+        """Build the live status string shown in the status bar and spoken by I.
+
+        Starts with the operating context (VFO/Memory) so the bar and the I
+        report carry the same information.
+        """
+        parts = [self._context_string()]
         if not self._radio.running:
-            speech.output(_("Radio not running."))
-            return
-        parts = []
+            return parts[0]
         db = self._audio.signal_db
         parts.append(_("Signal {db:.1f} dBFS, {s_unit}").format(
             db=db, s_unit=s_meter(db)
@@ -1092,7 +1075,23 @@ class MainWindow(wx.Frame):
             parts.append(_("Listening {freq}").format(
                 freq=fmt_freq(self._cursor.listening_freq())
             ))
-        speech.output(", ".join(parts))
+        if self._recording_path:
+            parts.append(_("REC {filename}").format(
+                filename=os.path.basename(self._recording_path)
+            ))
+        return ", ".join(parts)
+
+    def _refresh_status_bar(self) -> None:
+        """Push the live report to the status bar (when running)."""
+        if self._radio.running:
+            self._statusbar.SetStatusText(self._build_status_report())
+
+    def _announce_info(self) -> None:
+        """Speak current signal information (I key) — mirrors the status bar."""
+        if not self._radio.running:
+            speech.output(_("Radio not running."))
+            return
+        speech.output(self._build_status_report())
 
     # ==================================================================
     # Recording
@@ -1135,15 +1134,15 @@ class MainWindow(wx.Frame):
         self._update_recording_status()
 
     def _update_recording_status(self) -> None:
-        """Update the status bar to show/hide [REC: filename]."""
-        text = self._statusbar.GetStatusText()
-        # Strip any existing REC tag
-        if " [REC:" in text:
-            text = text[: text.index(" [REC:")]
-        if self._recording_path:
-            fname = os.path.basename(self._recording_path)
-            text += _(" [REC: {filename}]").format(filename=fname)
-        self._statusbar.SetStatusText(text)
+        """Refresh the status bar (the live report includes the REC segment)."""
+        if self._radio.running:
+            self._refresh_status_bar()
+        else:
+            self._statusbar.SetStatusText(
+                _("REC {filename}").format(
+                    filename=os.path.basename(self._recording_path))
+                if self._recording_path else _("Stopped.")
+            )
 
     # ==================================================================
     # Dialog openers
@@ -1220,13 +1219,24 @@ class MainWindow(wx.Frame):
     def _on_tab_changed(self, event) -> None:  # noqa: ANN001
         """The active tab sets the operating mode (VFO / MR) and focus."""
         sel = self._notebook.GetSelection()
-        self._opstate.mode = OpMode.MR if sel == 1 else OpMode.VFO  # 1 == Channels
+        on_vfo = sel == 0
+        self._opstate.mode = OpMode.MR if not on_vfo else OpMode.VFO  # 1 == Channels
+        # The spectrum (and its cursor/sweep) only make sense in VFO mode.
+        if not on_vfo and self._sweeping:
+            self._toggle_sweep()      # stop the sweep we're about to hide
+        self._set_vfo_widgets_visible(on_vfo)
         self._update_context_anchor()
         self._persist_op_state()
         page = self._notebook.GetCurrentPage()
         if page is not None:
             page.SetFocus()
         event.Skip()
+
+    def _set_vfo_widgets_visible(self, visible: bool) -> None:
+        """Show/hide the VFO-only spectrum panel and sweep button."""
+        self._spectrum_panel.Show(visible)
+        self._sweep_btn.Show(visible)
+        self._main_panel.Layout()
 
     def _update_context_anchor(self) -> None:
         """Reflect the live operating context in the title bar and status bar.
@@ -1236,23 +1246,28 @@ class MainWindow(wx.Frame):
         """
         if not hasattr(self, "_statusbar"):
             return
+        ctx = self._context_string()
+        self.SetTitle("{base} - {ctx}".format(base=self._base_title, ctx=ctx))
+        # While running, the live status report owns the bar (refreshed on
+        # spectrum frames); only write the bare context when stopped.
+        if not self._radio.running:
+            self._statusbar.SetStatusText(ctx)
+
+    def _context_string(self) -> str:
+        """The operating-context segment (VFO/Memory) used in title and status."""
         st = self._opstate
         if st.mode is OpMode.MR:
             cmap = self._channels.active_map()
             scope = cmap.name if cmap is not None else _("no map")
             ch = st.current_channel()
             if ch is not None:
-                ctx = _("Memory, {scope}, channel {n}, {label}").format(
+                return _("Memory, {scope}, channel {n}, {label}").format(
                     scope=scope, n=ch.number, label=ch.label
                 )
-            else:
-                ctx = _("Memory, {scope}").format(scope=scope)
-        else:
-            ctx = _("VFO, {scene}, {freq}").format(
-                scene=st.scene.name, freq=fmt_freq(self._settings.frequency)
-            )
-        self.SetTitle("{base} - {ctx}".format(base=self._base_title, ctx=ctx))
-        self._statusbar.SetStatusText(ctx)
+            return _("Memory, {scope}").format(scope=scope)
+        return _("VFO, {scene}, {freq}").format(
+            scene=st.scene.name, freq=fmt_freq(self._settings.frequency)
+        )
 
     def _persist_op_state(self) -> None:
         """Write the operating context to disk now.
@@ -1383,9 +1398,9 @@ class MainWindow(wx.Frame):
         elif not self._radio.running:
             self._statusbar.SetStatusText(_("Ready — no device connected."))
 
-    def _open_help_dialog(self) -> None:
-        from ui.dialogs.help_dialog import HelpDialog
-        self._open_or_raise("help", lambda: HelpDialog(self))
+    def _open_shortcuts(self) -> None:
+        from ui.dialogs.accessible_help import show_shortcuts
+        show_shortcuts(self)
 
     def _on_open_user_guide(self, _event) -> None:
         # Defer off the menu/key handler: the accessible HTML dialog creates a
@@ -1398,7 +1413,8 @@ class MainWindow(wx.Frame):
             speech.output(_("User guide not found. Run 'invoke build-help' first."))
 
     def _on_open_help(self, _event) -> None:
-        self._open_help_dialog()
+        # Defer (WebView2 COM input-synchronous guard, like About/User Guide).
+        wx.CallAfter(self._open_shortcuts)
 
     def _on_open_about(self, _event) -> None:
         wx.CallAfter(self._open_about_dialog)

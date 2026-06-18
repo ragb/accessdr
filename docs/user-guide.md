@@ -38,23 +38,31 @@ In VFO mode, ++page-up++ and ++page-down++ also step the frequency by the curren
 
 Press ++space++ to **pause** the radio — IQ capture and audio stop, but the last spectrum snapshot remains visible and navigable. Cursor movement, probe tone, peaks, zoom and all other spectrum features continue to work on the frozen data. Press ++space++ again to **resume** reception. Press ++f2++ while paused to fully stop the radio and release the device.
 
+## The main window
+
+A **toolbar** runs across the top of the window and is available at all times, in every mode. It holds the controls you always need: **Start/Stop**, the **Volume** slider, the **Mute** toggle, and the **Squelch** sensitivity slider with its on/off toggle (see [Volume, Mute, and Squelch](#volume-mute-and-squelch)).
+
+Below the toolbar is a notebook with two tabs — VFO and Channels — and, **on the VFO tab only**, the spectrum display. The status bar at the bottom shows your live operating context and, while receiving, a continuously-updated signal readout (the same information the ++i++ key speaks — see [Signal Information](#signal-information)).
+
 ## Channels and Bands
 
-AccessDR works like a Baofeng/handheld transceiver, with two operating modes surfaced as the two tabs of a notebook at the top of the main window:
+AccessDR works like a Baofeng/handheld transceiver, with two operating modes surfaced as the two tabs of the notebook:
 
-- **VFO tab** — free tuning within a **band**. Selecting this tab puts the radio in **VFO mode**.
-- **Channels tab** — stepping through numbered memory **channels**. Selecting this tab puts the radio in **Memory (MR) mode**.
+- **VFO tab** — free tuning within a **band**, with the spectrum display and its cursor/sonification tools. Selecting this tab puts the radio in **VFO mode**.
+- **Channels tab** — stepping through numbered memory **channels**. Selecting this tab puts the radio in **Memory (MR) mode**. The spectrum and its tools are hidden here (they only apply to free tuning).
 
 **The active tab _is_ the operating mode.** Press ++v++ to toggle between the two tabs (and therefore between VFO and Memory mode). On the Channels tab, ++ctrl+b++ jumps straight to it and focuses the channel list.
+
+Because the spectrum is VFO-only, the **spectrum and cursor shortcuts work only in VFO mode**; the toolbar controls and the radio-wide keys (start/stop, volume, mute, squelch, info, recording, the menus and dialogs) work in **both** modes. Press ++f1++ at any time for the full keyboard reference, grouped by where each key is live.
 
 ### The context anchor
 
 The window title always shows your live operating context, so a screen reader announces exactly where you are whenever the title is read:
 
-- In VFO mode: `AccessDR v0.6.0 - VFO, FM Radio, 98.100 MHz` (operating mode, band name, frequency).
-- In Memory mode: `AccessDR v0.6.0 - Memory, PMR446, channel 1, PMR 1` (operating mode, channel-map name, channel number, channel label).
+- In VFO mode: `AccessDR - VFO, FM Radio, 98.100 MHz` (operating mode, band name, frequency).
+- In Memory mode: `AccessDR - Memory, PMR446, channel 1, PMR 1` (operating mode, channel-map name, channel number, channel label).
 
-The same context text is shown in the status bar.
+The same context starts the status bar line; while the radio is running, the status bar extends it with the live signal readout (see [Signal Information](#signal-information)).
 
 ### Bands (VFO presets)
 
@@ -173,37 +181,43 @@ Similar to AM but **without carrier filtering**. Useful for receiving AM signals
 
 ## Volume, Mute, and Squelch
 
+These controls live on the **toolbar** (top of the window) and are available in both VFO and Memory modes. The keyboard shortcuts work everywhere too:
+
 | Key | Action |
 |---|---|
-| ++f11++ | Volume up (+5%) |
-| ++f12++ | Volume down (-5%) |
+| ++f11++ / ++f12++ | Volume up / down |
 | ++f3++ | Mute / Unmute |
-| ++shift+f11++ | Squelch up (+3 dB) |
-| ++shift+f12++ | Squelch down (-3 dB) |
+| ++shift+f11++ / ++shift+f12++ | Squelch sensitivity up / down |
+| ++ctrl+shift+a++ | Squelch on / off |
+| ++l++ (hold) | Monitor — temporarily open a closed squelch to listen |
 
-Volume and squelch sliders are also available in the main window. The mute toggle button is labelled "Mute (M)" in the UI.
+The **squelch** silences audio until a real signal is present, so you only hear transmissions, not the noise between them — useful for monitoring and scanning.
 
-The **squelch** silences audio when the signal drops below a threshold. This is useful for scanning or monitoring — you only hear audio when someone is transmitting. Set it just above the noise level so that only real signals open the squelch. A value of -80 dBm is a good starting point; raise it if you hear too much noise.
+The squelch is **automatic and adaptive**: rather than a fixed level in dBm, you set a **sensitivity from 0 to 10**, and AccessDR tracks the channel and decides when a signal is really present. It uses a different measure per mode — the above-audio noise in the FM discriminator for WFM/NFM, the carrier-to-noise ratio for AM, and an adaptive noise-floor for SSB/CW — so the same sensitivity behaves sensibly across modes.
 
-The squelch behaves like a real radio rather than a hard on/off gate, so it doesn't chop speech between syllables or click on every brief fade:
+- **0** is the most sensitive (opens for the weakest signals; lets more noise through).
+- **10** is the tightest (only strong, clear signals open it).
+- Start around **5** and adjust: raise it if noise is breaking squelch, lower it if weak signals are being cut off.
 
-- **Hang time** — after the signal drops, the audio is held open for a short tail (default 500 ms) before muting, bridging momentary fades and gaps between words.
-- **Hysteresis** — it opens at your threshold but closes a few dB lower (default 3 dB), so it doesn't chatter right at the edge.
-- **Soft attack/release** — it opens and fades closed smoothly instead of cutting abruptly.
+Use the **Off** toggle (or ++ctrl+shift+a++) to disable squelch entirely and hear everything. Hold **Monitor** (++l++) to momentarily listen through a closed squelch — handy for checking a marginal channel without changing the setting.
 
-Moving the squelch control takes effect immediately (the new threshold is applied at once, without waiting out the previous hang). You can tune the **Squelch Hang (ms)** and **Squelch Hysteresis (dB)** in **Options > Audio Settings** (++ctrl+d++) — set the hang to 0 for an instant cut, or higher if the audio drops too quickly between overs.
+The gate opens and closes smoothly (a short hold-open tail and hysteresis) so it doesn't chop speech between syllables or click on brief fades; moving the sensitivity takes effect immediately.
 
 ## Signal Information
 
-Press ++i++ at any time to hear a spoken status report including:
+Press ++i++ at any time to hear a spoken status report. It reports **the same information shown live in the status bar**, so the spoken report and the on-screen readout always match:
 
+- Operating context (VFO band / Memory channel) and frequency
 - Signal strength in dBFS with S-meter reading (S0–S9+30)
 - Stereo or Mono (in WFM mode)
 - RDS station name (in WFM mode, when available)
 - CTCSS tone frequency (in NFM mode, when detected)
-- Squelch state (open or closed)
+- Squelch state (open / closed) and sensitivity, or "off"
 - Mute state
 - Demod offset and listening frequency (when a software VFO offset is active)
+- Recording filename (when recording)
+
+While receiving, the status bar updates continuously; ++i++ simply speaks the current line on demand.
 
 ## RF Settings
 
@@ -323,6 +337,8 @@ See the [WFM mode description](#wfm-wideband-fm) and [NFM mode description](#nfm
 ## Spectrum
 
 The spectrum display shows signal power across the SDR's bandwidth. AccessDR provides multiple ways to explore the spectrum: sonification sweeps, an interactive cursor with probe tone, zoom, and peak detection. All spectrum features work on paused (frozen) data as well as live data.
+
+The spectrum belongs to free tuning, so it is shown **only on the VFO tab** — and the shortcuts below are live **only in VFO mode**. On the Channels tab the spectrum (and its cursor, sweep, peaks, and zoom) are hidden; those keys fall through to the channel list. The **Sweep** button (continuous sonification) is also VFO-only, and a running sweep stops automatically if you switch to the Channels tab.
 
 ### Shortcuts
 
