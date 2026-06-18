@@ -60,6 +60,10 @@ class Settings:
     # i18n — empty string means system default
     language: str = ""
 
+    # Automatic updates
+    auto_check_updates: bool = True         # check GitHub releases on startup
+    skipped_update_version: str = ""        # version the user chose to skip
+
     # Noise blanker
     noise_blanker_enabled: bool = False
     noise_blanker_threshold: float = 5.0   # multiplier above median magnitude

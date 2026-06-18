@@ -53,6 +53,8 @@ a = Analysis(
         "wx_accessible_webview.chat",
         "wx_accessible_webview._common",
         "wx.html2",
+        # packaging — PEP 440 comparison for the update checker
+        "packaging.version",
         # accessible_output2 — handled by hook, but list explicitly too
         "accessible_output2",
         "accessible_output2.outputs",
