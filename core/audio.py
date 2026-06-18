@@ -315,17 +315,21 @@ class AudioOutput:
         self.device = device
         self.blocksize = blocksize
         self.volume: float = 0.75       # 0.0 – 1.0
-        self.squelch: float = -80.0     # dBm; signals below this → silence
+        self.squelch_enabled: bool = True     # False = squelch off (hear everything)
         self.squelch_hysteresis_db: float = 3.0   # close threshold is this much lower
         self.squelch_hang_ms: float = 500.0       # hold-open tail after signal drops
         self.muted: bool = False
         self.signal_db: float = -120.0  # last measured signal strength
 
+        # Auto squelch state (always active when squelch is enabled)
+        self.noise_db: float = 0.0            # signal metric from DSP (mode-dependent)
+        self.auto_squelch_threshold: float = -80.0  # adaptive threshold from DSP
+        self.current_mode: str = "WFM"        # current demodulation mode
+
         # Squelch gate state (smooth open/close with hang time)
         self._sq_open: bool = False
         self._sq_gain: float = 0.0       # current gate gain (0 = muted, 1 = open)
         self._sq_hang_remaining: int = 0  # samples left on the hang timer
-        self._sq_last_squelch: float = self.squelch  # detect manual threshold change
 
         # Ducking: smoothly reduce radio volume while probe tone plays
         self._duck_target: float = 1.0   # 1.0 = full, 0.0 = silent
@@ -340,8 +344,13 @@ class AudioOutput:
         self.audio_overruns: int = 0     # write() dropped (queue full)
 
     def _squelch_hang_samples(self) -> int:
-        """Hang-time tail length in samples (clamped to >= 0)."""
-        return max(0, int(self.sample_rate * self.squelch_hang_ms / 1000.0))
+        """Hang-time tail length in samples (clamped to >= 0).
+
+        Uses half the configured hang time — the adaptive metrics already
+        smooth transients, so a long hold-open tail just adds lag.
+        """
+        ms = self.squelch_hang_ms * 0.5
+        return max(0, int(self.sample_rate * ms / 1000.0))
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -493,33 +502,38 @@ class AudioOutput:
         if take < frames:
             self.audio_underruns += 1
 
-        # Squelch — like a real radio: open instantly, hold briefly through
-        # fades (hang time) with hysteresis, then fade out smoothly.  A hard
-        # gate (mute the instant signal_db dips below threshold) chops speech
-        # between syllables and clicks; this avoids both.
-        # A manual threshold change (the user moving the squelch control) must
-        # take effect immediately — re-evaluate against the new value directly,
-        # without carrying over the previous hang timer or hysteresis dead-zone.
-        if self.squelch != self._sq_last_squelch:
-            self._sq_last_squelch = self.squelch
-            self._sq_open = self.signal_db >= self.squelch
-            self._sq_hang_remaining = (
-                self._squelch_hang_samples() if self._sq_open else 0
-            )
-
-        open_thr = self.squelch
-        close_thr = self.squelch - self.squelch_hysteresis_db
-        if self.signal_db >= open_thr:
+        # Squelch — hardware-style carrier squelch with hysteresis,
+        # hang time, and smooth ramping.  Three strategies by mode:
+        #   FM (WFM/NFM): above-audio noise power (lower = stronger signal)
+        #   AM/DSB: carrier-to-noise ratio (higher = stronger signal)
+        #   SSB/CW: adaptive RSSI floor (higher = stronger signal)
+        # When squelch is disabled, the gate is always open.
+        if not self.squelch_enabled:
             self._sq_open = True
-            self._sq_hang_remaining = self._squelch_hang_samples()
-        elif self._sq_open and self.signal_db < close_thr:
-            self._sq_hang_remaining -= frames
-            if self._sq_hang_remaining <= 0:
-                self._sq_open = False
+        else:
+            if self.current_mode in ("WFM", "NFM"):
+                # FM carrier squelch: low noise = signal present (open).
+                signal_present = self.noise_db < self.auto_squelch_threshold
+                signal_absent = self.noise_db > (
+                    self.auto_squelch_threshold + self.squelch_hysteresis_db
+                )
+            else:
+                # AM/DSB/SSB/CW: higher metric = stronger signal.
+                signal_present = self.noise_db >= self.auto_squelch_threshold
+                signal_absent = self.noise_db < (
+                    self.auto_squelch_threshold - self.squelch_hysteresis_db
+                )
+            if signal_present:
+                self._sq_open = True
+                self._sq_hang_remaining = self._squelch_hang_samples()
+            elif self._sq_open and signal_absent:
+                self._sq_hang_remaining -= frames
+                if self._sq_hang_remaining <= 0:
+                    self._sq_open = False
         sq_target = 1.0 if self._sq_open else 0.0
         if abs(self._sq_gain - sq_target) > 1e-4:
-            # Fast attack (~5 ms) when opening, slower release (~40 ms) closing.
-            tc = 0.005 if sq_target > self._sq_gain else 0.040
+            # Fast attack (~5 ms) when opening, snappy release (~20 ms).
+            tc = 0.005 if sq_target > self._sq_gain else 0.020
             alpha = 1.0 - math.exp(-1.0 / (self.sample_rate * tc))
             k = 1.0 - alpha
             idx = np.arange(1, frames + 1, dtype=np.float64)

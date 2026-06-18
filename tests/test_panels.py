@@ -47,13 +47,13 @@ def test_save_channel_with_squelch_and_overrides(wx_app):
     panel._freq_ctrl.SetValue("145.5")
     panel._mode_ctrl.SetStringSelection("NFM")
     panel._refresh_bw_choices("NFM")
-    panel._squelch_ctrl.SetValue("-70")
+    panel._squelch_ctrl.SetValue("7")
     panel._pending_overrides = {"nfm_deviation": 2500}
     panel._on_save_channel(None)
     ch = store.maps[0].channels[0]
     assert ch.number == 5
     assert ch.frequency == 145_500_000
-    assert ch.squelch == -70.0
+    assert ch.squelch_sensitivity == 7
     assert ch.nfm_deviation == 2500
     frame.Destroy()
 

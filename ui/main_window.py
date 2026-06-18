@@ -64,7 +64,7 @@ class MainWindow(wx.Frame):
             blocksize=self._settings.audio_buffer_size,
         )
         self._audio.volume = self._settings.volume
-        self._audio.squelch = self._settings.squelch
+        self._audio.squelch_enabled = self._settings.squelch_enabled
         self._audio.squelch_hysteresis_db = self._settings.squelch_hysteresis_db
         self._audio.squelch_hang_ms = self._settings.squelch_hang_ms
         self._audio.muted = self._settings.muted
@@ -85,6 +85,7 @@ class MainWindow(wx.Frame):
             set_frequency_cb=self._tune,
             get_signal_db_cb=lambda: self._audio.signal_db,
             dispatcher=wx.CallAfter,
+            get_squelch_open_cb=lambda: self._audio._sq_open,
         )
         self._scenes = SceneStore()
         self._scenes.load()
@@ -140,6 +141,7 @@ class MainWindow(wx.Frame):
 
         self.Bind(wx.EVT_CLOSE, self._on_close)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+        self.Bind(wx.EVT_KEY_UP, self._on_key_up)
 
         self._apply_settings_to_ui()
 
@@ -248,21 +250,34 @@ class MainWindow(wx.Frame):
 
         # --- Squelch row ---
         sq_row = wx.BoxSizer(wx.HORIZONTAL)
-        sq_label = wx.StaticText(panel, label=_("Squelch (dBm):"))
+        sq_label = wx.StaticText(panel, label=_("Squelch:"))
         self._sq_slider = wx.Slider(
-            panel, value=int(self._settings.squelch),
-            minValue=-120, maxValue=0,
+            panel, value=self._settings.squelch_sensitivity,
+            minValue=0, maxValue=10,
             style=wx.SL_HORIZONTAL,
-            name="Squelch slider",
+            name="Squelch sensitivity slider",
             size=(140, -1),
         )
         self._sq_slider.Bind(wx.EVT_SLIDER, self._on_squelch)
         self._sq_lbl = wx.StaticText(
-            panel, label=f"{self._settings.squelch:.0f} dBm", name="Squelch level display"
+            panel,
+            label=str(self._settings.squelch_sensitivity),
+            name="Squelch sensitivity display",
         )
-        for w in (sq_label, self._sq_slider, self._sq_lbl):
+        self._sq_off_btn = wx.ToggleButton(
+            panel,
+            label=_("Off (Ctrl+Shift+A)"),
+            name="Squelch off toggle",
+        )
+        self._sq_off_btn.SetValue(not self._settings.squelch_enabled)
+        self._sq_off_btn.Bind(wx.EVT_TOGGLEBUTTON, self._on_squelch_off_toggle)
+        if not self._settings.squelch_enabled:
+            self._sq_slider.Enable(False)
+            self._sq_lbl.SetLabel(_("Off"))
+        for w in (sq_label, self._sq_slider, self._sq_lbl, self._sq_off_btn):
             sq_row.Add(w, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 6)
         outer.Add(sq_row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+        self._monitor_active: bool = False
 
         # --- Sweep toggle button ---
         sweep_row = wx.BoxSizer(wx.HORIZONTAL)
@@ -362,8 +377,8 @@ class MainWindow(wx.Frame):
         self._update_bw_choices(self._settings.mode)
         self._vol_slider.SetValue(int(self._settings.volume * 100))
         self._mute_btn.SetValue(self._settings.muted)
-        self._sq_slider.SetValue(int(self._settings.squelch))
-        self._sq_lbl.SetLabel(f"{self._settings.squelch:.0f} dBm")
+        self._sq_slider.SetValue(self._settings.squelch_sensitivity)
+        self._sq_lbl.SetLabel(str(self._settings.squelch_sensitivity))
         # Reflect the restored band / mode / channel context immediately.
         self._update_context_anchor()
 
@@ -559,14 +574,11 @@ class MainWindow(wx.Frame):
         else:
             self._load_channel(res.channel)
 
-    def _apply_squelch_override(self, value) -> None:
-        """Apply a band/channel squelch override (dBm) to audio + UI."""
+    def _apply_sensitivity_override(self, value) -> None:
+        """Apply a band/channel squelch sensitivity override (0–10)."""
         if value is None:
             return
-        self._settings.squelch = value
-        self._audio.squelch = value
-        self._sq_slider.SetValue(int(value))
-        self._sq_lbl.SetLabel(f"{value:.0f} dBm")
+        self._apply_sensitivity(value)
 
     def _load_channel(self, ch: Channel) -> None:
         """Tune to a channel and announce number, label, frequency."""
@@ -574,7 +586,7 @@ class MainWindow(wx.Frame):
         self._set_mode(ch.mode)
         self._set_bandwidth(ch.bandwidth)
         self._apply_mode_overrides(ch)
-        self._apply_squelch_override(ch.squelch)
+        self._apply_sensitivity_override(ch.squelch_sensitivity)
         self._tune(ch.frequency)
         self._persist_op_state()
         speech.output(
@@ -594,7 +606,7 @@ class MainWindow(wx.Frame):
         self._set_mode(scene.mode)
         self._set_bandwidth(scene.bandwidth)
         self._apply_mode_overrides(scene)
-        self._apply_squelch_override(scene.squelch)
+        self._apply_sensitivity_override(scene.squelch_sensitivity)
         landing = scene.landing_freq()
         if landing is not None:
             self._cursor.reset_offset()
@@ -624,9 +636,7 @@ class MainWindow(wx.Frame):
     # ==================================================================
 
     def _on_start_stop(self, _event: wx.CommandEvent) -> None:
-        if self._radio.paused:
-            self._stop_radio()
-        elif self._radio.running:
+        if self._radio.running:
             self._stop_radio()
         else:
             self._start_radio()
@@ -656,27 +666,6 @@ class MainWindow(wx.Frame):
         self._start_btn.SetLabel(_("\u25b6 Start"))
         self._statusbar.SetStatusText(_("Stopped."))
         speech.output(_("Radio stopped."))
-
-    def _toggle_pause(self) -> None:
-        """Toggle pause/resume."""
-        if not self._radio.running and not self._radio.paused:
-            return
-        if not self._radio.paused:
-            self._radio.pause()
-            listen = self._cursor.listening_freq()
-            self._start_btn.SetLabel(_("▶ Resume"))
-            self._statusbar.SetStatusText(
-                _("Paused — {freq}").format(freq=fmt_freq(listen))
-            )
-            speech.output(_("Paused."))
-        else:
-            self._radio.resume()
-            listen = self._cursor.listening_freq()
-            self._start_btn.SetLabel(_("■ Stop"))
-            self._statusbar.SetStatusText(
-                _("Receiving — {freq}").format(freq=fmt_freq(listen))
-            )
-            speech.output(_("Resumed."))
 
     # ==================================================================
     # DSP pipeline callbacks (dispatched to UI thread)
@@ -760,11 +749,18 @@ class MainWindow(wx.Frame):
         speech.output(_("Muted") if muted else _("Unmuted"))
 
     def _on_squelch(self, event: wx.CommandEvent) -> None:
-        val = float(event.GetInt())
-        self._audio.squelch = val
-        self._settings.squelch = val
-        self._sq_lbl.SetLabel(f"{val:.0f} dBm")
-        speech.output(_("Squelch {val:.0f} dBm").format(val=val))
+        val = event.GetInt()
+        self._apply_sensitivity(val)
+
+    def _apply_sensitivity(self, val: int) -> None:
+        """Set squelch sensitivity and update pipeline + UI."""
+        val = max(0, min(10, val))
+        self._settings.squelch_sensitivity = val
+        self._sq_slider.SetValue(val)
+        self._sq_lbl.SetLabel(str(val))
+        if self._radio.pipeline is not None:
+            self._radio.pipeline.set_squelch_sensitivity(val)
+        speech.output(_("Squelch {val}").format(val=val))
 
     def _adjust_volume(self, delta_pct: int) -> None:
         """Change volume by *delta_pct* percentage points and announce."""
@@ -775,14 +771,53 @@ class MainWindow(wx.Frame):
         self._vol_slider.SetValue(pct)
         speech.output(_("Volume {v} percent").format(v=pct))
 
-    def _adjust_squelch(self, delta_db: int) -> None:
-        """Change squelch by *delta_db* dB and announce."""
-        val = max(-120.0, min(0.0, self._settings.squelch + delta_db))
-        self._audio.squelch = val
-        self._settings.squelch = val
-        self._sq_slider.SetValue(int(val))
-        self._sq_lbl.SetLabel(f"{val:.0f} dBm")
-        speech.output(_("Squelch {val:.0f} dBm").format(val=val))
+    def _adjust_squelch(self, delta: int) -> None:
+        """Change squelch sensitivity by *delta* and announce."""
+        if not self._settings.squelch_enabled:
+            return
+        self._apply_sensitivity(self._settings.squelch_sensitivity + delta)
+
+    def _set_squelch_enabled(self, enabled: bool) -> None:
+        """Enable or disable squelch."""
+        self._settings.squelch_enabled = enabled
+        self._audio.squelch_enabled = enabled
+        self._sq_off_btn.SetValue(not enabled)
+        if enabled:
+            self._sq_slider.Enable(True)
+            self._sq_lbl.SetLabel(str(self._settings.squelch_sensitivity))
+            speech.output(_("Squelch on"))
+        else:
+            self._sq_slider.Enable(False)
+            self._sq_lbl.SetLabel(_("Off"))
+            speech.output(_("Squelch off"))
+
+    def _on_squelch_off_toggle(self, event: wx.CommandEvent) -> None:
+        self._set_squelch_enabled(not event.IsChecked())
+
+    def _toggle_squelch(self) -> None:
+        self._set_squelch_enabled(not self._settings.squelch_enabled)
+
+    def _monitor_down(self) -> None:
+        """Momentary squelch defeat — hold to listen."""
+        if self._monitor_active:
+            return
+        self._monitor_active = True
+        self._audio.squelch_enabled = False
+        speech.output(_("Monitor"))
+        # Poll as backup in case key-up event is lost
+        if not hasattr(self, "_monitor_timer"):
+            self._monitor_timer = wx.Timer(self)
+            self.Bind(wx.EVT_TIMER, lambda e: self._poll_monitor_key(), self._monitor_timer)
+        self._monitor_timer.Start(100)  # check every 100ms
+
+    def _monitor_up(self) -> None:
+        """Release monitor — restore squelch."""
+        if not self._monitor_active:
+            return
+        self._monitor_active = False
+        self._audio.squelch_enabled = self._settings.squelch_enabled
+        if hasattr(self, "_monitor_timer"):
+            self._monitor_timer.Stop()
 
     # ==================================================================
     # Noise blanker
@@ -855,6 +890,7 @@ class MainWindow(wx.Frame):
             kb.START_STOP, kb.TOGGLE_MUTE,
             kb.VOLUME_UP, kb.VOLUME_DOWN,
             kb.SQUELCH_UP, kb.SQUELCH_DOWN,
+            kb.SQUELCH_TOGGLE, kb.SQUELCH_MONITOR,
         }
         if action in global_actions:
             self._dispatch_action(action)
@@ -903,7 +939,6 @@ class MainWindow(wx.Frame):
         return {
             # Radio control
             kb.START_STOP:          lambda: self._on_start_stop(None),
-            kb.TOGGLE_PAUSE:        self._toggle_pause,
             kb.TOGGLE_MUTE:         self._toggle_mute_action,
             kb.TOGGLE_RECORDING:    self._toggle_recording,
             # Frequency
@@ -927,8 +962,10 @@ class MainWindow(wx.Frame):
             # Volume / squelch
             kb.VOLUME_UP:           lambda: self._adjust_volume(+5),
             kb.VOLUME_DOWN:         lambda: self._adjust_volume(-5),
-            kb.SQUELCH_UP:          lambda: self._adjust_squelch(+3),
-            kb.SQUELCH_DOWN:        lambda: self._adjust_squelch(-3),
+            kb.SQUELCH_UP:          lambda: self._adjust_squelch(+1),
+            kb.SQUELCH_DOWN:        lambda: self._adjust_squelch(-1),
+            kb.SQUELCH_TOGGLE:      self._toggle_squelch,
+            kb.SQUELCH_MONITOR:     self._monitor_down,
             # Sonification
             kb.SNAPSHOT:            self._do_snapshot,
             kb.TOGGLE_SWEEP:        self._toggle_sweep,
@@ -962,6 +999,21 @@ class MainWindow(wx.Frame):
             kb.OPEN_USER_GUIDE:     lambda: self._on_open_user_guide(None),
             kb.OPEN_HELP:           self._open_help_dialog,
         }
+
+    def _on_key_up(self, event: wx.KeyEvent) -> None:
+        """Release the monitor key (squelch defeat)."""
+        if self._monitor_active and event.GetKeyCode() in (ord("L"), wx.WXK_F4):
+            self._monitor_up()
+        event.Skip()
+
+    def _poll_monitor_key(self) -> None:
+        """Timer callback: release monitor if the key is no longer held."""
+        if not self._monitor_active:
+            return
+        f4_held = wx.GetKeyState(wx.WXK_F4)
+        l_held = wx.GetKeyState(ord("L"))
+        if not f4_held and not l_held:
+            self._monitor_up()
 
     def _dispatch_action(self, action: str) -> None:
         """Execute a keyboard action by name."""
@@ -1022,10 +1074,15 @@ class MainWindow(wx.Frame):
             ctcss = getattr(demod, "ctcss_tone", None)
             if ctcss is not None:
                 parts.append(_("CTCSS {tone:.1f} Hz").format(tone=ctcss))
-        squelch_open = db >= self._audio.squelch
-        parts.append(
-            _("Squelch open") if squelch_open else _("Squelch closed")
-        )
+        if not self._settings.squelch_enabled:
+            parts.append(_("Squelch off"))
+        else:
+            parts.append(
+                _("Squelch open") if self._audio._sq_open else _("Squelch closed")
+            )
+            parts.append(
+                _("Sensitivity {s}").format(s=self._settings.squelch_sensitivity)
+            )
         if self._audio.muted:
             parts.append(_("Muted"))
         if self._cursor.demod_offset != 0.0:
@@ -1117,7 +1174,7 @@ class MainWindow(wx.Frame):
         dlg = RFDialog(self, self._settings, valid_gains=valid_gains)
         if dlg.ShowModal() == wx.ID_OK:
             backend_changed = self._settings.rtl_tcp_active != old_active
-            if backend_changed and (self._radio.running or self._radio.paused):
+            if backend_changed and (self._radio.running):
                 self._stop_radio()
                 self._start_radio()
                 self._update_backend_status()
@@ -1306,7 +1363,7 @@ class MainWindow(wx.Frame):
         dlg.Destroy()
         # Check if the active server was removed or modified
         new_srv = self._settings.active_rtl_tcp_server()
-        if self._radio.running or self._radio.paused:
+        if self._radio.running:
             if old_srv != new_srv or self._settings.rtl_tcp_active != old_active:
                 self._stop_radio()
                 self._start_radio()
@@ -1376,7 +1433,7 @@ class MainWindow(wx.Frame):
         self._audio.stop()
         self._audio.device = settings.audio_device
         self._audio.blocksize = settings.audio_buffer_size
-        if self._radio.running or self._radio.paused:
+        if self._radio.running:
             self._audio.start()
         self._sync_sonification_device()
 
@@ -1404,7 +1461,7 @@ class MainWindow(wx.Frame):
         wx.CallAfter(self._stop_radio_on_error)
 
     def _stop_radio_on_error(self) -> None:
-        if self._radio.running or self._radio.paused:
+        if self._radio.running:
             self._stop_radio()
 
     # ==================================================================

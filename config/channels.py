@@ -34,7 +34,7 @@ class Channel:
     wfm_stereo_mode: Optional[str] = None
     wfm_hiblend_enabled: Optional[bool] = None
     wfm_rds_enabled: Optional[bool] = None
-    squelch: Optional[float] = None     # per-channel squelch (dBm); None = keep
+    squelch_sensitivity: Optional[int] = None  # per-channel sensitivity (0–10); None = keep
 
 
 @dataclass
@@ -82,11 +82,21 @@ def _pmr446_map() -> ChannelMap:
     )
 
 
-def _cb_cept_map() -> ChannelMap:
+def _cb_cept_fm_map() -> ChannelMap:
     return ChannelMap(
         "CB (CEPT FM)",
         [
-            Channel(n, f"CB {n}", hz, "NFM", 12_500)
+            Channel(n, f"CB {n}", hz, "NFM", 12_500, nfm_deviation=2_000)
+            for n, hz in enumerate(_CB_CEPT_HZ, start=1)
+        ],
+    )
+
+
+def _cb_cept_am_map() -> ChannelMap:
+    return ChannelMap(
+        "CB (CEPT AM)",
+        [
+            Channel(n, f"CB {n}", hz, "AM", 6_000)
             for n, hz in enumerate(_CB_CEPT_HZ, start=1)
         ],
     )
@@ -97,7 +107,8 @@ def default_maps() -> List[ChannelMap]:
     return [
         ChannelMap("My Channels", []),
         _pmr446_map(),
-        _cb_cept_map(),
+        _cb_cept_fm_map(),
+        _cb_cept_am_map(),
     ]
 
 

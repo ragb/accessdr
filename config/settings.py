@@ -35,7 +35,8 @@ class Settings:
 
     # Audio
     volume: float = 0.75             # 0.0 – 1.0
-    squelch: float = -80.0           # dBm
+    squelch_sensitivity: int = 5     # 0 = most sensitive, 10 = tightest
+    squelch_enabled: bool = True     # False = squelch off (hear everything)
     squelch_hysteresis_db: float = 3.0   # close threshold is this much below open
     squelch_hang_ms: float = 500.0       # hold-open tail after a signal drops
     muted: bool = False

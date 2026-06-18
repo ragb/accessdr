@@ -37,7 +37,7 @@ def test_load_missing_seeds_defaults(tmp_path):
 
 def test_default_maps_include_pmr_and_cb():
     names = [m.name for m in default_maps()]
-    assert names == ["My Channels", "PMR446", "CB (CEPT FM)"]
+    assert names == ["My Channels", "PMR446", "CB (CEPT FM)", "CB (CEPT AM)"]
 
 
 def test_pmr446_map():
@@ -49,15 +49,18 @@ def test_pmr446_map():
 
 
 def test_cb_cept_map():
-    cb = next(m for m in default_maps() if m.name == "CB (CEPT FM)")
-    assert len(cb.channels) == 40
-    assert cb.channels[0].frequency == 26_965_000    # ch1
-    assert cb.channels[39].frequency == 27_405_000   # ch40
+    cb_fm = next(m for m in default_maps() if m.name == "CB (CEPT FM)")
+    assert len(cb_fm.channels) == 40
+    assert cb_fm.channels[0].frequency == 26_965_000    # ch1
+    assert cb_fm.channels[39].frequency == 27_405_000   # ch40
     # The standard CB anomaly: ch23 is higher than ch24/25.
-    assert cb.channels[22].frequency == 27_255_000   # ch23
-    assert cb.channels[23].frequency == 27_235_000   # ch24
-    assert cb.channels[24].frequency == 27_245_000   # ch25
-    assert all(c.mode == "NFM" for c in cb.channels)
+    assert cb_fm.channels[22].frequency == 27_255_000   # ch23
+    assert cb_fm.channels[23].frequency == 27_235_000   # ch24
+    assert cb_fm.channels[24].frequency == 27_245_000   # ch25
+    assert all(c.mode == "NFM" for c in cb_fm.channels)
+    cb_am = next(m for m in default_maps() if m.name == "CB (CEPT AM)")
+    assert len(cb_am.channels) == 40
+    assert all(c.mode == "AM" for c in cb_am.channels)
 
 
 def test_round_trip(tmp_path):
@@ -100,7 +103,7 @@ def test_load_merges_new_default_maps(tmp_path):
     fresh.load(path)
     names = [m.name for m in fresh.maps]
     assert names[0] == "Mine"                    # user's map preserved/first
-    assert "PMR446" in names and "CB (CEPT FM)" in names  # defaults merged in
+    assert "PMR446" in names and "CB (CEPT FM)" in names and "CB (CEPT AM)" in names
 
 
 def test_set_active_clamps():
