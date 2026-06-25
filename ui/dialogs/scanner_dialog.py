@@ -90,8 +90,25 @@ class ScannerDialog(wx.Frame):
         )
         if self._bands:
             self._band_choice.SetSelection(0)
-        self._band_choice.Bind(wx.EVT_CHOICE, lambda e: self._update_info())
+        self._band_choice.Bind(wx.EVT_CHOICE, self._on_band_change)
         grid.Add(self._band_choice, 1, wx.EXPAND)
+
+        # Optional min/max frequency override
+        grid.Add(wx.StaticText(panel, label=_("Min freq (MHz):")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._min_freq = wx.SpinCtrlDouble(
+            panel, min=0, max=2000, inc=0.1, name="Minimum frequency",
+        )
+        self._min_freq.SetDigits(3)
+        grid.Add(self._min_freq, 1, wx.EXPAND)
+
+        grid.Add(wx.StaticText(panel, label=_("Max freq (MHz):")), 0, wx.ALIGN_CENTER_VERTICAL)
+        self._max_freq = wx.SpinCtrlDouble(
+            panel, min=0, max=2000, inc=0.1, name="Maximum frequency",
+        )
+        self._max_freq.SetDigits(3)
+        grid.Add(self._max_freq, 1, wx.EXPAND)
+
+        self._populate_freq_limits()
 
         # Channel-map picker
         grid.Add(wx.StaticText(panel, label=_("Channel map:")), 0, wx.ALIGN_CENTER_VERTICAL)
@@ -161,9 +178,24 @@ class ScannerDialog(wx.Frame):
         self._sync_enabled()
         self._update_info()
 
+    def _on_band_change(self, _event: wx.CommandEvent) -> None:
+        self._populate_freq_limits()
+        self._update_info()
+
+    def _populate_freq_limits(self) -> None:
+        band = self._selected_band()
+        if band is None:
+            return
+        self._min_freq.SetRange(band.freq_start / 1e6, band.freq_end / 1e6)
+        self._max_freq.SetRange(band.freq_start / 1e6, band.freq_end / 1e6)
+        self._min_freq.SetValue(band.freq_start / 1e6)
+        self._max_freq.SetValue(band.freq_end / 1e6)
+
     def _sync_enabled(self) -> None:
         is_band = self._source.GetSelection() == _SRC_BAND
         self._band_choice.Enable(is_band)
+        self._min_freq.Enable(is_band)
+        self._max_freq.Enable(is_band)
         self._map_choice.Enable(not is_band)
 
     def _selected_band(self):
@@ -178,6 +210,10 @@ class ScannerDialog(wx.Frame):
             return self._maps[idx]
         return None
 
+    def _scan_range(self):
+        """Return (start_hz, end_hz) from the freq controls."""
+        return int(self._min_freq.GetValue() * 1e6), int(self._max_freq.GetValue() * 1e6)
+
     def _update_info(self) -> None:
         if self._source.GetSelection() == _SRC_BAND:
             band = self._selected_band()
@@ -185,10 +221,11 @@ class ScannerDialog(wx.Frame):
                 self._info.SetLabel(_("No scannable bands. Define a bounded band first."))
                 return
             step = band.step if band.step > 0 else _DEFAULT_STEP_HZ
+            start_hz, end_hz = self._scan_range()
             self._info.SetLabel(
                 _("{start} to {stop}, step {step} kHz, {mode}").format(
-                    start=fmt_freq(band.freq_start),
-                    stop=fmt_freq(band.freq_end),
+                    start=fmt_freq(start_hz),
+                    stop=fmt_freq(end_hz),
                     step=step // 1000,
                     mode=band.mode,
                 )
@@ -216,14 +253,18 @@ class ScannerDialog(wx.Frame):
                 speech.output(_("No band selected."))
                 return
             step = band.step if band.step > 0 else _DEFAULT_STEP_HZ
+            start_hz, end_hz = self._scan_range()
+            if start_hz >= end_hz:
+                speech.output(_("Min frequency must be less than max."))
+                return
             self._set_mode(band.mode)
             self._status.SetLabel(_("Scanning band {name}…").format(name=band.name))
-            self._scanner.start(band.freq_start, band.freq_end, step)
+            self._scanner.start(start_hz, end_hz, step)
             speech.output(
                 _("Scanning band {name}, {start} to {stop}.").format(
                     name=band.name,
-                    start=fmt_freq(band.freq_start),
-                    stop=fmt_freq(band.freq_end),
+                    start=fmt_freq(start_hz),
+                    stop=fmt_freq(end_hz),
                 )
             )
         else:

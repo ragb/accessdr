@@ -41,14 +41,17 @@ TOGGLE_RECORDING = "toggle_recording"
 
 # --- Info ---
 ANNOUNCE_INFO = "announce_info"
+ANNOUNCE_SIGNAL = "announce_signal"
 
-# --- Volume / squelch ---
+# --- Volume / squelch / gain ---
 VOLUME_UP = "volume_up"
 VOLUME_DOWN = "volume_down"
 SQUELCH_UP = "squelch_up"
 SQUELCH_DOWN = "squelch_down"
 SQUELCH_TOGGLE = "squelch_toggle"
 SQUELCH_MONITOR = "squelch_monitor"
+GAIN_UP = "gain_up"
+GAIN_DOWN = "gain_down"
 
 # --- Sonification / spectrum ---
 SNAPSHOT = "snapshot"
@@ -100,9 +103,10 @@ CLOSE_WINDOW = "close_window"
 # Work in both modes (radio control, volume/squelch/mute, info, mode toggle,
 # recording, and every menu/dialog opener).
 GLOBAL_ACTIONS = frozenset({
-    START_STOP, TOGGLE_MUTE, TOGGLE_RECORDING, ANNOUNCE_INFO,
+    START_STOP, TOGGLE_MUTE, TOGGLE_RECORDING, ANNOUNCE_INFO, ANNOUNCE_SIGNAL,
     VOLUME_UP, VOLUME_DOWN,
     SQUELCH_UP, SQUELCH_DOWN, SQUELCH_TOGGLE, SQUELCH_MONITOR,
+    GAIN_UP, GAIN_DOWN,
     TOGGLE_VFO_MR, CLOSE_WINDOW, OPEN_HELP,
     # Page nav steps the frequency in VFO and the channel in Memory.
     PAGE_NAV_UP, PAGE_NAV_DOWN,
@@ -157,6 +161,7 @@ def _build_keymap() -> dict[tuple[int, int], str]:
 
         # Info
         (ord("I"), NONE):            ANNOUNCE_INFO,
+        (ord("D"), NONE):            ANNOUNCE_SIGNAL,
 
         # Channel / scene navigation
         (wx.WXK_PAGEUP, NONE):      PAGE_NAV_UP,
@@ -168,8 +173,8 @@ def _build_keymap() -> dict[tuple[int, int], str]:
         # Volume / squelch
         (wx.WXK_F11, NONE):         VOLUME_UP,
         (wx.WXK_F12, NONE):         VOLUME_DOWN,
-        (wx.WXK_F11, S):            SQUELCH_UP,
-        (wx.WXK_F12, S):            SQUELCH_DOWN,
+        (wx.WXK_F11, S):            GAIN_UP,
+        (wx.WXK_F12, S):            GAIN_DOWN,
         (ord("A"), M | S):          SQUELCH_TOGGLE,
         (wx.WXK_F4, M):             SQUELCH_TOGGLE,
         (ord("L"), NONE):            SQUELCH_MONITOR,

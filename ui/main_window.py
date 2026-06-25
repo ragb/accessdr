@@ -768,6 +768,23 @@ class MainWindow(wx.Frame):
         self._vol_slider.SetValue(pct)
         speech.output(_("Volume {v} percent").format(v=pct))
 
+    def _adjust_gain(self, delta: int) -> None:
+        """Step RF gain up/down through valid gains and announce."""
+        if not self._radio.running:
+            speech.output(_("Radio not running"))
+            return
+        valid = self._radio.get_valid_gains()
+        if not valid:
+            speech.output(_("No valid gains"))
+            return
+        current = self._settings.gain
+        idx = min(range(len(valid)), key=lambda i: abs(valid[i] - current))
+        idx = max(0, min(len(valid) - 1, idx + delta))
+        new_gain = valid[idx]
+        self._settings.gain = new_gain
+        self._radio._sdr.set_gain(new_gain)
+        speech.output(_("Gain {g} dB").format(g=new_gain))
+
     def _adjust_squelch(self, delta: int) -> None:
         """Change squelch sensitivity by *delta* and announce."""
         if not self._settings.squelch_enabled:
@@ -944,6 +961,7 @@ class MainWindow(wx.Frame):
             kb.SCENE_NEXT:          lambda: self._cycle_scene(+1),
             # Info
             kb.ANNOUNCE_INFO:       self._announce_info,
+            kb.ANNOUNCE_SIGNAL:     self._announce_signal,
             # Volume / squelch
             kb.VOLUME_UP:           lambda: self._adjust_volume(+5),
             kb.VOLUME_DOWN:         lambda: self._adjust_volume(-5),
@@ -951,6 +969,8 @@ class MainWindow(wx.Frame):
             kb.SQUELCH_DOWN:        lambda: self._adjust_squelch(-1),
             kb.SQUELCH_TOGGLE:      self._toggle_squelch,
             kb.SQUELCH_MONITOR:     self._monitor_down,
+            kb.GAIN_UP:             lambda: self._adjust_gain(+1),
+            kb.GAIN_DOWN:           lambda: self._adjust_gain(-1),
             # Sonification
             kb.SNAPSHOT:            self._do_snapshot,
             kb.TOGGLE_SWEEP:        self._toggle_sweep,
@@ -1098,6 +1118,16 @@ class MainWindow(wx.Frame):
             return
         speech.output(self._build_status_report())
 
+    def _announce_signal(self) -> None:
+        """Speak just the signal level (D key)."""
+        if not self._radio.running:
+            speech.output(_("Radio not running."))
+            return
+        db = self._audio.signal_db
+        speech.output(_("{db:.1f} dBFS, {s_unit}").format(
+            db=db, s_unit=s_meter(db)
+        ))
+
     # ==================================================================
     # Recording
     # ==================================================================
@@ -1196,6 +1226,9 @@ class MainWindow(wx.Frame):
         dlg.Destroy()
 
     def _open_scanner_dialog(self) -> None:
+        if not self._radio.running:
+            speech.output(_("Start the radio first"))
+            return
         from ui.dialogs.scanner_dialog import ScannerDialog
         self._open_or_raise(
             "scanner",

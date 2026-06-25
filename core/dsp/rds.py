@@ -14,13 +14,14 @@ RDS protocol summary (IEC 62106 / NRSC-4-B):
   - Group type 2A/2B → Radio Text (64 chars, 4 or 2 per group)
   - All groups carry PTY in bits 6–10 of block B
 
-Demodulation approach:
-  Costas loop PLL tracks the 57 kHz RDS carrier phase directly from
-  the bandpass-filtered subcarrier signal.  This replaces the earlier
-  pilot-derived carrier (cos(3θ)) which amplified pilot phase noise
-  by cubing.  The PLL provides robust carrier recovery at SNR as low
-  as ~3 dB.  Differential BPSK decode (XOR of consecutive bit signs)
-  recovers data regardless of PLL lock phase (0° or 180° ambiguity).
+Demodulation approach (based on PySDR architecture):
+  Free-running complex LO at 3× the estimated pilot frequency shifts
+  the 57 kHz RDS subcarrier to baseband.  LPF + decimation produces a
+  complex baseband at ~20 kHz.  AGC normalises amplitude so the
+  Mueller-Muller timing error detector operates at consistent scale.
+  Cubic interpolation between samples gives sub-sample timing precision.
+  Differential BPSK decode via Re{z[n]·conj(z[n-1])} is insensitive to
+  constant and slowly-varying carrier phase offset.
 """
 
 from __future__ import annotations
@@ -90,10 +91,29 @@ def _build_single_bit_syndromes() -> dict[int, int]:
 _SINGLE_BIT_SYNDROMES = _build_single_bit_syndromes()
 
 
+def _cubic_interp(buf: np.ndarray, idx: int, frac: float) -> complex:
+    """Catmull-Rom cubic interpolation at buf[idx + frac]."""
+    s0 = buf[idx - 1]
+    s1 = buf[idx]
+    s2 = buf[idx + 1]
+    s3 = buf[idx + 2]
+    a = -0.5 * s0 + 1.5 * s1 - 1.5 * s2 + 0.5 * s3
+    b = s0 - 2.5 * s1 + 2.0 * s2 - 0.5 * s3
+    c = -0.5 * s0 + 0.5 * s2
+    d = s1
+    return complex(((a * frac + b) * frac + c) * frac + d)
+
+
 class RDSDecoder:
     """Decodes RDS data from the 240 kHz FM MPX baseband."""
 
     def __init__(self, baseband_rate: int) -> None:
+        if baseband_rate < 114_001:
+            raise ValueError(
+                f"Sample rate {baseband_rate} Hz too low for RDS "
+                f"(need >114 kHz for 57 kHz subcarrier)"
+            )
+
         self._baseband_rate = baseband_rate
         self._on_station_change: Optional[Callable[[str], None]] = None
 
@@ -111,67 +131,35 @@ class RDSDecoder:
         self._rt_ab_flag: int = -1  # A/B flag for RT version tracking
 
         # PTY confirmation: only report after seeing the same code twice
-        # (reduces false positives from noise-matching CRC by chance)
         self._pty_candidate: int = -1
         self._pty_confirm_count: int = 0
 
-        # --- DSP filters ---
-        # FIR bandpass 56–58 kHz to isolate RDS subcarrier.
-        # Narrowed from 55.5–58.5 kHz to reject L-R stereo leakage: audio
-        # content at 16–18 kHz creates DSB energy at 54–56 kHz (38+f) which
-        # falls within the old passband.  The RDS BPSK main lobe is only
-        # 56.4–57.6 kHz (57 ± 594 Hz), so 56–58 kHz captures all signal
-        # energy including first sidelobes.
-        # 1001-tap Kaiser (beta=8) for sharp transition at the narrower BW.
-        _BPF_TAPS = 1001
-        self._rds_bpf = sp_signal.firwin(
-            _BPF_TAPS, [56_000, 58_000], pass_zero=False,
-            fs=baseband_rate, window=("kaiser", 8),
-        )
-        self._rds_bpf_zi = sp_signal.lfilter_zi(self._rds_bpf, [1.0]) * 0.0
+        # --- Free-running LO for 57 kHz → baseband shift ---
+        self._lo_phase: float = 0.0
+        self._pilot_freq_est: float = 19_000.0
 
-        # --- Costas loop PLL for 57 kHz carrier recovery ---
-        # Tracks carrier phase directly from the bandpass-filtered RDS signal.
-        # Replaces noisy pilot-derived carrier (cubing amplifies phase noise).
-        self._pll_freq = 2.0 * np.pi * 57_000.0 / baseband_rate  # rad/sample
-        self._pll_center_freq = self._pll_freq
-        self._pll_phase = 0.0
-        # Block size ≈ 1/4 bit period for sub-bit phase updates
-        # Bit period = baseband_rate / 1187.5 ≈ 202 samples at 240 kHz
-        self._pll_block_size = max(1, int(baseband_rate / 5000))
-        # Loop filter gains (2nd-order, critically damped, ~50 Hz BW)
-        _block_rate = baseband_rate / self._pll_block_size
-        _zeta = 0.707
-        _omega_n = 2.0 * np.pi * 50.0
-        _wT = _omega_n / _block_rate
-        self._pll_alpha = 2.0 * _zeta * _wT   # proportional (phase)
-        self._pll_beta = _wT * _wT             # integral (frequency)
-
-        # Lowpass for RDS demodulated baseband.  The RDS bit rate is 1187.5 bps
-        # so the theoretical minimum bandwidth is ~600 Hz.  A 1.2 kHz cutoff
-        # provides adequate margin while rejecting ~3 dB more noise than a
-        # wider filter, which helps on marginal signals.
+        # --- LPF for complex baseband (after frequency shift) ---
         from .filters import make_lowpass_iir
-        self._rds_lpf = make_lowpass_iir(1_200, baseband_rate, order=4)
+        self._rds_lpf = make_lowpass_iir(4_000, baseband_rate, order=4)
         self._rds_lpf_zi = sp_signal.sosfilt_zi(self._rds_lpf) * 0.0
+        self._rds_lpf_zi_q = sp_signal.sosfilt_zi(self._rds_lpf) * 0.0
 
-        # Decimation: reduce sample rate to ~12 kHz for cheap per-sample processing.
-        # At 240 kHz baseband, decimate by 20 → 12 kHz → ~10 samples per bit.
-        _RDS_INTERNAL_RATE = 11875  # 10× the bit rate
+        # --- Decimation to ~20 kHz → ~16.8 samples/symbol ---
+        _RDS_INTERNAL_RATE = 19_000
         self._decim_factor = max(1, baseband_rate // _RDS_INTERNAL_RATE)
         self._internal_rate = baseband_rate / self._decim_factor
 
-        # --- Bit clock recovery (Gardner TED) ---
-        self._bits_per_sample = 1187.5 / self._internal_rate
-        self._clock_phase: float = 0.0
-        self._clock_freq_offset: float = 0.0  # integral term for PLL
-        self._last_decision: float = 0.0  # previous bit decision value
-        self._mid_sample: float = 0.0  # mid-bit sample for Gardner TED
-        self._bit_accumulator: float = 0.0  # running sum within bit period
-        self._bit_acc_count: int = 0  # samples accumulated
+        # --- Symbol timing recovery ---
+        self._samples_per_symbol = self._internal_rate / 1187.5
+        self._bits_per_sample = 1187.5 / self._internal_rate  # backward compat
+        self._sample_buf = np.zeros(0, dtype=np.complex128)
+        self._mm_pos: float = 1.0  # fractional position in sample buffer
+        self._prev_sample: complex = 0j  # previous symbol sample (complex)
+        self._mm_count: int = 0  # symbols seen
+        self._mm_gain: float = 0.1  # zero-crossing PLL gain
 
-        # --- Differential decode state ---
-        self._last_bit_sign: int = 0  # sign of previous bit sample (0 or 1)
+        # --- AGC ---
+        self._agc_gain: float = 1.0
 
         # --- Block / group sync ---
         self._bit_buffer: list[int] = []
@@ -209,17 +197,15 @@ class RDSDecoder:
         self._block_idx = 0
         self._blocks_collected = 0
         self._sync_errors = 0
-        self._rds_bpf_zi = sp_signal.lfilter_zi(self._rds_bpf, [1.0]) * 0.0
-        self._pll_phase = 0.0
-        self._pll_freq = self._pll_center_freq
+        self._lo_phase = 0.0
+        self._pilot_freq_est = 19_000.0
         self._rds_lpf_zi = sp_signal.sosfilt_zi(self._rds_lpf) * 0.0
-        self._clock_phase = 0.0
-        self._clock_freq_offset = 0.0
-        self._last_decision = 0.0
-        self._mid_sample = 0.0
-        self._bit_accumulator = 0.0
-        self._bit_acc_count = 0
-        self._last_bit_sign = 0
+        self._rds_lpf_zi_q = sp_signal.sosfilt_zi(self._rds_lpf) * 0.0
+        self._sample_buf = np.zeros(0, dtype=np.complex128)
+        self._mm_pos = 1.0
+        self._prev_sample = 0j
+        self._mm_count = 0
+        self._agc_gain = 1.0
 
     def process(self, mpx: np.ndarray, pilot: np.ndarray) -> None:
         """Feed MPX baseband + filtered 19 kHz pilot. Decodes RDS data.
@@ -234,73 +220,86 @@ class RDSDecoder:
         if len(mpx) < 4:
             return
 
-        # 1. Bandpass filter MPX to isolate RDS subcarrier (FIR, 501 taps)
-        rds_band, self._rds_bpf_zi = sp_signal.lfilter(
-            self._rds_bpf, [1.0], mpx, zi=self._rds_bpf_zi,
-        )
-
-        # 2. Check pilot presence (stereo pilot → RDS likely present)
-        pilot_peak = float(np.max(np.abs(pilot)))
-        if pilot_peak < 1e-8:
+        # 1. Check pilot presence
+        pilot_peak_iir = float(np.max(np.abs(pilot)))
+        if pilot_peak_iir < 1e-8:
             self._debug_chunks += 1
-            return  # no pilot → no stereo → probably no RDS
+            return
 
-        # 3. Costas loop demodulation — PLL tracks 57 kHz carrier phase
-        demod = self._costas_demod(rds_band)
+        # 2. Estimate pilot frequency for carrier tracking
+        if len(pilot) > 100:
+            pilot_pow = float(np.mean(np.square(pilot)))
+            if pilot_pow > 1e-12:
+                r1 = float(np.mean(pilot[1:] * pilot[:-1])) / pilot_pow
+                r1 = max(-1.0, min(1.0, r1))
+                f_est = self._baseband_rate / (2.0 * np.pi) * float(np.arccos(r1))
+                if 18_500 < f_est < 19_500:
+                    self._pilot_freq_est += 0.3 * (f_est - self._pilot_freq_est)
 
-        # 4. Lowpass at 1.2 kHz (RDS data bandwidth)
-        demod_mf, self._rds_lpf_zi = sp_signal.sosfilt(
-            self._rds_lpf, demod, zi=self._rds_lpf_zi,
+        # 3. Free-running LO at 3× pilot frequency — shift 57 kHz to DC
+        carrier_freq = 3.0 * self._pilot_freq_est
+        n = len(mpx)
+        phase_inc = 2.0 * np.pi * carrier_freq / self._baseband_rate
+        phases = self._lo_phase + phase_inc * np.arange(n, dtype=np.float64)
+        self._lo_phase = float((phases[-1] + phase_inc) % (2.0 * np.pi))
+        lo = np.exp(-1j * phases)
+        bb = mpx * lo
+
+        # 4. Lowpass I and Q (4 kHz — covers RDS main lobe + transitions)
+        bb_i, self._rds_lpf_zi = sp_signal.sosfilt(
+            self._rds_lpf, bb.real, zi=self._rds_lpf_zi,
+        )
+        bb_q, self._rds_lpf_zi_q = sp_signal.sosfilt(
+            self._rds_lpf, bb.imag, zi=self._rds_lpf_zi_q,
         )
 
-        # 5. Decimate to ~12 kHz to keep the per-sample Python loop cheap
+        # 5. Decimate to ~20 kHz
         if self._decim_factor > 1:
-            demod_mf = demod_mf[::self._decim_factor]
+            bb_i = bb_i[::self._decim_factor]
+            bb_q = bb_q[::self._decim_factor]
+        demod = (bb_i + 1j * bb_q).astype(np.complex128)
 
-        # 6. Clock recovery and differential BPSK bit extraction
-        self._extract_bits(demod_mf)
+        # 6. AGC: normalise to ~unit RMS so M&M error scale is consistent
+        rms = float(np.sqrt(np.mean(np.abs(demod) ** 2)))
+        if rms > 1e-10:
+            self._agc_gain += 0.3 * (1.0 / rms - self._agc_gain)
+        demod = demod * self._agc_gain
+
+        # 7. Mueller-Muller timing recovery + differential BPSK decode
+        self._extract_bits(demod)
 
         # Debug: log RDS activity every ~5 seconds (~185 chunks at 37/s)
         self._debug_chunks += 1
         if self._debug_chunks % 185 == 0:
-            rms = float(np.sqrt(np.mean(np.square(demod_mf))))
             rds_snr = self._measure_rds_snr(mpx)
 
-            # Sign-change rate: clean BPSK ~5%, noise ~50%
-            signs = np.sign(demod_mf)
+            demod_re = demod.real
+            signs = np.sign(demod_re)
             sign_changes = np.count_nonzero(np.diff(signs))
             sign_change_pct = 100.0 * sign_changes / max(len(signs) - 1, 1)
 
-            # Bimodality: ratio of |samples| > 0.5×rms (BPSK >80%, noise ~39%)
             if rms > 1e-10:
-                above_half = np.count_nonzero(np.abs(demod_mf) > 0.5 * rms)
-                bimodal_pct = 100.0 * above_half / max(len(demod_mf), 1)
+                above_half = np.count_nonzero(np.abs(demod) > 0.5 * rms * self._agc_gain)
+                bimodal_pct = 100.0 * above_half / max(len(demod), 1)
             else:
                 bimodal_pct = 0.0
 
             logger.info(
                 "RDS debug: chunks=%d bits=%d synced=%s syncs=%d groups=%d "
-                "blk_ok=%d blk_fail=%d rms=%.5f pilot=%.5f "
+                "blk_ok=%d blk_fail=%d rms=%.5f agc=%.1f pilot=%.5f "
                 "ones=%d zeros=%d rds_snr=%.1fdB "
-                "sign_chg=%.1f%% bimodal=%.1f%%",
+                "sign_chg=%.1f%% bimodal=%.1f%% pilot_f=%.1fHz",
                 self._debug_chunks, self._debug_bits, self._synced,
                 self._debug_syncs, self._debug_groups,
                 self._debug_block_ok, self._debug_block_fail,
-                rms, pilot_peak,
+                rms, self._agc_gain, pilot_peak_iir,
                 self._debug_bit_ones, self._debug_bit_zeros,
                 rds_snr, sign_change_pct, bimodal_pct,
+                self._pilot_freq_est,
             )
 
     def _measure_rds_snr(self, mpx: np.ndarray) -> float:
-        """Measure RDS subcarrier SNR using peak-bin detection.
-
-        Uses a Hann-windowed FFT to measure:
-        - Pilot: peak bin in 18.5-19.5 kHz
-        - RDS carrier: peak bin in 55-59 kHz
-        - Noise floor: median of bins in 70-76 kHz
-        Peak detection is essential because both pilot and RDS carrier are
-        narrow-band signals (tones) that would be diluted by band-average.
-        """
+        """Measure RDS subcarrier SNR using peak-bin detection."""
         N = len(mpx)
         if N < 1024:
             return 0.0
@@ -342,129 +341,71 @@ class RDSDecoder:
 
         return 0.0
 
-    def _costas_demod(self, rds_band: np.ndarray) -> np.ndarray:
-        """Demodulate RDS subcarrier using a Costas loop PLL.
-
-        Processes the bandpass-filtered 57 kHz signal in small blocks.
-        For each block: mix with NCO to get I/Q, compute phase error
-        from I×Q (data-independent for BPSK since d²=1), update PLL.
-        Returns the I branch (coherent baseband output).
-        """
-        n = len(rds_band)
-        output = np.empty(n)
-        bs = self._pll_block_size
-
-        for start in range(0, n, bs):
-            end = min(start + bs, n)
-            seg = rds_band[start:end]
-            seg_len = end - start
-
-            # Generate NCO oscillator for this block
-            t = np.arange(seg_len, dtype=np.float64)
-            phases = self._pll_phase + self._pll_freq * t
-            cos_nco = np.cos(phases)
-            sin_nco = np.sin(phases)
-
-            # I/Q demodulation (mix to baseband, ×2 for amplitude)
-            i_branch = seg * cos_nco * 2.0
-            q_branch = seg * (-sin_nco) * 2.0
-
-            # Block-average acts as LPF, rejecting 2×carrier components
-            i_avg = float(np.mean(i_branch))
-            q_avg = float(np.mean(q_branch))
-
-            # Costas phase error: I×Q / (I²+Q²)
-            # For BPSK: I×Q = A²/2 × sin(2φ_err) — data cancels (d²=1)
-            # Normalization makes loop gain amplitude-independent.
-            power = i_avg * i_avg + q_avg * q_avg
-            if power > 1e-20:
-                phase_error = (i_avg * q_avg) / power
-            else:
-                phase_error = 0.0
-
-            # Loop filter: proportional (phase) + integral (frequency)
-            self._pll_freq += self._pll_beta * phase_error
-            self._pll_phase += self._pll_alpha * phase_error
-
-            # Advance NCO phase by block duration
-            self._pll_phase += self._pll_freq * seg_len
-            self._pll_phase %= (2.0 * np.pi)
-
-            # Clamp frequency near 57 kHz (±200 Hz max drift)
-            max_drift = 2.0 * np.pi * 200.0 / self._baseband_rate
-            if self._pll_freq < self._pll_center_freq - max_drift:
-                self._pll_freq = self._pll_center_freq - max_drift
-            elif self._pll_freq > self._pll_center_freq + max_drift:
-                self._pll_freq = self._pll_center_freq + max_drift
-
-            output[start:end] = i_branch
-
-        return output
-
     def _extract_bits(self, demod: np.ndarray) -> None:
-        """Recover clock and extract bits via differential BPSK.
+        """Symbol-rate sampling with complex differential BPSK decode.
 
-        Uses Gardner-style timing error detection: the error signal is
-        computed from the mid-bit sample and the two adjacent decision
-        samples, which is self-normalizing and robust to noise.
-
-        Real-valued demodulation: the carrier phase offset (from pilot
-        BPF group delay) produces a constant sign flip that cancels in
-        the differential XOR.
+        Uses cubic interpolation at the nominal symbol rate.  Differential
+        decode via Re{z[n] * conj(z[n-1])} is phase-invariant — works
+        regardless of the carrier phase offset from the free-running LO.
+        A slow PLL nudges the sampling phase toward symbol centres using
+        amplitude dips at transitions (magnitude-based, also phase-invariant).
         """
-        for sample in demod:
-            self._clock_phase += self._bits_per_sample
+        buf = np.concatenate([self._sample_buf, demod])
+        sps = self._samples_per_symbol
+        pos = self._mm_pos
 
-            # Accumulate sample into the bit integrator for mid-bit estimation
-            self._bit_accumulator += sample
-            self._bit_acc_count += 1
+        while True:
+            idx = int(pos)
+            if idx < 1 or idx + 2 >= len(buf):
+                break
+            frac = pos - idx
 
-            if self._clock_phase >= 1.0:
-                self._clock_phase -= 1.0
+            sample = _cubic_interp(buf, idx, frac)
 
-                # Use the accumulated average as the decision value
-                # (partial integrate-and-dump within Python loop)
-                if self._bit_acc_count > 0:
-                    decision_value = self._bit_accumulator / self._bit_acc_count
-                else:
-                    decision_value = sample
+            if self._mm_count >= 1:
+                prev = self._prev_sample
 
-                # Gardner timing error detector:
-                # e[n] = (y[n] - y[n-1]) × y_mid
-                # where y[n] is the current decision, y[n-1] is the previous,
-                # and y_mid is the mid-bit sample (accumulated between decisions).
-                # This is self-normalizing and data-directed.
-                if self._last_decision != 0.0:
-                    timing_error = (decision_value - self._last_decision) * self._mid_sample
-                    # Loop filter: proportional + integral for stable tracking
-                    self._clock_phase -= timing_error * 0.01  # proportional
-                    self._clock_freq_offset += timing_error * 0.0001  # integral
-                    self._clock_phase -= self._clock_freq_offset
+                # Clock recovery: detect phase flips via complex product.
+                # A negative real product means the phase jumped ~180°
+                # (symbol transition).  Interpolate the transition time
+                # and nudge the clock.
+                dp = (sample * prev.conjugate()).real
+                if dp < 0:
+                    mag_curr = abs(sample)
+                    mag_prev = abs(prev)
+                    total = mag_prev + mag_curr
+                    if total > 1e-12:
+                        t_frac = mag_prev / total
+                    else:
+                        t_frac = 0.5
+                    zc_pos = (pos - sps) + t_frac * sps
+                    expected_next = zc_pos + sps * 0.5
+                    phase_err = expected_next - pos
+                    while phase_err > sps * 0.5:
+                        phase_err -= sps
+                    while phase_err < -sps * 0.5:
+                        phase_err += sps
+                    pos += self._mm_gain * phase_err
 
-                # Clamp the frequency offset to prevent runaway
-                self._clock_freq_offset = max(-0.1, min(0.1, self._clock_freq_offset))
-
-                # Differential BPSK: XOR of consecutive bit signs.
-                current_sign = 1 if decision_value >= 0 else 0
-                decoded = current_sign ^ self._last_bit_sign
-                self._last_bit_sign = current_sign
-                self._last_decision = decision_value
+                # Complex differential decode: Re{z[n]·conj(z[n-1])}
+                # Positive → same phase → bit 0; negative → flip → bit 1
+                bit = 0 if dp > 0 else 1
                 self._debug_bits += 1
-                if decoded:
+                if bit:
                     self._debug_bit_ones += 1
                 else:
                     self._debug_bit_zeros += 1
+                self._process_bit(bit)
 
-                self._process_bit(decoded)
+            self._prev_sample = sample
+            self._mm_count = min(self._mm_count + 1, 3)
+            pos += sps
 
-                # Reset accumulator; save the mid-point sample as zero
-                self._mid_sample = 0.0
-                self._bit_accumulator = 0.0
-                self._bit_acc_count = 0
-
-            elif self._clock_phase >= 0.5 and self._mid_sample == 0.0:
-                # Capture mid-bit sample for Gardner TED
-                self._mid_sample = sample
+        # Keep tail of buffer for continuity across chunks.
+        keep = min(len(buf), int(sps) + 4)
+        start = len(buf) - keep
+        self._sample_buf = buf[start:].copy()
+        self._mm_pos = pos - start
 
     def _process_bit(self, bit: int) -> None:
         """Process one decoded bit — sync and assemble blocks/groups."""
@@ -548,18 +489,14 @@ class RDSDecoder:
             if valid:
                 expected = _OFFSET_Cp
 
-        # Single-bit error correction: if the syndrome doesn't match,
-        # check whether XOR with the expected offset yields a known
-        # single-bit error pattern.  If so, correct the bit and accept.
+        # Single-bit error correction
         if not valid:
             error_syn = syndrome ^ expected
             if error_syn in _SINGLE_BIT_SYNDROMES:
                 bit_pos = _SINGLE_BIT_SYNDROMES[error_syn]
                 if bit_pos < 16:
                     data_16 ^= 1 << (15 - bit_pos)
-                # (check bits don't affect decoded data, no need to fix)
                 valid = True
-            # Also try C' for block C
             elif self._block_idx == 2:
                 error_syn_cp = syndrome ^ _OFFSET_Cp
                 if error_syn_cp in _SINGLE_BIT_SYNDROMES:
@@ -582,10 +519,6 @@ class RDSDecoder:
                     self._block_idx, syndrome, expected, syndrome ^ expected,
                 )
             if self._sync_errors > 50:
-                # Lost sync — go back to searching.  Threshold raised from 10
-                # to 50 to survive marginal signals: at 3% block pass rate the
-                # average gap between valid blocks is ~33, so a threshold of 10
-                # would lose sync before seeing even one good block.
                 self._synced = False
                 self._blocks_collected = 0
                 return
@@ -594,19 +527,12 @@ class RDSDecoder:
         self._block_idx = (self._block_idx + 1) % 4
 
         # If we wrapped around (completed block D → block A), try to decode group.
-        # Full decode requires all 4 blocks (0x0F).  Partial decode attempts
-        # extraction with whatever blocks passed — this dramatically improves
-        # decode success rate on marginal signals where individual block BER
-        # is high but the data repeats across many groups.
         if self._block_idx == 0:
             collected = self._blocks_collected
             if collected == 0x0F:
                 self._decode_group(collected)
                 self._debug_groups += 1
             elif (collected & 0x03) == 0x03:
-                # Blocks A+B both valid — partial decode.  Requiring A
-                # reduces false positives: random noise matching BOTH A's
-                # and B's CRC is p ≈ (5/1024)² ≈ 0.002% vs 0.5% for B alone.
                 self._decode_group(collected)
             self._blocks_collected = 0
 
